@@ -6,7 +6,7 @@
     <Application.Resources>
         <SolidColorBrush x:Key="ThemeWindowBg" Color="#F1F5F9"/>
         <SolidColorBrush x:Key="ThemeCardBg" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="ThemeCardBorder" Color="#CBD5E1"/>
+        <SolidColorBrush x:Key="ThemeCardBorder" Color="#94A3B8"/>
         <SolidColorBrush x:Key="ThemeInsetBg" Color="#F8FAFC"/>
         <SolidColorBrush x:Key="ThemeInsetBorder" Color="#CBD5E1"/>
         <SolidColorBrush x:Key="ThemeInputBg" Color="#FFFFFF"/>

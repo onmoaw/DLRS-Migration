@@ -28,7 +28,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             public static readonly MediaColor WindowBg = MediaColor.FromRgb(15, 23, 42);          // #0F172A
             public static readonly MediaColor CardBg = MediaColor.FromRgb(30, 41, 59);            // #1E293B
-            public static readonly MediaColor CardBorder = MediaColor.FromRgb(51, 65, 85);        // #334155
+            public static readonly MediaColor CardBorder = MediaColor.FromRgb(71, 85, 105);        // #475569 (crisp slate-600)
             public static readonly MediaColor InsetBg = MediaColor.FromRgb(15, 23, 42);           // #0F172A
             public static readonly MediaColor InsetBorder = MediaColor.FromRgb(51, 65, 85);       // #334155
             public static readonly MediaColor InputBg = MediaColor.FromRgb(15, 23, 42);           // #0F172A
@@ -53,7 +53,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             public static readonly MediaColor WindowBg = MediaColor.FromRgb(241, 245, 249);       // #F1F5F9
             public static readonly MediaColor CardBg = MediaColor.FromRgb(255, 255, 255);         // #FFFFFF
-            public static readonly MediaColor CardBorder = MediaColor.FromRgb(203, 213, 225);     // #CBD5E1
+            public static readonly MediaColor CardBorder = MediaColor.FromRgb(148, 163, 184);     // #94A3B8 (crisp slate-400)
             public static readonly MediaColor InsetBg = MediaColor.FromRgb(248, 250, 252);        // #F8FAFC
             public static readonly MediaColor InsetBorder = MediaColor.FromRgb(203, 213, 225);    // #CBD5E1
             public static readonly MediaColor InputBg = MediaColor.FromRgb(255, 255, 255);        // #FFFFFF

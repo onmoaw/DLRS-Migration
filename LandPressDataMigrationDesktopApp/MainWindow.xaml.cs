@@ -168,6 +168,23 @@ namespace LandPressDataMigrationDesktopApp
                 txtConnectError.Foreground = System.Windows.Media.Brushes.LimeGreen;
                 txtConnectError.Text       = "✔ Connected successfully.";
                 txtConnectError.Visibility = Visibility.Visible;
+
+                // Update server status summary and Pre-Step server banner
+                if (txtServerStatusSummary != null)
+                {
+                    txtServerStatusSummary.Text = $"🟢 Connected to \"{_ServerName}\"";
+                    txtServerStatusSummary.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                }
+                if (txtPreStepServerName != null)
+                {
+                    txtPreStepServerName.Text = $"🟢 {_ServerName}";
+                    txtPreStepServerName.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                }
+                if (btnRunPreStep != null)
+                {
+                    btnRunPreStep.IsEnabled = true;
+                    btnRunPreStep.ToolTip = $"Restore or attach database directly to {_ServerName}";
+                }
             }
             catch (Microsoft.Data.SqlClient.SqlException sqlEx)
             {
@@ -193,12 +210,28 @@ namespace LandPressDataMigrationDesktopApp
             }
         }
 
-        /// <summary>Shows a red inline error message next to the Connect button.</summary>
+        /// <summary>Shows a red inline error message next to the Connect button and resets status banners.</summary>
         private void ShowConnectError(string message)
         {
             txtConnectError.Foreground = System.Windows.Media.Brushes.Tomato;
             txtConnectError.Text       = message;
             txtConnectError.Visibility = Visibility.Visible;
+
+            if (txtServerStatusSummary != null)
+            {
+                txtServerStatusSummary.Text = "⚪ Disconnected";
+                txtServerStatusSummary.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+            }
+            if (txtPreStepServerName != null)
+            {
+                txtPreStepServerName.Text = "🔒 Not Connected (Connect in Stage 1 above)";
+                txtPreStepServerName.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+            }
+            if (btnRunPreStep != null)
+            {
+                btnRunPreStep.IsEnabled = false;
+                btnRunPreStep.ToolTip = "Please connect to a SQL Server in Stage 1 above first.";
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────────────

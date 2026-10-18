@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LandPressDataMigrationDesktopApp"
         mc:Ignorable="d"
-        Title="DLRS Data Migration Tool" Height="920" Width="1440"
+        Title="{x:Static local:AppConfig.WindowTitle}" Height="920" Width="1440"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/DLRS-Migration App Icon.png"
         Background="{DynamicResource ThemeWindowBg}">
@@ -15,10 +15,10 @@
         <Style x:Key="StageCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource ThemeCardBg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="16,14"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
 
         <!-- Input Box Style -->
@@ -84,7 +84,7 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource ThemeTextMuted}"
-                           Text="DLRS Data Migration Tool  v0.6"/>
+                           Text="{x:Static local:AppConfig.AppTitleWithVersion}"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock FontSize="11" Foreground="{DynamicResource ThemeTextSecondary}" Text="Powered by "/>
@@ -107,9 +107,9 @@
                 <!-- Left: App Title and Role Badge -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0">
                     <Image Source="/Assets/DLRS-Migration App Icon.png" Width="26" Height="26" Margin="0,0,10,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <TextBlock Text="DLRS Data Migration Tool" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Static local:AppConfig.AppName}" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                     <Border Background="#1D4ED8" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="v1.0" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="{x:Static local:AppConfig.Version}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                     </Border>
                     <Border x:Name="borderUserRoleBadge" Background="#065F46" CornerRadius="4" Padding="8,3" Margin="10,0,0,0" VerticalAlignment="Center">
                         <TextBlock x:Name="txtUserRoleBadge" Text="👤 Admin (Full Access)" Foreground="#6EE7B7" FontSize="11" FontWeight="Bold"/>
@@ -219,19 +219,101 @@
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,8,0">
                 <StackPanel>
 
+                    <!-- ================= STAGE 1 CARD: CONNECT & SELECT DATABASE ================= -->
+                    <Border Style="{StaticResource StageCard}" BorderBrush="#3B82F6" BorderThickness="1.5">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Border Background="#1D4ED8" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                                    <TextBlock Text="STAGE 1" Foreground="White" FontWeight="Bold" FontSize="10"/>
+                                </Border>
+                                <TextBlock Text="Database Connection &amp; Selection" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="14"/>
+                            </StackPanel>
+
+                            <!-- Server & Auth Bar -->
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Server:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+                                <TextBox x:Name="txtServer" Grid.Column="1" Style="{StaticResource InputBox}" Height="28"/>
+                                <TextBlock Grid.Column="2" Text="Auth:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Margin="8,0,4,0" FontSize="12"/>
+                                <ComboBox x:Name="cmbAuth" Grid.Column="3" Width="90" Height="28" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}">
+                                    <ComboBoxItem Content="Windows"/>
+                                    <ComboBoxItem Content="SQL"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <!-- SQL User/Password (if SQL Auth selected) -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBox x:Name="txtUser" Width="140" Margin="0,0,6,0" Style="{StaticResource InputBox}" Height="28" Visibility="Collapsed"/>
+                                <PasswordBox x:Name="txtPassword" Width="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}" Height="28" Visibility="Collapsed"/>
+                            </StackPanel>
+
+                            <!-- Connect Button & Status -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button Content="Connect" Width="100" Height="32" Padding="14,6" Style="{StaticResource AppBtn}" Click="Connect_Click">
+                                    <Button.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#3B82F6" Offset="0"/>
+                                            <GradientStop Color="#2563EB" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Button.Background>
+                                </Button>
+                                <TextBlock x:Name="txtConnectError" Visibility="Collapsed" VerticalAlignment="Center"
+                                           Margin="10,0,0,0" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <!-- Server Status Indicator Banner -->
+                            <Border x:Name="borderServerConnectedBadge" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Server Status: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtServerStatusSummary" Text="⚪ Disconnected — Enter server &amp; click Connect" Foreground="#F59E0B" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Databases List -->
+                            <TextBlock Text="Available Databases (click to select):" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" Margin="0,0,0,4"/>
+                            <ListBox x:Name="lstDatabases" Height="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}"
+                                     SelectionChanged="Databases_SelectionChanged"/>
+
+                            <!-- Active Database Banner -->
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#38BDF8" BorderThickness="1.5" CornerRadius="6" Padding="10,6" Margin="0,8,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Active Database: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtActiveDbName" Text="(None Selected)" Foreground="#38BDF8" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Helper Note pointing to Pre-Step -->
+                            <TextBlock Text="💡 Don't see your database? Use the Restore / Attach Database card below ⬇"
+                                       Foreground="{DynamicResource ThemeTextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- ================= PRE-STEP CARD: RESTORE / ATTACH DATABASE ================= -->
-                    <Border Style="{StaticResource StageCard}">
+                    <Border Style="{StaticResource StageCard}" BorderBrush="#0D9488" BorderThickness="1.5">
                         <StackPanel>
                             <!-- Header: PRE-STEP badge + title -->
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <Border Background="#0F766E" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
                                     <TextBlock Text="PRE-STEP" Foreground="White" FontWeight="Bold" FontSize="10"/>
                                 </Border>
                                 <TextBlock Text="Restore / Attach Database" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="14"/>
                             </StackPanel>
 
+                            <!-- Target Server Banner (Shows WHICH server is connected) -->
+                            <Border x:Name="borderPreStepServerStatus" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,8">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Target Server: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtPreStepServerName" Text="🔒 Not Connected (Connect in Stage 1 above)" Foreground="#F59E0B" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Description -->
-                            <TextBlock Text="Restore a .bak backup or attach a .mdf database file directly into SQL Server before proceeding with the migration stages."
+                            <TextBlock Text="Restore a .bak backup or attach a .mdf database file directly into the connected SQL Server before proceeding with migration."
                                        Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Mode Selector -->
@@ -327,7 +409,8 @@
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
 
                             <!-- Action Button -->
-                            <Button x:Name="btnRunPreStep" MinHeight="38" Padding="16,8"
+                            <Button x:Name="btnRunPreStep" MinHeight="38" Padding="16,8" IsEnabled="False"
+                                    ToolTip="Please connect to a SQL Server in Stage 1 above first."
                                     Style="{StaticResource AppBtn}" Click="BtnRunPreStep_Click">
                                 <Button.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -341,70 +424,8 @@
                     </Border>
                     <!-- ================= END PRE-STEP CARD ================= -->
 
-                    <!-- STAGE 1 CARD: CONNECT & SELECT DATABASE -->
-                    <Border Style="{StaticResource StageCard}">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <Border Background="#1D4ED8" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
-                                    <TextBlock Text="STAGE 1" Foreground="White" FontWeight="Bold" FontSize="10"/>
-                                </Border>
-                                <TextBlock Text="Database Connection &amp; Selection" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="14"/>
-                            </StackPanel>
-
-                            <!-- Server & Auth Bar -->
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Server:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
-                                <TextBox x:Name="txtServer" Grid.Column="1" Style="{StaticResource InputBox}" Height="28"/>
-                                <TextBlock Grid.Column="2" Text="Auth:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Margin="8,0,4,0" FontSize="12"/>
-                                <ComboBox x:Name="cmbAuth" Grid.Column="3" Width="90" Height="28" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}">
-                                    <ComboBoxItem Content="Windows"/>
-                                    <ComboBoxItem Content="SQL"/>
-                                </ComboBox>
-                            </Grid>
-
-                            <!-- SQL User/Password (if SQL Auth selected) -->
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBox x:Name="txtUser" Width="140" Margin="0,0,6,0" Style="{StaticResource InputBox}" Height="28" Visibility="Collapsed"/>
-                                <PasswordBox x:Name="txtPassword" Width="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}" Height="28" Visibility="Collapsed"/>
-                            </StackPanel>
-
-                            <!-- Connect Button & Status -->
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <Button Content="Connect" Width="100" Height="32" Padding="14,6" Style="{StaticResource AppBtn}" Click="Connect_Click">
-                                    <Button.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#3B82F6" Offset="0"/>
-                                            <GradientStop Color="#2563EB" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Button.Background>
-                                </Button>
-                                <TextBlock x:Name="txtConnectError" Visibility="Collapsed" VerticalAlignment="Center"
-                                           Margin="10,0,0,0" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"/>
-                            </StackPanel>
-
-                            <!-- Databases List -->
-                            <TextBlock Text="Available Databases (click to select):" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" Margin="0,0,0,4"/>
-                            <ListBox x:Name="lstDatabases" Height="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}"
-                                     SelectionChanged="Databases_SelectionChanged"/>
-
-                            <!-- Active Database Banner -->
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,8,0,0">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Active Database: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="txtActiveDbName" Text="(None Selected)" Foreground="#38BDF8" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
                     <!-- STAGE 2 CARD: DATABASE PREPARATION & COMPATIBILITY -->
-                    <Border Style="{StaticResource StageCard}">
+                    <Border Style="{StaticResource StageCard}" BorderBrush="#0284C7" BorderThickness="1.5">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <Border Background="#0284C7" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
@@ -441,7 +462,7 @@
                     </Border>
 
                     <!-- STAGE 4 CARD: DATA MIGRATION TO CORE DB -->
-                    <Border Style="{StaticResource StageCard}">
+                    <Border Style="{StaticResource StageCard}" BorderBrush="#7C3AED" BorderThickness="1.5">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <Border Background="#7C3AED" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
@@ -513,7 +534,7 @@
                 <StackPanel>
 
                     <!-- STAGE 3 CARD HEADER -->
-                    <Border Style="{StaticResource StageCard}">
+                    <Border Style="{StaticResource StageCard}" BorderBrush="#059669" BorderThickness="1.5">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                 <Border Background="#059669" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
@@ -545,8 +566,8 @@
 
                             <!-- Warning Banner when Database / Tables are Already Converted to Unicode -->
                             <Border x:Name="borderAlreadyConvertedWarning" Visibility="Collapsed"
-                                    Background="{DynamicResource ThemeWarningBg}" BorderBrush="{DynamicResource ThemeWarningBorder}" BorderThickness="1"
-                                    CornerRadius="6" Padding="12,10" Margin="0,0,0,14">
+                                     Background="{DynamicResource ThemeWarningBg}" BorderBrush="{DynamicResource ThemeWarningBorder}" BorderThickness="1"
+                                     CornerRadius="6" Padding="12,10" Margin="0,0,0,14">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⚠️" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                     <StackPanel VerticalAlignment="Center">
@@ -558,7 +579,7 @@
                             </Border>
 
                             <!-- SECTION 3A: TABLE SELECTION & FETCH -->
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#0284C7" BorderThickness="1.5" CornerRadius="8" Padding="14" Margin="0,0,0,12">
                                 <StackPanel>
                                     <TextBlock Text="1. Table Selection &amp; Data Fetch" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
 
@@ -605,7 +626,7 @@
                             </Border>
 
                             <!-- SECTION 3B: FONT CONVERSION WITH LIVE PROGRESS BAR & REMAINING TIME -->
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#059669" BorderThickness="1.5" CornerRadius="8" Padding="14" Margin="0,0,0,12">
                                 <StackPanel>
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
@@ -674,7 +695,7 @@
                             </Border>
 
                             <!-- SECTION 3C: DATABASE UPDATE -->
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="14">
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#7C3AED" BorderThickness="1.5" CornerRadius="8" Padding="14">
                                 <StackPanel>
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>

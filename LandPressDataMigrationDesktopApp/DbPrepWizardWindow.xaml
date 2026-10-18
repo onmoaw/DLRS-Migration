@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LandPressDataMigrationDesktopApp"
         mc:Ignorable="d"
-        Title="Database Preparation Wizard"
+        Title="{x:Static local:AppConfig.DbPrepWizardTitle}"
         Height="700" Width="920"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
@@ -367,7 +368,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="DLRS Preparation Wizard  v1.0" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0" Text="{x:Static local:AppConfig.DbPrepWizardTitle}" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Powered by " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11"/>
                     <TextBlock Text="Pirthe Limited" Foreground="#F97316" FontWeight="Bold" FontSize="11"/>

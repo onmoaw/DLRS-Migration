@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LandPressDataMigrationDesktopApp"
         mc:Ignorable="d"
-        Title="DLRS Data Migration Tool - Login"
+        Title="{x:Static local:AppConfig.WindowTitle}"
         Height="560" Width="470"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
@@ -117,11 +117,15 @@
                     <Image Source="/Assets/DLRS-Migration App Icon.png" Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                 </Border>
 
-                <TextBlock Text="DLRS Data Migration"
-                           Foreground="{DynamicResource ThemeTextPrimary}"
-                           FontSize="20"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="DLRS Data Migration"
+                               Foreground="{DynamicResource ThemeTextPrimary}"
+                               FontSize="20"
+                               FontWeight="Bold"/>
+                    <Border Background="#1D4ED8" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Static local:AppConfig.Version}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
                 <TextBlock Text="Authorized Access Portal"
                            Foreground="{DynamicResource ThemeTextMuted}"
                            FontSize="12"
