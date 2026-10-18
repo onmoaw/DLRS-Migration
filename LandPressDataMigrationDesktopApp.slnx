@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="DBAccess/DBAccess.csproj" Id="3997c538-72e3-486b-afc9-84aa90e873af">
+    <BuildType Project="Release" />
+  </Project>
+  <Project Path="FontConverter/FontConverter.csproj" Id="8cca251a-1f95-42d9-89ee-c46f3b778d9f">
+    <BuildType Project="Release" />
+  </Project>
+  <Project Path="LandPressDataMigrationDesktopApp/LandPressDataMigrationDesktopApp.csproj">
+    <BuildType Project="Release" />
+  </Project>
+</Solution>

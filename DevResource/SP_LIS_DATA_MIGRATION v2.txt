@@ -1,0 +1,1054 @@
+USE [DLRSLSINF_4103PRSDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_LIS_DATA_MIGRATION]    Script Date: 12-Oct-26 11:46:02 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		<Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:	<Description,,>
+-- =============================================
+ALTER PROCEDURE [dbo].[SP_LIS_DATA_MIGRATION] 
+	@ComCod nvarchar(2500)='',	
+	@ProcID nvarchar(2500)='',
+	@Dxml01 xml = null,
+	@Dxml02 xml = null,
+	@Dbin01 varbinary(max) = null, 
+	@Desc01 nvarchar(2500)='',
+	@Desc02 nvarchar(2500)='',
+	@Desc03 nvarchar(2500)='',
+	@Desc04 nvarchar(2500)='', 
+	@Desc05 nvarchar(2500)='',
+	@Desc06 nvarchar(2500)='',	
+	@Desc07 nvarchar(2500)='',	
+	@Desc08 nvarchar(2500)='', 	
+	@Desc09 nvarchar(2500)='', 	
+	@Desc10 nvarchar(2500)='',	
+	@Desc11 nvarchar(max)='',
+	@Desc12 nvarchar(max)='',
+	@Desc13 nvarchar(max)='',
+	@Desc14 nvarchar(max)='',
+	@Desc15 nvarchar(max)='', 
+	@Desc16 nvarchar(max)='', 
+	@Desc17 nvarchar(max)='',
+	@Desc18 nvarchar(max)='',
+	@Desc19 nvarchar(max)='',
+	@Desc20 nvarchar(max)=''
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+	-- SET XACT_ABORT ON will cause the transaction to be uncommittable when the constraint violation occurs. 
+	SET XACT_ABORT ON;
+	SET QUERY_GOVERNOR_COST_LIMIT 0;
+begin
+	begin try
+		if @ProcID = 'MTO_AREAINF'			goto MIGRATE_LANDINFO_TO_AREAINF; --half done 
+		if @ProcID = 'MANAGE_MISSMATCH'		goto MANAGE_THE_MISSMATCH_KHATIANS; 
+
+		if @ProcID = 'MTO_LINFO00'			goto MIGRATE_LANDINFO_TO_LINFO00;
+		/*
+		   [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO00', @Desc01='jowarsahara', @Desc02='201901';
+		*/
+		if @ProcID = 'MTO_LINFO01'			goto MIGRATE_LANDINFO_TO_LINFO01;
+		/*
+		   [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO01', @Desc01='jowarsahara', @Desc02='201901';
+		*/
+
+		if @ProcID = 'MTO_LINFO02'			goto MIGRATE_LANDINFO_TO_LINFO02;
+		/*
+		   [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO02', @Desc01='jowarsahara', @Desc02='201901';
+		*/
+
+		if @ProcID = 'UPDTMAPINF01'			goto UPDATE_MAPINF01_WITH_UNITCOD;
+
+		if @ProcID = 'MTO_PLOTINF01'		goto MIGRATE_LANDINFO_TO_PLOTINF01; -- Working On
+
+	--------------------------------------------------------
+		set @ProcID = char(13) + 'Process ID "' + @ProcID + '" not found to execute';
+		raiserror(@ProcID, 16, 1);
+	end try
+	begin catch
+		execute dbo.sp_lis_common_utility_info 'XXX', 'GETERRORINFO01', @Desc01=@ProcID;
+	end catch; 
+	return;
+end;
+--****************************************************************
+--****************************************************************
+
+MIGRATE_LANDINFO_TO_AREAINF:
+-- [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_AREAINF', @Desc01='Dhaka_Pritthi_U';
+begin 
+--	begin try
+--	create table #tempareainf (comcod nchar(4), unitcod nchar(9), unitnam nvarchar(150), unitrefs nvarchar(250), unittype nvarchar(30), unitginf xml, resanum nvarchar(30), geocode nvarchar(30), areatype nchar(5));
+
+--	create table #tempunicodlist (unitcod nchar(9));
+
+--	insert into #tempunicodlist select distinct unitcod from Dhaka_Pritthi_U.dbo.tblHalsabek intersect select distinct unitcod from Dhaka_Pritthi_U.dbo.tblLinfo01 intersect select distinct unitcod from Dhaka_Pritthi_U.dbo.tblLinfo02;
+
+--	declare @unitcod char(9);
+--	declare unit_cursor cursor for select ltrim(rtrim(unitcod)) from #tempunicodlist;
+--	open unit_cursor;
+--	fetch next from unit_cursor into @unitcod;
+
+--	while @@fetch_status = 0
+--	begin
+
+--	insert into #tempareainf (comcod, unitcod, unitnam, unitrefs, unittype, unitginf, resanum, geocode, areatype) select '4103', a.unitcod, a.unitnam, N'ডিএলআরএস প্রেস', a.unittype, a.unitginf, a.resanum, a.geocode, a.areatype from  [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] a where a.unitcod = '7'+left(right(@unitcod, 8),1)+'0000000' or a.unitcod = '7'+left(right(@unitcod, 8),3)+'00000' or a.unitcod = '7'+left(right(@unitcod, 8),5)+'000' or a.unitcod = '7'+right(@unitcod, 8); 
+
+--	--if exists (select 1 from [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] where unitcod = @unitcod) --mouza
+--	--if exists (select 1 from [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] where unitcod = left(@unitcod, 6)+'000') --upazila
+--	--if exists (select 1 from [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] where unitcod = left(@unitcod, 4)+'00000') --zila
+--	--if exists (select 1 from [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] where unitcod = left(@unitcod, 2)+'0000000') --div
+
+--	--if not exists (select 1 from [DLRSLSINF_4103PRSDB].[dbo].[AREAINF] where unitcod = '7'+left(right(@unitcod, 8),1)+'0000000') --div
+--	--	insert into #tempareainf (comcod, unitcod, unitnam, unitrefs, unittype, unitginf, resanum, geocode, areatype) select '4103', a.unitcod, a.unitnam, N'ডিএলআরএস প্রেস', a.unittype, a.unitginf, a.resanum, a.geocode, a.areatype from  [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] a where a.unitcod = '7'+left(right(@unitcod, 8),1)+'0000000'; 
+
+--	--if not exists (select 1 from [DLRSLSINF_4103PRSDB].[dbo].[AREAINF] where unitcod = '7'+left(right(@unitcod, 8),3)+'00000') --zila
+--	--insert into #tempareainf (comcod, unitcod, unitnam, unitrefs, unittype, unitginf, resanum, geocode, areatype) select '4103', a.unitcod, a.unitnam, N'ডিএলআরএস প্রেস', a.unittype, a.unitginf, a.resanum, a.geocode, a.areatype from  [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] a where a.unitcod = '7'+left(right(@unitcod, 8),3)+'00000'; 
+
+--	--if not exists (select 1 from [DLRSLSINF_4103PRSDB].[dbo].[AREAINF] where unitcod = '7'+left(right(@unitcod, 8),5)+'000') --upazila
+--	--insert into #tempareainf (comcod, unitcod, unitnam, unitrefs, unittype, unitginf, resanum, geocode, areatype) select '4103', a.unitcod, a.unitnam, N'ডিএলআরএস প্রেস', a.unittype, a.unitginf, a.resanum, a.geocode, a.areatype from  [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] a where a.unitcod = '7'+left(right(@unitcod, 8),5)+'000'; 
+
+--	--if not exists (select 1 from [DLRSLSINF_4103PRSDB].[dbo].[AREAINF] where unitcod = '7'+right(@unitcod, 8)) --mouza
+--	--insert into #tempareainf (comcod, unitcod, unitnam, unitrefs, unittype, unitginf, resanum, geocode, areatype) select '4103', a.unitcod, a.unitnam, N'ডিএলআরএস প্রেস', a.unittype, a.unitginf, a.resanum, a.geocode, a.areatype from  [DLRSLSINF_0000SYSDB].[dbo].[SYS_AREAINF] a where a.unitcod = '7'+right(@unitcod, 8); 
+
+--	fetch next from unit_cursor into @unitcod;
+--	end
+--	close unit_cursor;
+--	deallocate unit_cursor;
+
+
+--	select * from #tempunicodlist;
+--	select * from #tempareainf;
+--	return
+--end try
+--begin catch
+--	return
+--end catch;
+return
+end;--MIGRATE_LANDINFO_TO_AREAINF
+--****************************************************************
+
+
+MANAGE_THE_MISSMATCH_KHATIANS:
+--[dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MANAGE_MISSMATCH', @Desc01='Dhaka_Pritthi_U';
+begin try
+
+	declare @sql nvarchar(max); 
+	create table #tempmissmatch (unitcod char(9), KhtNum nvarchar(20)); 
+
+
+	set @sql = 'insert into #tempmissmatch (unitcod, KhtNum) 
+		select distinct ltrim(rtrim(l1.unitcod)), ltrim(rtrim(l1.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 
+		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(h.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(h.KhtNum)) 
+		where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null 
+		union select distinct ltrim(rtrim(l1.unitcod)), ltrim(rtrim(l1.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 
+		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 on ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(l2.KhtNum)) 
+		where ltrim(rtrim(l2.unitcod)) is null or ltrim(rtrim(l2.KhtNum)) is null 
+		union select distinct ltrim(rtrim(l2.unitcod)), ltrim(rtrim(l2.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 
+		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(h.unitcod)) and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(h.KhtNum)) 
+		where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null 
+		union select distinct ltrim(rtrim(l2.unitcod)), ltrim(rtrim(l2.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 
+		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 on ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(l1.KhtNum)) 
+		where ltrim(rtrim(l1.unitcod)) is null or ltrim(rtrim(l1.KhtNum)) is null 
+		union select distinct ltrim(rtrim(h.unitcod)), ltrim(rtrim(h.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h 
+		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 on ltrim(rtrim(h.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(l1.KhtNum)) 
+		where ltrim(rtrim(l1.unitcod)) is null or ltrim(rtrim(l1.KhtNum)) is null 
+		union select distinct ltrim(rtrim(h.unitcod)), ltrim(rtrim(h.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h 
+		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 on ltrim(rtrim(h.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(l2.KhtNum)) 
+		where ltrim(rtrim(l2.unitcod)) is null or ltrim(rtrim(l2.KhtNum)) is null;';
+
+	exec sp_executesql @sql;
+	select * from #tempmissmatch ;
+	drop table #tempmissmatch ;
+
+	return
+
+end try
+begin catch
+
+	print 'Error'
+	return
+
+end catch;--MANAGE_THE_MISSMATCH_KHATIANS
+--****************************************************************
+
+--MIGRATE_LANDINFO_TO_LINFO00:
+---- [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO00', @Desc01='chachra', @Desc02='201901';
+
+--begin try
+
+--	create table #templf00 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), ekhtnum nvarchar(20), pkhtnum nvarchar(20), shetnum nvarchar(5),ltcode nchar(2), kremark nvarchar(1000), khtnote nvarchar(100), khtdat1 xml, khtdat2 xml, khtdat3 xml, khtdat4 xml, khtdat5 xml, khtdat6 xml, khtstatus nvarchar(250), usrid nchar(12), sealid nchar(3), sealdesc nvarchar(250), usrses nvarchar(10), termid nvarchar(50), rowtime datetime);
+
+--	declare @DynamicQuerylf00 nvarchar(max);
+--	set @DynamicQuerylf00 = N'insert into #templf00 select @Comcod as comcod, @Desc02 as rsnum, ''7''+ right(ltrim(rtrim(a.unitcod)),8) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, ltrim(rtrim(a.KhtNum)) as ekhtnum, N'''' as pkhtnum, N''000'' AS shetnum, 
+--	N''0'' + ltrim(rtrim(a.LndTyp)) as ltcode, ltrim(rtrim(a.KRemark)) as kremark, N'''' as khtnote, NULL AS khtdat1, NULL as khtdat2, NULL as khtdat3, NULL as khtdat4, NULL as khtdat5, NULL as khtdat6, 
+--	N''চূড়ান্ত প্রকাশনা স্তর'' as khtstatus, ltrim(rtrim(a.UsrId)) as usrid, N''000'' AS sealid, N'''' as sealdesc, N'''' as usrses, N'''' as termid, ltrim(rtrim(a.Entdate)) as ROWTIME from ' + quotename(@desc01) + '.dbo.tbllinfo01 a
+--	where exists (select 1 from ' + quotename(@desc01) + '.dbo.tblHalsabek h where ltrim(rtrim(h.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(a.KhtNum)))
+--		and exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo02 l2 where ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(a.unitcod))and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(a.KhtNum)))';
+
+--	exec sp_executesql @DynamicQuerylf00, N'@ComCod nchar(4), @Desc02 nvarchar(50)', @ComCod, @Desc02;
+
+ 
+--	with temp001 as (select a.comcod, a.rsnum, a.unitcod, a.khtnum, a.ekhtnum, a.pkhtnum, a.shetnum, a.ltcode, isnull(a.kremark, '') as kremark, isnull(a.khtnote, '') as khtnote, isnull(a.khtstatus, '') as khtstatus, 
+--		a.usrid, a.sealid, a.sealdesc, a.usrses, a.termid, a.rowtime, a.khtdat1, a.khtdat2, a.khtdat3, a.khtdat4, a.khtdat5, a.khtdat6, ROW_NUMBER() over (partition by a.comcod, a.rsnum, a.unitcod, a.khtnum order by a.rowtime desc) as newrownum 
+--		from #templf00 a)
+--	insert into DLRSLSINF_4103PRSDB.dbo_lis.linfo00 (comcod, rsnum, unitcod, khtnum, ekhtnum, pkhtnum, shetnum, ltcode, kremark, khtnote, khtdat1, khtdat2, khtdat3, khtdat4, khtdat5, khtdat6, khtstatus, usrid, sealid, sealdesc, usrses, termid, rowtime)
+--	select comcod, rsnum, unitcod, khtnum, ekhtnum, pkhtnum, shetnum, ltcode, kremark, khtnote, khtdat1, khtdat2, khtdat3, khtdat4, khtdat5, khtdat6, khtstatus, usrid, sealid, sealdesc, usrses, termid, rowtime 
+--	from temp001 where newrownum = 1;
+
+
+
+--	select * from #templf00;
+---- updating the source table
+	
+--	DECLARE @SourcetblLinfo01update NVARCHAR(MAX);
+
+--	SET @SourcetblLinfo01update = N'UPDATE a SET a.convsts = ''SUCCESS'' FROM ' + QUOTENAME(@desc01) + '.dbo.tblLinfo01 AS a INNER JOIN 
+--	(SELECT STUFF(unitcod,1,1,''0'') AS unitcod, khtnum FROM #templf00 GROUP BY STUFF(unitcod,1,1,''0''), khtnum) AS b ON a.unitcod = b.unitcod AND a.khtnum = b.khtnum;';
+--	EXEC sp_executesql @SourcetblLinfo01update;
+
+--	EXEC sp_executesql @SourcetblLinfo01update;
+
+	
+	
+--	--missmatchhandle00
+--	declare @DynamicQuerylmmf00 nvarchar(max); 
+
+--	-- Added tblnam column to temp table
+--	create table #tempmissmatch00 (comcod  nchar(4) NOT NULL DEFAULT '4103', unitcod Nchar(9), KhtNum  nvarchar(20), RowJson nvarchar(max), tblnam  nvarchar(20));
+
+--	set @DynamicQuerylmmf00 = 'insert into #tempmissmatch00 (unitcod, KhtNum, RowJson, tblnam) select distinct ltrim(rtrim(l2.unitcod)), ltrim(rtrim(l2.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] x 
+--		where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(x.KhtNum))  = ltrim(rtrim(l2.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblLinfo02''                                                  
+--		from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 on ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(l2.KhtNum))  = ltrim(rtrim(l1.KhtNum)) 
+--		where ltrim(rtrim(l1.unitcod)) is null or ltrim(rtrim(l1.KhtNum))  is null 
+
+--		union 
+
+--		select distinct ltrim(rtrim(h.unitcod)), ltrim(rtrim(h.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(h.unitcod)) 
+--		and ltrim(rtrim(x.KhtNum))  = ltrim(rtrim(h.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblHalsabek'' from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 
+--		on ltrim(rtrim(h.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(h.KhtNum))  = ltrim(rtrim(l1.KhtNum)) where ltrim(rtrim(l1.unitcod)) is null or ltrim(rtrim(l1.KhtNum))  is null;';
+
+--	exec sp_executesql @DynamicQuerylmmf00;
+
+--	INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, t.unitcod, t.khtnum, t.rowjson, 'MISMATCH', t.tblnam
+--	FROM #tempmissmatch00 t WHERE NOT EXISTS (SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod  = t.comcod AND d.unitcod = t.unitcod AND d.khtnum  = t.khtnum AND d.tblnam  = t.tblnam AND d.rowjson = t.rowjson);
+
+--	-- =============================================
+--	-- UPDATE convsts in tblLinfo02 for mismatched rows
+--	-- =============================================
+--	declare @updatelinfo02 nvarchar(max);
+--	set @updatelinfo02 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo02] t inner join #tempmissmatch00 m on ltrim(rtrim(t.unitcod)) = ltrim(rtrim(m.unitcod))
+--			   and ltrim(rtrim(t.khtnum))  = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+--	exec sp_executesql @updatelinfo02;
+
+--	-- =============================================
+--	-- UPDATE convsts in tblHalsabek for mismatched rows
+--	-- =============================================
+--	declare @updatehalsabek nvarchar(max);
+--	set @updatehalsabek = 'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tblhalsabek] t inner join #tempmissmatch00 m on  ltrim(rtrim(t.unitcod)) = ltrim(rtrim(m.unitcod))
+--			   and ltrim(rtrim(t.khtnum))  = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+--	exec sp_executesql @updatehalsabek;
+
+--	drop table #tempmissmatch00 ;
+--    drop table #templf00;
+	
+--return;
+
+--end try
+--begin catch
+
+--	--print 'Primary Key Constraint'+ ERROR_MESSAGE;
+--	return
+
+--end catch; -- MIGRATE_LANDINFO_TO_LINFO00:
+----****************************************************************
+
+
+----********************************************** Original Sp, Commented out for testing
+----MIGRATE_LANDINFO_TO_LINFO01:
+------ [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO01', @Desc01='barishal_sbd22122025', @Desc02='201901';
+----begin
+
+----	--create table #templf01 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), pltnum nvarchar(15), slnum int, lucode nchar(5), tpltarea decimal(18,6), 
+----	--	khtshare decimal(18,6), kpltarea decimal(18,6), kpltrmrk nvarchar(1500), skhtnum nvarchar(250), spltnum nvarchar(500), cpltnum nvarchar(250), rowtime datetime);
+
+----	--************************************************************ Edited By Atik
+
+----	create table #templf01 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), pltnum nvarchar(15), slnum int, lucode nchar(5), tpltarea decimal(18,6), 
+----		khtshare decimal(18,6), kpltarea decimal(18,6), kpltrmrk nvarchar(1500), skhtnum nvarchar(250), spltnum nvarchar(1500), cpltnum nvarchar(250), rowtime datetime);
+
+----    --*******************************************************************************************************************************************************************************
+
+
+----	declare @DynamicQuerylf05 nvarchar(max);
+ 
+----	 set @DynamicQuerylf05 = N'with cte as (select @comcod as comcod, @desc02 as rsnum, ''7''+ right(ltrim(rtrim(unitcod)),8) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, 
+----		ltrim(rtrim(a.pltnum)) as pltnum, case 
+----		when exists (select 1 from #templf01 t where t.comcod = @comcod and t.rsnum = @desc02 and t.unitcod = ''7''+right(ltrim(rtrim(a.unitcod)),8) and t.khtnum = ltrim(rtrim(a.khtnum))) then
+----		(select max(slnum)+1 from #templf01 t where t.comcod = @comcod and t.rsnum = @desc02 and t.unitcod = ''7''+right(ltrim(rtrim(a.unitcod)),8) and t.khtnum = ltrim(rtrim(a.khtnum))) else 1 end
+----		as slnum, N'''' as lucode, 0.0 as tpltarea, 0.0 as khtshare, 0.0 as kpltarea, N'''' as kpltrmrk, N'''' as skhtnum, 
+----		ltrim(rtrim(a.hspltnum)) as spltnum, N'''' as cpltnum, a.entdt as rowtime from '+quotename(@desc01)+'.dbo.tblHalsabek a)
+----		insert into #templf01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+----		select comcod, rsnum, unitcod, khtnum, pltnum, row_number() over (partition by @comcod, @desc02, ''7'' + right(ltrim(rtrim(unitcod)), 8), ltrim(rtrim(khtnum)) order by pltnum) as slnum, 
+----		max(lucode) as lucode, max(tpltarea) as tpltarea, max(khtshare) as khtshare, max(kpltarea) as kpltarea,  
+----		max(kpltrmrk) as kpltrmrk, max(skhtnum) as skhtnum, STRING_AGG(spltnum, '','') as spltnum, max(cpltnum) as cpltnum, max(rowtime) as rowtime from CTE group by comcod, rsnum, unitcod, khtnum, pltnum;';
+
+----	exec sp_executesql @DynamicQuerylf05, N'@ComCod nchar(4), @Desc02 nvarchar(50)',  @ComCod, @Desc02;
+
+----	declare @DynamicQuerylf06 NVARCHAR(MAX); 
+
+----	set @dynamicquerylf06 = N'update a set a.tpltarea = isnull(b.tpltarea, 0.0), a.khtshare = isnull(b.khtshare, 0.0), a.kpltarea = isnull(b.kpltarea, 0.0), 
+----		a.kpltrmrk = isnull(b.kremark, '''') from #templf01 a inner join ' + quotename(@desc01) + '.dbo.tbllinfo01 b on a.unitcod = ''7''+right(ltrim(rtrim(b.unitcod)),8) and a.khtnum = b.khtnum and a.pltnum = b.pltnum';
+
+----	exec sp_executesql @DynamicQuerylf06, N'@ComCod nchar(4), @Desc01 nvarchar(50)', @ComCod, @Desc01;
+
+----	insert into DLRSLSINF_4103PRSDB.dbo_lis.LINFO01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+----	select comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime from #templf01;
+
+----	--missmatch01
+----	declare @DynamicQuerylmmf01 nvarchar(max); 
+----	create table #tempmissmatch01 (unitcod char(9), KhtNum nvarchar(20)); 
+
+----	set @DynamicQuerylmmf01 = 'insert into #tempmissmatch01 (unitcod, KhtNum) 
+----		select distinct ltrim(rtrim(l1.unitcod)), ltrim(rtrim(l1.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 
+----		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(h.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(h.KhtNum)) 
+----		where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null 
+----		union select distinct ltrim(rtrim(l2.unitcod)), ltrim(rtrim(l2.KhtNum)) from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 
+----		left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(h.unitcod)) and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(h.KhtNum)) 
+----		where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null;';
+
+----	exec sp_executesql @DynamicQuerylmmf01;
+
+----	select * from #tempmissmatch01;
+
+----	insert into DLRSLSINF_4103PRSDB.dbo_lis.LINFO01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+----		select @ComCod, @Desc02, '7'+right(ltrim(rtrim(a.unitcod)),8), a.khtnum, N'', '1', '90001', 0.0, 0.0, 0.0, N'', N'', N'', N'', getdate() 
+----		from #tempmissmatch01 a where not exists (select 1 from DLRSLSINF_4103PRSDB.dbo_lis.LINFO01 b where b.unitcod = '7'+right(ltrim(rtrim(a.unitcod)),8) and b.khtnum = a.khtnum);
+
+----	drop table #tempmissmatch01 ;
+----	--drop table #templf01;
+
+----return;
+----end;
+-- -- MIGRATE_LANDINFO_TO_LINFO01:
+----****************************************************************
+----****************************************************************** End of original Sp
+
+
+
+
+
+----************************************************************** Only for testing Purpose
+
+--MIGRATE_LANDINFO_TO_LINFO01:
+---- [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO01', @Desc01='chachra', @Desc02='201901';
+--begin
+
+--	--create table #templf01 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), pltnum nvarchar(15), slnum int, lucode nchar(5), tpltarea decimal(18,6), 
+--	--	khtshare decimal(18,6), kpltarea decimal(18,6), kpltrmrk nvarchar(1500), skhtnum nvarchar(250), spltnum nvarchar(500), cpltnum nvarchar(250), rowtime datetime);
+
+--	--************************************************************ Edited By Atik
+
+--	--create table #templf01 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), pltnum nvarchar(15), slnum int, lucode nchar(5), tpltarea decimal(18,6), 
+--	--	khtshare decimal(18,6), kpltarea decimal(18,6), kpltrmrk nvarchar(1500), skhtnum nvarchar(250), spltnum nvarchar(max), cpltnum nvarchar(250), rowtime datetime);
+
+--	--************************************************************ onmoaw 10/10/26
+--	create table #templf01 (
+--    comcod nchar(4) collate database_default, rsnum nchar(6) collate database_default,
+--    unitcod nchar(9) collate database_default, khtnum nvarchar(20) collate database_default,
+--    pltnum nvarchar(15) collate database_default, slnum int,
+--    lucode nchar(5) collate database_default, tpltarea decimal(18,6),
+--    khtshare decimal(18,6), kpltarea decimal(18,6),
+--    kpltrmrk nvarchar(1500) collate database_default,
+--    skhtnum nvarchar(250) collate database_default,
+--    spltnum nvarchar(max) collate database_default,
+--    cpltnum nvarchar(250) collate database_default, rowtime datetime);
+
+--    --************************************************************
+
+
+
+
+
+--	-- =====================================================
+--	-- COPY PASTE THIS ENTIRE BLOCK TO REPLACE THE EXISTING
+--	-- @DynamicQuerylf05 SET AND EXEC IN SP2
+--	-- =====================================================
+--	declare @DynamicQuerylf05 nvarchar(max);
+
+--	set @DynamicQuerylf05 = N'with cte as (select @comcod as comcod, @desc02 as rsnum, ''7''+ right(ltrim(rtrim(a.unitcod)),8) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, ltrim(rtrim(a.pltnum)) as pltnum, 
+--		case 
+--			when exists (select 1 from #templf01 t 
+--				where t.comcod = @comcod and t.rsnum = @desc02 
+--				and t.unitcod = ''7''+right(ltrim(rtrim(a.unitcod)),8) 
+--				and t.khtnum = ltrim(rtrim(a.khtnum))) 
+--			then (select max(slnum)+1 from #templf01 t 
+--				where t.comcod = @comcod and t.rsnum = @desc02 
+--				and t.unitcod = ''7''+right(ltrim(rtrim(a.unitcod)),8) 
+--				and t.khtnum = ltrim(rtrim(a.khtnum))) 
+--			else 1 
+--		end as slnum, 
+--		N'''' as lucode, 0.0 as tpltarea, 0.0 as khtshare, 0.0 as kpltarea, N'''' as kpltrmrk, N'''' as skhtnum, ltrim(rtrim(a.hspltnum)) as spltnum, N'''' as cpltnum, a.entdt as rowtime from ' + quotename(@desc01) + '.dbo.tblHalsabek a
+--		where exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo01 l1 where ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(a.KhtNum)))
+--		and exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo02 l2 where ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(a.KhtNum))))
+
+--		insert into #templf01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+--		select comcod, rsnum, unitcod, khtnum, pltnum, row_number() over (partition by @comcod, @desc02, ''7'' + right(ltrim(rtrim(unitcod)), 8), ltrim(rtrim(khtnum)) order by pltnum) as slnum, 
+--		max(lucode) as lucode, max(tpltarea) as tpltarea, max(khtshare) as khtshare, max(kpltarea) as kpltarea, max(kpltrmrk) as kpltrmrk, max(skhtnum) as skhtnum, STRING_AGG(CAST(spltnum AS nvarchar(max)), N'','') AS spltnum, 
+--		max(cpltnum) as cpltnum, max(rowtime) as rowtime from CTE group by comcod, rsnum, unitcod, khtnum, pltnum';
+
+--	exec sp_executesql @DynamicQuerylf05, N'@ComCod nchar(4), @Desc02 nvarchar(50)', @ComCod, @Desc02;
+--	-- =====================================================
+--	-- END OF COPY PASTE BLOCK
+--	-- =====================================================
+
+
+--	declare @DynamicQuerylf06 NVARCHAR(MAX); 
+
+--	set @dynamicquerylf06 = N'update a set a.tpltarea = isnull(b.tpltarea, 0.0), a.khtshare = isnull(b.khtshare, 0.0), a.kpltarea = isnull(b.kpltarea, 0.0), 
+--		a.kpltrmrk = isnull(b.kremark, '''') from #templf01 a inner join ' + quotename(@desc01) + '.dbo.tbllinfo01 b on a.unitcod = ''7''+right(ltrim(rtrim(b.unitcod)),8) and a.khtnum = b.khtnum and a.pltnum = b.pltnum';
+
+--	exec sp_executesql @DynamicQuerylf06, N'@ComCod nchar(4), @Desc01 nvarchar(50)', @ComCod, @Desc01;
+
+--	-- Duplicate check
+--	-- #tempchecklf01 holds group by data (no duplicate), so is, #templf01
+
+--	SELECT l.unitcod, l.khtnum, l.pltnum INTO #tempchecklf01 FROM dlrslsinf_4103prsdb.dbo_lis.linfo01 l WHERE EXISTS (SELECT 1 FROM #templf01 t WHERE t.unitcod = l.unitcod);
+
+
+--	IF EXISTS (SELECT 1 FROM #tempchecklf01)
+--	BEGIN
+--		DECLARE @SourceHalsabeDuplicatekupdate NVARCHAR(MAX); 
+--		SET @SourceHalsabeDuplicatekupdate = N'UPDATE a SET a.convsts = ''DUPLICATE'' FROM ' + QUOTENAME(@desc01) + '.dbo.tblHalsabek AS a INNER JOIN (
+--		SELECT STUFF(unitcod,1,1,''0'') AS unitcod, khtnum, pltnum FROM #tempchecklf01 GROUP BY STUFF(unitcod,1,1,''0''), khtnum, pltnum) AS b ON a.unitcod = b.unitcod AND a.khtnum = b.khtnum AND a.pltnum = b.pltnum
+--		where len(ltrim(rtrim(a.convsts))) = 0;';
+--		EXEC sp_executesql @SourceHalsabeDuplicatekupdate;
+
+--		-- Capture the duplicate rows BEFORE deleting, serialize entire row as JSON
+--		INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, STUFF(t.unitcod, 1, 1, '0') AS unitcod, t.khtnum,
+--			(SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS rowjson, 'DUPLICATE' AS rowsts, 'tblHalsabek' AS tblnam FROM #templf01 t 
+--		INNER JOIN #tempchecklf01 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.pltnum = c.pltnum WHERE NOT EXISTS (
+--			SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod  = t.comcod AND d.unitcod = STUFF(t.unitcod, 1, 1, '0') AND d.khtnum  = t.khtnum AND d.tblnam  = 'tblHalsabek'
+--			  AND d.rowjson = (SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER));
+
+--		-- Now delete the duplicate rows from source temp table
+--		DELETE t FROM #templf01 t INNER JOIN #tempchecklf01 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.pltnum = c.pltnum;
+--	END
+
+--	--*********************************************************************************************************************************
+
+--	insert into DLRSLSINF_4103PRSDB.dbo_lis.LINFO01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+--	select comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime from #templf01;
+
+--	-- UPDATE EACH ROW STATUS IN SOURCE DB
+--	declare @SourceHalsabekupdate nvarchar(max);
+    
+--		set @SourceHalsabekupdate = N'update a set a.convsts = ''SUCCESS'' from ' + quotename(@desc01) + '.dbo.tblHalsabek as a inner join (select stuff(unitcod,1,1,''0'') as unitcod, khtnum, pltnum 
+--		from #templf01 group by stuff(unitcod,1,1,''0''), khtnum, pltnum) as b on a.unitcod = b.unitcod and a.khtnum = b.khtnum and a.pltnum = b.pltnum;';
+
+--	exec sp_executesql @SourceHalsabekupdate;
+
+
+--	--missmatch01
+--	declare @DynamicQuerylmmf01 nvarchar(max); 
+--	--create table #tempmissmatch01 (comcod nchar(4) NOT NULL DEFAULT '4103', unitcod char(9), KhtNum nvarchar(20), RowJson nvarchar(max), tblnam nvarchar(20));
+--	create table #tempmissmatch01 (comcod nchar(4) collate database_default NOT NULL DEFAULT '4103',
+--    unitcod char(9) collate database_default, KhtNum nvarchar(20) collate database_default,
+--    RowJson nvarchar(max) collate database_default, tblnam nvarchar(20) collate database_default);
+--	set @DynamicQuerylmmf01 = 'insert into #tempmissmatch01 (unitcod, KhtNum, RowJson, tblnam) select distinct ltrim(rtrim(l1.unitcod)), ltrim(rtrim(l1.KhtNum)),
+--	(select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(l1.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+--	''tblLinfo01''
+--	from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(h.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(h.KhtNum)) 
+--	where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null 
+--	union 
+--	select distinct ltrim(rtrim(l2.unitcod)), ltrim(rtrim(l2.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] x 
+--	where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(l2.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+--	''tblLinfo02''
+--	from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(h.unitcod)) 
+--	and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(h.KhtNum)) where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null;';
+--	exec sp_executesql @DynamicQuerylmmf01;
+
+--	INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, t.unitcod, t.khtnum, t.rowjson, 'MISMATCH', t.tblnam 
+--	FROM #tempmissmatch01 t  WHERE NOT EXISTS (SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod  = t.comcod AND d.unitcod = t.unitcod AND d.khtnum  = t.khtnum AND d.tblnam  = t.tblnam
+--      AND d.rowjson = t.rowjson);
+
+--	-- =============================================
+--	-- UPDATE convsts in tblLinfo01 for mismatched rows
+--	-- =============================================
+--	declare @updatelinfo01_mm01 nvarchar(max);
+--	set @updatelinfo01_mm01 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo01] t inner join #tempmissmatch01 m on ltrim(rtrim(t.unitcod)) = ltrim(rtrim(m.unitcod))
+--		and ltrim(rtrim(t.khtnum))  = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+--	exec sp_executesql @updatelinfo01_mm01;
+
+--	-- =============================================
+--	-- update convsts in tbllinfo02 for mismatched rows
+--	-- =============================================
+--	declare @updatelinfo02_mm01 nvarchar(max);
+--	set @updatelinfo02_mm01 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo02] t inner join #tempmissmatch01 m on ltrim(rtrim(t.unitcod)) = ltrim(rtrim(m.unitcod))
+--		and ltrim(rtrim(t.khtnum))  = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+--	exec sp_executesql @updatelinfo02_mm01;
+
+--		drop table #tempmissmatch01 ;
+--		drop table #templf01;
+--		drop table #tempchecklf01;
+
+--return;
+--end;
+-- -- MIGRATE_LANDINFO_TO_LINFO01:
+----****************************************************************
+----***************************************************************** End of experiment
+
+
+--MIGRATE_LANDINFO_TO_LINFO02:
+---- exec [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO02', @Desc01='chachra', @Desc02='201901';
+--begin
+	
+--	--create table #templf02 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), ownrgrp int, ownrnum int, ownname nvarchar(300),
+--	--gender nvarchar(20), nidnum nvarchar(50), bregnum nvarchar(50), fathernam nvarchar(200), mothernam nvarchar(200), spousenam nvarchar(200), 
+--	--phone01 nvarchar(50), email01 nvarchar(50), address01 nvarchar(350), ownrarea decimal(18, 6), rowtime datetime);
+
+--	-- ===================================================== onmoaw 10/10/26
+--	create table #templf02 (
+--    comcod nchar(4) collate database_default, rsnum nchar(6) collate database_default,
+--    unitcod nchar(9) collate database_default, khtnum nvarchar(20) collate database_default,
+--    ownrgrp int, ownrnum int, ownname nvarchar(300) collate database_default,
+--    gender nvarchar(20) collate database_default, nidnum nvarchar(50) collate database_default,
+--    bregnum nvarchar(50) collate database_default, fathernam nvarchar(200) collate database_default,
+--    mothernam nvarchar(200) collate database_default, spousenam nvarchar(200) collate database_default,
+--    phone01 nvarchar(50) collate database_default, email01 nvarchar(50) collate database_default,
+--    address01 nvarchar(350) collate database_default, ownrarea decimal(18,6), rowtime datetime);
+
+--	-- =====================================================
+--	-- COPY PASTE THIS ENTIRE BLOCK TO REPLACE THE EXISTING
+--	-- @DynamicQuerylf02 SET AND EXEC IN SP3
+--	-- =====================================================
+--	declare @DynamicQuerylf02 nvarchar(max);
+
+--	set @DynamicQuerylf02 = N'insert into #templf02 select @comcod as comcod, @desc02 as rsnum, ''7''+ right(ltrim(rtrim(a.unitcod)),8) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, a.ownrgrp, a.ownrnum, ltrim(rtrim(a.ownname)) as ownname, 
+--		case 
+--			when ltrim(rtrim(a.addr1)) like N''জং%'' 
+--			then N''মহিলা'' 
+--			else N'''' end as gender, 
+--		N'''' as nidnum, N'''' as bregnum, 
+--		case 
+--			when ltrim(rtrim(a.addr1)) like N''পিং%'' 
+--			then ltrim(rtrim(a.addr1)) 
+--			else N'''' end as fathernam, 
+--		N'''' as mothernam, 
+--		case 
+--			when ltrim(rtrim(a.addr1)) like N''জং%'' 
+--			then ltrim(rtrim(a.addr1)) 
+--			else N'''' end as spousenam, 
+--		N'''' as phone01, N'''' as email01, left(ltrim(rtrim(isnull(a.addr2, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr3, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr4, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr5, N''''))) + N'' '' + 
+--		ltrim(rtrim(isnull(a.addr6, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr7, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr8, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr9, N''''))) + N'' '' + 
+--		ltrim(rtrim(isnull(a.addr10, N''''))), 350) as address01, cast(a.ownrarea as decimal(18,6)) as ownrarea, a.entdate as rowtime from ' + quotename(@desc01) + '.dbo.tbllinfo02 a
+--		where exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo01 l1 where ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(a.KhtNum)))
+--		and exists (select 1 from ' + quotename(@desc01) + '.dbo.tblHalsabek h where ltrim(rtrim(h.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(a.KhtNum)))';
+
+--		exec sp_executesql @DynamicQuerylf02, N'@Desc02 nchar(9), @ComCod nchar(4)', @Desc02, @ComCod;
+--	-- =====================================================
+--	-- END OF COPY PASTE BLOCK
+--	-- =====================================================
+
+--	SELECT l.unitcod, l.khtnum, l.ownrgrp, l.ownrnum INTO #tempchecklf02 FROM dlrslsinf_4103prsdb.dbo_lis.linfo02 l WHERE EXISTS (SELECT 1 FROM #templf02 t WHERE t.unitcod = l.unitcod);
+--	IF EXISTS (SELECT 1 FROM #tempchecklf02)
+--	BEGIN
+--		DECLARE @sourcetbllinfo02duplicatekupdate NVARCHAR(MAX);
+
+--		SET @sourcetbllinfo02duplicatekupdate = N'UPDATE a SET a.convsts = ''DUPLICATE'' FROM ' + QUOTENAME(@desc01) + '.dbo.tbllinfo02 AS a INNER JOIN (
+--		SELECT STUFF(unitcod,1,1,''0'') AS unitcod, khtnum, ownrgrp, ownrnum FROM #tempchecklf02 GROUP BY STUFF(unitcod,1,1,''0''), khtnum, ownrgrp, ownrnum
+--		  ) AS b ON a.unitcod = b.unitcod AND a.khtnum = b.khtnum AND a.ownrgrp = b.ownrgrp AND a.ownrnum = b.ownrnum
+--		where len(ltrim(rtrim(a.convsts))) = 0;';
+
+--		EXEC sp_executesql @sourcetbllinfo02duplicatekupdate;
+--		-- Capture the duplicate rows BEFORE deleting, serialize entire row as JSON
+--		INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam)
+
+--		SELECT DISTINCT t.comcod, STUFF(t.unitcod, 1, 1, '0') AS unitcod, t.khtnum, (SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS rowjson, 'DUPLICATE' AS rowsts, 'tblLinfo02' AS tblnam
+--		FROM #templf02 t INNER JOIN #tempchecklf02 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.ownrgrp = c.ownrgrp AND t.ownrnum = c.ownrnum
+--		WHERE NOT EXISTS (SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod = t.comcod AND d.unitcod = STUFF(t.unitcod, 1, 1, '0') AND d.khtnum = t.khtnum AND d.tblnam = 'tblLinfo02'
+--			AND d.rowjson = (SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER));
+
+--		-- delete duplicate data from source temp table, because those rows are already in dlrslsinf_4103prsdb.dbo_lis.linfo02
+--		DELETE t FROM #templf02 t INNER JOIN #tempchecklf02 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.ownrgrp = c.ownrgrp AND t.ownrnum = c.ownrnum;
+--	END
+	
+--	--*********************************************************************************************************************************
+
+
+--	insert into DLRSLSINF_4103PRSDB.dbo_lis.linfo02 (comcod, rsnum, unitcod, khtnum, ownrgrp, ownrnum, ownname, gender, nidnum, bregnum, fathernam, mothernam, spousenam, phone01, email01, address01, ownrarea, rowtime)
+--	select a.comcod, a.rsnum, a.unitcod, a.khtnum, a.ownrgrp, a.ownrnum, a.ownname, a.gender, a.nidnum, a.bregnum, a.fathernam, a.mothernam, a.spousenam, a.phone01, a.email01, a.address01, a.ownrarea, a.rowtime
+--	from #templf02 a;
+
+
+--	-- UPDATE EACH ROW STATUS IN SOURCE DB
+--	declare @SourcetblLinfo02update nvarchar(max);
+    
+--		set @SourcetblLinfo02update = N'update a set a.convsts = ''SUCCESS'' from ' + quotename(@desc01) + '.dbo.tbllinfo02 as a inner join (
+--			select stuff(unitcod,1,1,''0'') as unitcod, khtnum, ownrgrp, ownrnum from #templf02 group by stuff(unitcod,1,1,''0''), khtnum, ownrgrp, ownrnum)
+--			as b on a.unitcod = b.unitcod and a.khtnum = b.khtnum and a.ownrgrp = b.ownrgrp and a.ownrnum = b.ownrnum';
+
+--	exec sp_executesql @SourcetblLinfo02update;
+
+--	--missmatchhandle02
+--	declare @DynamicQuerylmmf02 nvarchar(max); 
+--	create table #tempmissmatch02 (comcod nchar(4) NOT NULL DEFAULT '4103', unitcod char(9), KhtNum nvarchar(20), RowJson nvarchar(max), tblnam nvarchar(20));
+--	set @DynamicQuerylmmf02 = 'insert into #tempmissmatch02 (unitcod, KhtNum, RowJson, tblnam) select distinct ltrim(rtrim(l1.unitcod)), ltrim(rtrim(l1.KhtNum)),
+--	(select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(l1.KhtNum)) 
+--	 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblLinfo01'' from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 on ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(l2.unitcod)) 
+--	 and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(l2.KhtNum)) where ltrim(rtrim(l2.unitcod)) is null or ltrim(rtrim(l2.KhtNum)) is null 
+--	union 
+--	select distinct ltrim(rtrim(h.unitcod)), ltrim(rtrim(h.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(h.unitcod)) 
+--	and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(h.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblHalsabek'' from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 
+--	on ltrim(rtrim(h.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(l2.KhtNum)) where ltrim(rtrim(l2.unitcod)) is null or ltrim(rtrim(l2.KhtNum)) is null;';
+--	exec sp_executesql @DynamicQuerylmmf02;
+
+--	INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, t.unitcod, t.khtnum, t.rowjson, 'MISMATCH', t.tblnam FROM #tempmissmatch02 t WHERE NOT EXISTS
+--	(SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod = t.comcod AND d.unitcod = t.unitcod AND d.khtnum = t.khtnum AND d.tblnam = t.tblnam
+--	AND d.rowjson = t.rowjson);
+
+--	-- =============================================
+--	-- UPDATE convsts in tblLinfo01 for mismatched rows
+--	-- =============================================
+--	declare @updatelinfo01_mm02 nvarchar(max);
+--	set @updatelinfo01_mm02 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo01] t inner join #tempmissmatch02 m on ltrim(rtrim(t.unitcod)) = ltrim(rtrim(m.unitcod))
+--		and ltrim(rtrim(t.khtnum))  = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+--	exec sp_executesql @updatelinfo01_mm02;
+
+--	-- =============================================
+--	-- update convsts in tblhalsabek for mismatched rows
+--	-- =============================================
+--	declare @updatehalsabek_mm02 nvarchar(max);
+--	set @updatehalsabek_mm02 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tblhalsabek] t inner join #tempmissmatch02 m on ltrim(rtrim(t.unitcod)) = ltrim(rtrim(m.unitcod))
+--		and ltrim(rtrim(t.khtnum))  = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+--	exec sp_executesql @updatehalsabek_mm02;
+	
+--	drop table #tempmissmatch02 ;
+--	drop table #templf02
+
+--	return;
+
+--end; -- MIGRATE_LANDINFO_TO_LINFO02:
+----****************************************************************
+
+
+MIGRATE_LANDINFO_TO_LINFO00:
+-- [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO00', @Desc01='jowarsahara', @Desc02='201901';
+
+begin try
+
+	create table #templf00 (comcod nchar(4) collate database_default, rsnum nchar(6) collate database_default, unitcod nchar(9) collate database_default, 
+		khtnum nvarchar(20) collate database_default, ekhtnum nvarchar(20) collate database_default, pkhtnum nvarchar(20) collate database_default, 
+		shetnum nvarchar(5) collate database_default, ltcode nchar(2) collate database_default, kremark nvarchar(1000) collate database_default, 
+		khtnote nvarchar(100) collate database_default, khtdat1 xml, khtdat2 xml, khtdat3 xml, khtdat4 xml, khtdat5 xml, khtdat6 xml, 
+		khtstatus nvarchar(250) collate database_default, usrid nchar(12) collate database_default, sealid nchar(3) collate database_default, 
+		sealdesc nvarchar(250) collate database_default, usrses nvarchar(10) collate database_default, termid nvarchar(50) collate database_default, rowtime datetime);
+
+	declare @DynamicQuerylf00 nvarchar(max);
+	set @DynamicQuerylf00 = N'insert into #templf00 select @Comcod as comcod, @Desc02 as rsnum, ''7''+ right(ltrim(rtrim(a.unitcod)),8) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, ltrim(rtrim(a.KhtNum)) as ekhtnum, N'''' as pkhtnum, N''000'' AS shetnum, 
+	N''0'' + ltrim(rtrim(a.LndTyp)) as ltcode, ltrim(rtrim(a.KRemark)) as kremark, N'''' as khtnote, NULL AS khtdat1, NULL as khtdat2, NULL as khtdat3, NULL as khtdat4, NULL as khtdat5, NULL as khtdat6, 
+	N''চূড়ান্ত প্রকাশনা স্তর'' as khtstatus, ltrim(rtrim(a.UsrId)) as usrid, N''000'' AS sealid, N'''' as sealdesc, N'''' as usrses, N'''' as termid, ltrim(rtrim(a.Entdate)) as ROWTIME from ' + quotename(@desc01) + '.dbo.tbllinfo01 a
+	where exists (select 1 from ' + quotename(@desc01) + '.dbo.tblHalsabek h where ltrim(rtrim(h.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(a.KhtNum)))
+		and exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo02 l2 where ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(a.unitcod))and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(a.KhtNum)))';
+
+	exec sp_executesql @DynamicQuerylf00, N'@ComCod nchar(4), @Desc02 nvarchar(50)', @ComCod, @Desc02;
+
+ 
+	with temp001 as (select a.comcod, a.rsnum, a.unitcod, a.khtnum, a.ekhtnum, a.pkhtnum, a.shetnum, a.ltcode, isnull(a.kremark, '') as kremark, isnull(a.khtnote, '') as khtnote, isnull(a.khtstatus, '') as khtstatus, 
+		a.usrid, a.sealid, a.sealdesc, a.usrses, a.termid, a.rowtime, a.khtdat1, a.khtdat2, a.khtdat3, a.khtdat4, a.khtdat5, a.khtdat6, ROW_NUMBER() over (partition by a.comcod, a.rsnum, a.unitcod, a.khtnum order by a.rowtime desc) as newrownum 
+		from #templf00 a)
+	insert into DLRSLSINF_4103PRSDB.dbo_lis.linfo00 (comcod, rsnum, unitcod, khtnum, ekhtnum, pkhtnum, shetnum, ltcode, kremark, khtnote, khtdat1, khtdat2, khtdat3, khtdat4, khtdat5, khtdat6, khtstatus, usrid, sealid, sealdesc, usrses, termid, rowtime)
+	select comcod, rsnum, unitcod, khtnum, ekhtnum, pkhtnum, shetnum, ltcode, kremark, khtnote, khtdat1, khtdat2, khtdat3, khtdat4, khtdat5, khtdat6, khtstatus, usrid, sealid, sealdesc, usrses, termid, rowtime 
+	from temp001 where newrownum = 1;
+
+	select * from #templf00;
+
+	-- updating the source table
+	DECLARE @SourcetblLinfo01update NVARCHAR(MAX);
+
+	SET @SourcetblLinfo01update = N'UPDATE a SET a.convsts = ''SUCCESS'' FROM ' + QUOTENAME(@desc01) + '.dbo.tblLinfo01 AS a INNER JOIN 
+	(SELECT STUFF(unitcod,1,1,''0'') AS unitcod, khtnum FROM #templf00 GROUP BY STUFF(unitcod,1,1,''0''), khtnum) AS b 
+	ON a.unitcod collate database_default = b.unitcod AND a.khtnum collate database_default = b.khtnum;';
+	EXEC sp_executesql @SourcetblLinfo01update;
+
+	--missmatchhandle00
+	declare @DynamicQuerylmmf00 nvarchar(max); 
+
+	create table #tempmissmatch00 (comcod nchar(4) collate database_default NOT NULL DEFAULT '4103', unitcod nchar(9) collate database_default, 
+		KhtNum nvarchar(20) collate database_default, RowJson nvarchar(max) collate database_default, tblnam nvarchar(20) collate database_default);
+
+	set @DynamicQuerylmmf00 = 'insert into #tempmissmatch00 (unitcod, KhtNum, RowJson, tblnam) select distinct ltrim(rtrim(l2.unitcod)), ltrim(rtrim(l2.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] x 
+		where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(x.KhtNum))  = ltrim(rtrim(l2.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblLinfo02''                                                  
+		from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 on ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(l2.KhtNum))  = ltrim(rtrim(l1.KhtNum)) 
+		where ltrim(rtrim(l1.unitcod)) is null or ltrim(rtrim(l1.KhtNum))  is null 
+
+		union 
+
+		select distinct ltrim(rtrim(h.unitcod)), ltrim(rtrim(h.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(h.unitcod)) 
+		and ltrim(rtrim(x.KhtNum))  = ltrim(rtrim(h.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblHalsabek'' from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 
+		on ltrim(rtrim(h.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(h.KhtNum))  = ltrim(rtrim(l1.KhtNum)) where ltrim(rtrim(l1.unitcod)) is null or ltrim(rtrim(l1.KhtNum))  is null;';
+
+	exec sp_executesql @DynamicQuerylmmf00;
+
+	INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, t.unitcod, t.khtnum, t.rowjson, 'MISMATCH', t.tblnam
+	FROM #tempmissmatch00 t WHERE NOT EXISTS (SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod  = t.comcod AND d.unitcod = t.unitcod AND d.khtnum  = t.khtnum AND d.tblnam  = t.tblnam AND d.rowjson = t.rowjson);
+
+	-- =============================================
+	-- UPDATE convsts in tblLinfo02 for mismatched rows
+	-- =============================================
+	declare @updatelinfo02 nvarchar(max);
+	set @updatelinfo02 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo02] t inner join #tempmissmatch00 m on ltrim(rtrim(t.unitcod)) collate database_default = ltrim(rtrim(m.unitcod))
+			   and ltrim(rtrim(t.khtnum)) collate database_default = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+	exec sp_executesql @updatelinfo02;
+
+	-- =============================================
+	-- UPDATE convsts in tblHalsabek for mismatched rows
+	-- =============================================
+	declare @updatehalsabek nvarchar(max);
+	set @updatehalsabek = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tblhalsabek] t inner join #tempmissmatch00 m on ltrim(rtrim(t.unitcod)) collate database_default = ltrim(rtrim(m.unitcod))
+			   and ltrim(rtrim(t.khtnum)) collate database_default = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+	exec sp_executesql @updatehalsabek;
+
+	drop table #tempmissmatch00 ;
+	drop table #templf00;
+	
+return;
+
+end try
+begin catch
+
+	-- Previously this was just "return", which silently swallowed every error.
+	-- It now shows the error. Once everything runs clean you may revert to a plain "return".
+	select ERROR_NUMBER() as ErrNo, ERROR_MESSAGE() as ErrMsg, ERROR_LINE() as ErrLine;
+	return
+
+end catch; -- MIGRATE_LANDINFO_TO_LINFO00:
+--****************************************************************
+
+
+MIGRATE_LANDINFO_TO_LINFO01:
+-- [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO01', @Desc01='jowarsahara', @Desc02='201901';
+begin
+
+	create table #templf01 (
+		comcod nchar(4) collate database_default, rsnum nchar(6) collate database_default,
+		unitcod nchar(9) collate database_default, khtnum nvarchar(20) collate database_default,
+		pltnum nvarchar(15) collate database_default, slnum int,
+		lucode nchar(5) collate database_default, tpltarea decimal(18,6),
+		khtshare decimal(18,6), kpltarea decimal(18,6),
+		kpltrmrk nvarchar(1500) collate database_default,
+		skhtnum nvarchar(250) collate database_default,
+		spltnum nvarchar(max) collate database_default,
+		cpltnum nvarchar(250) collate database_default, rowtime datetime);
+
+	declare @DynamicQuerylf05 nvarchar(max);
+
+	set @DynamicQuerylf05 = N'with cte as (select @comcod as comcod, @desc02 as rsnum, ''7''+ right(ltrim(rtrim(a.unitcod)),8) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, ltrim(rtrim(a.pltnum)) as pltnum, 
+		case 
+			when exists (select 1 from #templf01 t 
+				where t.comcod = @comcod and t.rsnum = @desc02 
+				and t.unitcod = ''7''+right(ltrim(rtrim(a.unitcod)),8) collate database_default 
+				and t.khtnum = ltrim(rtrim(a.khtnum)) collate database_default) 
+			then (select max(slnum)+1 from #templf01 t 
+				where t.comcod = @comcod and t.rsnum = @desc02 
+				and t.unitcod = ''7''+right(ltrim(rtrim(a.unitcod)),8) collate database_default 
+				and t.khtnum = ltrim(rtrim(a.khtnum)) collate database_default) 
+			else 1 
+		end as slnum, 
+		N'''' as lucode, 0.0 as tpltarea, 0.0 as khtshare, 0.0 as kpltarea, N'''' as kpltrmrk, N'''' as skhtnum, ltrim(rtrim(a.hspltnum)) as spltnum, N'''' as cpltnum, a.entdt as rowtime from ' + quotename(@desc01) + '.dbo.tblHalsabek a
+		where exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo01 l1 where ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(a.KhtNum)))
+		and exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo02 l2 where ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(a.KhtNum))))
+
+		insert into #templf01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+		select comcod, rsnum, unitcod, khtnum, pltnum, row_number() over (partition by @comcod, @desc02, ''7'' + right(ltrim(rtrim(unitcod)), 8), ltrim(rtrim(khtnum)) order by pltnum) as slnum, 
+		max(lucode) as lucode, max(tpltarea) as tpltarea, max(khtshare) as khtshare, max(kpltarea) as kpltarea, max(kpltrmrk) as kpltrmrk, max(skhtnum) as skhtnum, 
+		isnull(STRING_AGG(CAST(spltnum AS nvarchar(max)), N'',''), N'''') AS spltnum, 
+		max(cpltnum) as cpltnum, isnull(max(rowtime), getdate()) as rowtime from CTE group by comcod, rsnum, unitcod, khtnum, pltnum';
+
+	exec sp_executesql @DynamicQuerylf05, N'@ComCod nchar(4), @Desc02 nvarchar(50)', @ComCod, @Desc02;
+
+
+	declare @DynamicQuerylf06 NVARCHAR(MAX); 
+
+	set @dynamicquerylf06 = N'update a set a.tpltarea = isnull(b.tpltarea, 0.0), a.khtshare = isnull(b.khtshare, 0.0), a.kpltarea = isnull(b.kpltarea, 0.0), 
+		a.kpltrmrk = left(isnull(b.kremark, N''''), 1500) from #templf01 a inner join ' + quotename(@desc01) + '.dbo.tbllinfo01 b on a.unitcod = ''7''+right(ltrim(rtrim(b.unitcod)),8) collate database_default 
+		and a.khtnum = b.khtnum collate database_default and a.pltnum = b.pltnum collate database_default';
+
+	exec sp_executesql @DynamicQuerylf06, N'@ComCod nchar(4), @Desc01 nvarchar(50)', @ComCod, @Desc01;
+
+	-- Duplicate check
+	-- #tempchecklf01 holds group by data (no duplicate), so is, #templf01
+
+	SELECT l.unitcod, l.khtnum, l.pltnum INTO #tempchecklf01 FROM dlrslsinf_4103prsdb.dbo_lis.linfo01 l WHERE EXISTS (SELECT 1 FROM #templf01 t WHERE t.unitcod = l.unitcod);
+
+
+	IF EXISTS (SELECT 1 FROM #tempchecklf01)
+	BEGIN
+		DECLARE @SourceHalsabeDuplicatekupdate NVARCHAR(MAX); 
+		SET @SourceHalsabeDuplicatekupdate = N'UPDATE a SET a.convsts = ''DUPLICATE'' FROM ' + QUOTENAME(@desc01) + '.dbo.tblHalsabek AS a INNER JOIN (
+		SELECT STUFF(unitcod,1,1,''0'') AS unitcod, khtnum, pltnum FROM #tempchecklf01 GROUP BY STUFF(unitcod,1,1,''0''), khtnum, pltnum) AS b 
+		ON a.unitcod collate database_default = b.unitcod AND a.khtnum collate database_default = b.khtnum AND a.pltnum collate database_default = b.pltnum
+		where len(ltrim(rtrim(a.convsts))) = 0;';
+		EXEC sp_executesql @SourceHalsabeDuplicatekupdate;
+
+		-- Capture the duplicate rows BEFORE deleting, serialize entire row as JSON
+		INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, STUFF(t.unitcod, 1, 1, '0') AS unitcod, t.khtnum,
+			(SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS rowjson, 'DUPLICATE' AS rowsts, 'tblHalsabek' AS tblnam FROM #templf01 t 
+		INNER JOIN #tempchecklf01 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.pltnum = c.pltnum WHERE NOT EXISTS (
+			SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod  = t.comcod AND d.unitcod = STUFF(t.unitcod, 1, 1, '0') AND d.khtnum  = t.khtnum AND d.tblnam  = 'tblHalsabek'
+			  AND d.rowjson = (SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER));
+
+		-- Now delete the duplicate rows from source temp table
+		DELETE t FROM #templf01 t INNER JOIN #tempchecklf01 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.pltnum = c.pltnum;
+	END
+
+	--*********************************************************************************************************************************
+
+	insert into DLRSLSINF_4103PRSDB.dbo_lis.LINFO01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+	select comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime from #templf01;
+
+	-- UPDATE EACH ROW STATUS IN SOURCE DB
+	declare @SourceHalsabekupdate nvarchar(max);
+    
+	set @SourceHalsabekupdate = N'update a set a.convsts = ''SUCCESS'' from ' + quotename(@desc01) + '.dbo.tblHalsabek as a inner join (select stuff(unitcod,1,1,''0'') as unitcod, khtnum, pltnum 
+		from #templf01 group by stuff(unitcod,1,1,''0''), khtnum, pltnum) as b 
+		on a.unitcod collate database_default = b.unitcod and a.khtnum collate database_default = b.khtnum and a.pltnum collate database_default = b.pltnum;';
+
+	exec sp_executesql @SourceHalsabekupdate;
+
+
+	--missmatch01
+	declare @DynamicQuerylmmf01 nvarchar(max); 
+	create table #tempmissmatch01 (comcod nchar(4) collate database_default NOT NULL DEFAULT '4103',
+		unitcod char(9) collate database_default, KhtNum nvarchar(20) collate database_default,
+		RowJson nvarchar(max) collate database_default, tblnam nvarchar(20) collate database_default);
+	set @DynamicQuerylmmf01 = 'insert into #tempmissmatch01 (unitcod, KhtNum, RowJson, tblnam) select distinct ltrim(rtrim(l1.unitcod)), ltrim(rtrim(l1.KhtNum)),
+	(select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(l1.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+	''tblLinfo01''
+	from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(h.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(h.KhtNum)) 
+	where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null 
+	union 
+	select distinct ltrim(rtrim(l2.unitcod)), ltrim(rtrim(l2.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] x 
+	where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(l2.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+	''tblLinfo02''
+	from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h on ltrim(rtrim(l2.unitcod)) = ltrim(rtrim(h.unitcod)) 
+	and ltrim(rtrim(l2.KhtNum)) = ltrim(rtrim(h.KhtNum)) where ltrim(rtrim(h.unitcod)) is null or ltrim(rtrim(h.KhtNum)) is null;';
+	exec sp_executesql @DynamicQuerylmmf01;
+
+	INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, t.unitcod, t.khtnum, t.rowjson, 'MISMATCH', t.tblnam 
+	FROM #tempmissmatch01 t  WHERE NOT EXISTS (SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod  = t.comcod AND d.unitcod = t.unitcod AND d.khtnum  = t.khtnum AND d.tblnam  = t.tblnam
+      AND d.rowjson = t.rowjson);
+
+	-- =============================================
+	-- UPDATE convsts in tblLinfo01 for mismatched rows
+	-- =============================================
+	declare @updatelinfo01_mm01 nvarchar(max);
+	set @updatelinfo01_mm01 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo01] t inner join #tempmissmatch01 m on ltrim(rtrim(t.unitcod)) collate database_default = ltrim(rtrim(m.unitcod))
+		and ltrim(rtrim(t.khtnum)) collate database_default = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+	exec sp_executesql @updatelinfo01_mm01;
+
+	-- =============================================
+	-- update convsts in tbllinfo02 for mismatched rows
+	-- =============================================
+	declare @updatelinfo02_mm01 nvarchar(max);
+	set @updatelinfo02_mm01 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo02] t inner join #tempmissmatch01 m on ltrim(rtrim(t.unitcod)) collate database_default = ltrim(rtrim(m.unitcod))
+		and ltrim(rtrim(t.khtnum)) collate database_default = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+	exec sp_executesql @updatelinfo02_mm01;
+
+	drop table #tempmissmatch01 ;
+	drop table #templf01;
+	drop table #tempchecklf01;
+
+return;
+end;
+ -- MIGRATE_LANDINFO_TO_LINFO01:
+--****************************************************************
+
+
+MIGRATE_LANDINFO_TO_LINFO02:
+-- exec [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_LINFO02', @Desc01='jowarsahara', @Desc02='201901';
+begin
+	
+	create table #templf02 (
+		comcod nchar(4) collate database_default, rsnum nchar(6) collate database_default,
+		unitcod nchar(9) collate database_default, khtnum nvarchar(20) collate database_default,
+		ownrgrp int, ownrnum int, ownname nvarchar(300) collate database_default,
+		gender nvarchar(20) collate database_default, nidnum nvarchar(50) collate database_default,
+		bregnum nvarchar(50) collate database_default, fathernam nvarchar(200) collate database_default,
+		mothernam nvarchar(200) collate database_default, spousenam nvarchar(200) collate database_default,
+		phone01 nvarchar(50) collate database_default, email01 nvarchar(50) collate database_default,
+		address01 nvarchar(350) collate database_default, ownrarea decimal(18,6), rowtime datetime);
+
+	declare @DynamicQuerylf02 nvarchar(max);
+
+	set @DynamicQuerylf02 = N'insert into #templf02 select @comcod as comcod, @desc02 as rsnum, ''7''+ right(ltrim(rtrim(a.unitcod)),8) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, 
+		isnull(a.ownrgrp, 0) as ownrgrp, a.ownrnum, isnull(ltrim(rtrim(a.ownname)), N'''') as ownname, 
+		case 
+			when ltrim(rtrim(a.addr1)) like N''জং%'' 
+			then N''মহিলা'' 
+			else N'''' end as gender, 
+		N'''' as nidnum, N'''' as bregnum, 
+		case 
+			when ltrim(rtrim(a.addr1)) like N''পিং%'' 
+			then ltrim(rtrim(a.addr1)) 
+			else N'''' end as fathernam, 
+		N'''' as mothernam, 
+		case 
+			when ltrim(rtrim(a.addr1)) like N''জং%'' 
+			then ltrim(rtrim(a.addr1)) 
+			else N'''' end as spousenam, 
+		N'''' as phone01, N'''' as email01, left(ltrim(rtrim(isnull(a.addr2, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr3, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr4, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr5, N''''))) + N'' '' + 
+		ltrim(rtrim(isnull(a.addr6, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr7, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr8, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr9, N''''))) + N'' '' + 
+		ltrim(rtrim(isnull(a.addr10, N''''))), 350) as address01, isnull(cast(a.ownrarea as decimal(18,6)), 0) as ownrarea, isnull(a.entdate, getdate()) as rowtime from ' + quotename(@desc01) + '.dbo.tbllinfo02 a
+		where exists (select 1 from ' + quotename(@desc01) + '.dbo.tblLinfo01 l1 where ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(a.KhtNum)))
+		and exists (select 1 from ' + quotename(@desc01) + '.dbo.tblHalsabek h where ltrim(rtrim(h.unitcod)) = ltrim(rtrim(a.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(a.KhtNum)))';
+
+	exec sp_executesql @DynamicQuerylf02, N'@Desc02 nchar(9), @ComCod nchar(4)', @Desc02, @ComCod;
+
+	SELECT l.unitcod, l.khtnum, l.ownrgrp, l.ownrnum INTO #tempchecklf02 FROM dlrslsinf_4103prsdb.dbo_lis.linfo02 l WHERE EXISTS (SELECT 1 FROM #templf02 t WHERE t.unitcod = l.unitcod);
+	IF EXISTS (SELECT 1 FROM #tempchecklf02)
+	BEGIN
+		DECLARE @sourcetbllinfo02duplicatekupdate NVARCHAR(MAX);
+
+		SET @sourcetbllinfo02duplicatekupdate = N'UPDATE a SET a.convsts = ''DUPLICATE'' FROM ' + QUOTENAME(@desc01) + '.dbo.tbllinfo02 AS a INNER JOIN (
+		SELECT STUFF(unitcod,1,1,''0'') AS unitcod, khtnum, ownrgrp, ownrnum FROM #tempchecklf02 GROUP BY STUFF(unitcod,1,1,''0''), khtnum, ownrgrp, ownrnum
+		  ) AS b ON a.unitcod collate database_default = b.unitcod AND a.khtnum collate database_default = b.khtnum AND a.ownrgrp = b.ownrgrp AND a.ownrnum = b.ownrnum
+		where len(ltrim(rtrim(a.convsts))) = 0;';
+
+		EXEC sp_executesql @sourcetbllinfo02duplicatekupdate;
+		-- Capture the duplicate rows BEFORE deleting, serialize entire row as JSON
+		INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam)
+
+		SELECT DISTINCT t.comcod, STUFF(t.unitcod, 1, 1, '0') AS unitcod, t.khtnum, (SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS rowjson, 'DUPLICATE' AS rowsts, 'tblLinfo02' AS tblnam
+		FROM #templf02 t INNER JOIN #tempchecklf02 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.ownrgrp = c.ownrgrp AND t.ownrnum = c.ownrnum
+		WHERE NOT EXISTS (SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod = t.comcod AND d.unitcod = STUFF(t.unitcod, 1, 1, '0') AND d.khtnum = t.khtnum AND d.tblnam = 'tblLinfo02'
+			AND d.rowjson = (SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER));
+
+		-- delete duplicate data from source temp table, because those rows are already in dlrslsinf_4103prsdb.dbo_lis.linfo02
+		DELETE t FROM #templf02 t INNER JOIN #tempchecklf02 c ON t.unitcod = c.unitcod AND t.khtnum = c.khtnum AND t.ownrgrp = c.ownrgrp AND t.ownrnum = c.ownrnum;
+	END
+	
+	--*********************************************************************************************************************************
+
+	-- If the same owner key (unit, khatian, group, number) appears more than once in the source batch,
+	-- keep only the latest row so the primary key of linfo02 is not violated.
+	;with d as (
+		select a.*, row_number() over (partition by a.comcod, a.rsnum, a.unitcod, a.khtnum, a.ownrgrp, a.ownrnum order by a.rowtime desc) as rn
+		from #templf02 a)
+	insert into DLRSLSINF_4103PRSDB.dbo_lis.linfo02 (comcod, rsnum, unitcod, khtnum, ownrgrp, ownrnum, ownname, gender, nidnum, bregnum, fathernam, mothernam, spousenam, phone01, email01, address01, ownrarea, rowtime)
+	select comcod, rsnum, unitcod, khtnum, ownrgrp, ownrnum, ownname, gender, nidnum, bregnum, fathernam, mothernam, spousenam, phone01, email01, address01, ownrarea, rowtime
+	from d where rn = 1;
+
+
+	-- UPDATE EACH ROW STATUS IN SOURCE DB
+	declare @SourcetblLinfo02update nvarchar(max);
+    
+	set @SourcetblLinfo02update = N'update a set a.convsts = ''SUCCESS'' from ' + quotename(@desc01) + '.dbo.tbllinfo02 as a inner join (
+			select stuff(unitcod,1,1,''0'') as unitcod, khtnum, ownrgrp, ownrnum from #templf02 group by stuff(unitcod,1,1,''0''), khtnum, ownrgrp, ownrnum)
+			as b on a.unitcod collate database_default = b.unitcod and a.khtnum collate database_default = b.khtnum and a.ownrgrp = b.ownrgrp and a.ownrnum = b.ownrnum';
+
+	exec sp_executesql @SourcetblLinfo02update;
+
+	--missmatchhandle02
+	declare @DynamicQuerylmmf02 nvarchar(max); 
+	create table #tempmissmatch02 (comcod nchar(4) collate database_default NOT NULL DEFAULT '4103',
+		unitcod char(9) collate database_default, KhtNum nvarchar(20) collate database_default,
+		RowJson nvarchar(max) collate database_default, tblnam nvarchar(20) collate database_default);
+	set @DynamicQuerylmmf02 = 'insert into #tempmissmatch02 (unitcod, KhtNum, RowJson, tblnam) select distinct ltrim(rtrim(l1.unitcod)), ltrim(rtrim(l1.KhtNum)),
+	(select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(l1.unitcod)) and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(l1.KhtNum)) 
+	 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblLinfo01'' from ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo01] l1 left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 on ltrim(rtrim(l1.unitcod)) = ltrim(rtrim(l2.unitcod)) 
+	 and ltrim(rtrim(l1.KhtNum)) = ltrim(rtrim(l2.KhtNum)) where ltrim(rtrim(l2.unitcod)) is null or ltrim(rtrim(l2.KhtNum)) is null 
+	union 
+	select distinct ltrim(rtrim(h.unitcod)), ltrim(rtrim(h.KhtNum)), (select top 1 * from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] x where ltrim(rtrim(x.unitcod)) = ltrim(rtrim(h.unitcod)) 
+	and ltrim(rtrim(x.KhtNum)) = ltrim(rtrim(h.KhtNum)) FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), ''tblHalsabek'' from ' + QUOTENAME(@Desc01) + '.[dbo].[tblHalsabek] h left join ' + QUOTENAME(@Desc01) + '.[dbo].[tblLinfo02] l2 
+	on ltrim(rtrim(h.unitcod)) = ltrim(rtrim(l2.unitcod)) and ltrim(rtrim(h.KhtNum)) = ltrim(rtrim(l2.KhtNum)) where ltrim(rtrim(l2.unitcod)) is null or ltrim(rtrim(l2.KhtNum)) is null;';
+	exec sp_executesql @DynamicQuerylmmf02;
+
+	INSERT INTO dlrslsinf_4103prsdb.[dbo].[mismchlog] (comcod, unitcod, khtnum, rowjson, rowsts, tblnam) SELECT DISTINCT t.comcod, t.unitcod, t.khtnum, t.rowjson, 'MISMATCH', t.tblnam FROM #tempmissmatch02 t WHERE NOT EXISTS
+	(SELECT 1 FROM dlrslsinf_4103prsdb.[dbo].[mismchlog] d WHERE d.comcod = t.comcod AND d.unitcod = t.unitcod AND d.khtnum = t.khtnum AND d.tblnam = t.tblnam
+	AND d.rowjson = t.rowjson);
+
+	-- =============================================
+	-- UPDATE convsts in tblLinfo01 for mismatched rows
+	-- =============================================
+	declare @updatelinfo01_mm02 nvarchar(max);
+	set @updatelinfo01_mm02 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tbllinfo01] t inner join #tempmissmatch02 m on ltrim(rtrim(t.unitcod)) collate database_default = ltrim(rtrim(m.unitcod))
+		and ltrim(rtrim(t.khtnum)) collate database_default = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+	exec sp_executesql @updatelinfo01_mm02;
+
+	-- =============================================
+	-- update convsts in tblhalsabek for mismatched rows
+	-- =============================================
+	declare @updatehalsabek_mm02 nvarchar(max);
+	set @updatehalsabek_mm02 = N'update t set t.convsts = ''MISMATCH'' from ' + quotename(@desc01) + '.[dbo].[tblhalsabek] t inner join #tempmissmatch02 m on ltrim(rtrim(t.unitcod)) collate database_default = ltrim(rtrim(m.unitcod))
+		and ltrim(rtrim(t.khtnum)) collate database_default = ltrim(rtrim(m.khtnum)) where len(ltrim(rtrim(t.convsts))) = 0;';
+	exec sp_executesql @updatehalsabek_mm02;
+	
+	drop table #tempmissmatch02 ;
+	drop table #templf02;
+	drop table #tempchecklf02;
+
+	return;
+
+end; -- MIGRATE_LANDINFO_TO_LINFO02:
+--****************************************************************
+
+MIGRATE_LANDINFO_TO_PLOTINF01:
+-- [dbo].[SP_LIS_DATA_MIGRATION] @ComCod = '4103', @ProcID = 'MTO_PLOTINF01', @Desc01='joarsahara_u', @Desc02='201901';
+
+begin
+
+	--create table #temppltinf01 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), shetnum nvarchar(5), pltnum nvarchar(15), tpltarea nvarchar(30), lucode nchar (5));
+
+	--declare @DynamicQueryplt01 nvarchar(max);
+	
+	--set @DynamicQueryplt01 = N'insert into #temppltinf01 select distinct @ComCod as comcod, @Desc02 as rsnum, ltrim(rtrim(a.unitcod)) as unitcod, N''00'' as shetnum, 
+	--ltrim(rtrim(a.pltnum)) as pltnum, ltrim(rtrim(a.TPltArea)) as tpltarea, N'''' as lucode from '+quotename(@desc01)+'.dbo.tblLinfo01 a';
+	
+	--exec sp_executesql @DynamicQueryplt01, N'@Desc02 nchar(9), @ComCod nchar(4)', @Desc02, @ComCod;
+	
+	--insert into DLRSLSINF_4103PRSDB.dbo_lis.plotinf01 (comcod, rsnum, unitcod, shetnum, pltnum, tpltarea, lucode) select a.comcod, a.rsnum, a.unitcod, a.shetnum, a.pltnum, 
+	--a.tpltarea, a.lucode from #temppltinf01 a where not exists (select 1 from DLRSLSINF_4103PRSDB.dbo_lis.plotinf01 p where p.comcod=a.comcod and p.rsnum=a.rsnum and 
+	--p.unitcod=a.unitcod); 
+
+	--select distinct *from #temppltinf01 order by pltnum;
+	--select*from DLRSLSINF_4103PRSDB.dbo_lis.plotinf01;
+	return;
+
+end; -- MIGRATE_LANDINFO_TO_PLOTINF01:
+--****************************************************************
+
+--*********************************** Atik ****************************************
+--*********************************************************************************
+UPDATE_MAPINF01_WITH_UNITCOD: 
+/*
+   [dbo].[SP_LIS_DATA_MIGRATION] @ProcID = 'UPDTMAPINF01', @Desc01='010109093_softbd_tangail_07012026'
+*/
+begin
+DECLARE @updateMapInf01 NVARCHAR(MAX);
+
+SET @updateMapInf01 = N'
+insert into [dlrslsinf_4103prsdb].[dbo_lis].[mapinf01] (comcod, rsnum, unitcod, shetnum)
+	select ''4103''   as comcod, ''201901'' as rsnum, h.unitcod, ''000''    as shetnum
+		from ( select distinct unitcod from ' + quotename(@desc01) + N'.dbo.tblhalsabek) h
+		where not exists ( select 1 from [dlrslsinf_4103prsdb].[dbo_lis].[mapinf01] m where m.comcod  = ''4103''
+			  and m.rsnum   = ''201901''
+			  and m.unitcod = h.unitcod
+			  and m.shetnum = ''000'' );';
+
+
+
+EXEC sp_executesql @updateMapInf01;
+
+return
+end
+
+--*********************************************************************************
+
+END;

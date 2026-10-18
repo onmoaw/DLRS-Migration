@@ -1,0 +1,29 @@
+<Application x:Class="LandPressDataMigrationDesktopApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:LandPressDataMigrationDesktopApp"
+             StartupUri="LoginWindow.xaml">
+    <Application.Resources>
+        <SolidColorBrush x:Key="ThemeWindowBg" Color="#F1F5F9"/>
+        <SolidColorBrush x:Key="ThemeCardBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeCardBorder" Color="#CBD5E1"/>
+        <SolidColorBrush x:Key="ThemeInsetBg" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="ThemeInsetBorder" Color="#CBD5E1"/>
+        <SolidColorBrush x:Key="ThemeInputBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeInputBorder" Color="#94A3B8"/>
+        <SolidColorBrush x:Key="ThemeTextPrimary" Color="#0F172A"/>
+        <SolidColorBrush x:Key="ThemeTextSecondary" Color="#334155"/>
+        <SolidColorBrush x:Key="ThemeTextMuted" Color="#475569"/>
+        <SolidColorBrush x:Key="ThemeHeaderBg" Color="#E2E8F0"/>
+        <SolidColorBrush x:Key="ThemeFooterBg" Color="#E2E8F0"/>
+        <SolidColorBrush x:Key="ThemeLockBg" Color="#FEE2E2"/>
+        <SolidColorBrush x:Key="ThemeLockBorder" Color="#EF4444"/>
+        <SolidColorBrush x:Key="ThemeLockText" Color="#991B1B"/>
+        <SolidColorBrush x:Key="ThemeSuccessBg" Color="#DCFCE7"/>
+        <SolidColorBrush x:Key="ThemeSuccessBorder" Color="#10B981"/>
+        <SolidColorBrush x:Key="ThemeSuccessText" Color="#166534"/>
+        <SolidColorBrush x:Key="ThemeWarningBg" Color="#FEF3C7"/>
+        <SolidColorBrush x:Key="ThemeWarningBorder" Color="#D97706"/>
+        <SolidColorBrush x:Key="ThemeWarningText" Color="#92400E"/>
+    </Application.Resources>
+</Application>
