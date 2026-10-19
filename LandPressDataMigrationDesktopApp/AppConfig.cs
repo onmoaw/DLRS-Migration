@@ -10,7 +10,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v0.7";
+        public const string Version = "v0.8";
 
         // Derived display strings automatically formatted using the Version constant above:
         public static string AppName => "DLRS Data Migration Tool";
