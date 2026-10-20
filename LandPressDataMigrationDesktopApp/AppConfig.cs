@@ -10,7 +10,12 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v0.8";
+        public const string Version = "v0.9";
+
+        /// <summary>
+        /// Permanent intermediate staging database required on the connected SQL Server instance.
+        /// </summary>
+        public const string IntermediateDbName = "DLRS_Migration_Intrm";
 
         // Derived display strings automatically formatted using the Version constant above:
         public static string AppName => "DLRS Data Migration Tool";

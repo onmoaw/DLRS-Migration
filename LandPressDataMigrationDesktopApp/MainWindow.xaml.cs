@@ -47,9 +47,20 @@ namespace LandPressDataMigrationDesktopApp
         private string tblInf02RowCount = string.Empty;
 
         // ── Sequential Workflow Completion Flags ──
+        // Intermediate Database (DLRS_Migration_Intrm) Ready Flag
+        private bool _isIntermediateDbReady = false;
+
+        // Step completion flags:
+        // _isStage2Completed represents Step 1 (Copy & Stage to DLRS_Migration_Intrm)
+        // _isStage3Completed represents Step 2 (Unicode Font Conversion & Intermediate DB Update)
+        // _isStage4Completed represents Step 3 (Core Data Migration)
         private bool _isStage2Completed = false;
         private bool _isStage3Completed = false;
         private bool _isStage4Completed = false;
+
+        // Current active pipeline step (1 = Copy, 2 = Font Convert, 3 = Migration)
+        // Only the current step panel is displayed to the user
+        private int _currentActiveStep = 1;
 
         public MainWindow()
         {
@@ -83,6 +94,43 @@ namespace LandPressDataMigrationDesktopApp
             bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
             txtThemeIcon.Text = isDark ? "🌙" : "☀️";
             txtThemeLabel.Text = isDark ? "Dark" : "Light";
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // ── SEQUENTIAL STEP PANEL NAVIGATION (Shows ONLY current active step) ──
+        // ─────────────────────────────────────────────────────────────────────────────
+        public void ShowStep(int step)
+        {
+            if (step == 2 && !_isStage2Completed)
+            {
+                System.Windows.MessageBox.Show("Please complete Step 1 (Copy to Intermediate DB) first.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (step == 3 && !_isStage3Completed)
+            {
+                System.Windows.MessageBox.Show("Please complete Step 2 (Unicode Font Conversion & Intermediate DB Update) first.", "Step 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _currentActiveStep = step;
+            UpdateWorkflowState();
+        }
+
+        private void BtnGoToStep2_Click(object sender, RoutedEventArgs e) => ShowStep(2);
+        private void BtnBackToStep1_Click(object sender, RoutedEventArgs e) => ShowStep(1);
+        private void BtnGoToStep3_Click(object sender, RoutedEventArgs e) => ShowStep(3);
+        private void BtnBackToStep2_Click(object sender, RoutedEventArgs e) => ShowStep(2);
+
+        private void ChipStep1_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowStep(1);
+        private void ChipStep2_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_isStage2Completed) ShowStep(2);
+            else System.Windows.MessageBox.Show("Please complete Step 1 (Copy to Intermediate DB) first.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        private void ChipStep3_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_isStage3Completed) ShowStep(3);
+            else System.Windows.MessageBox.Show("Please complete Step 2 (Unicode Font Conversion) first.", "Step 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void ApplyRoleView()
@@ -124,8 +172,8 @@ namespace LandPressDataMigrationDesktopApp
                 if (lblConversionCount != null)
                     lblConversionCount.Visibility = Visibility.Collapsed;
 
-                if (txtStage2Desc != null)
-                    txtStage2Desc.Text = "Verifies and prepares database compatibility, Unicode columns, and row tracking.";
+                if (txtStep1Desc != null)
+                    txtStep1Desc.Text = "Stages data from the selected source database into [DLRS_Migration_Intrm]. Source DB is never altered.";
 
                 if (txtStage4Desc != null)
                     txtStage4Desc.Text = "Migrates land records, plots, owners, maps, and boundary data into the core system.";
@@ -142,7 +190,7 @@ namespace LandPressDataMigrationDesktopApp
         // ------------------------------
         // CONNECT TO SERVER
         // ------------------------------
-        private void Connect_Click(object sender, RoutedEventArgs e)
+        private async void Connect_Click(object sender, RoutedEventArgs e)
         {
             // Reset inline status
             txtConnectError.Visibility = Visibility.Collapsed;
@@ -160,14 +208,7 @@ namespace LandPressDataMigrationDesktopApp
                 _baseConnectionString = BuildConnectionString("master");
 
                 using var conn = new SqlConnection(_baseConnectionString);
-                conn.Open();
-
-                LoadDatabases(conn);
-
-                // Show green success feedback
-                txtConnectError.Foreground = System.Windows.Media.Brushes.LimeGreen;
-                txtConnectError.Text       = "✔ Connected successfully.";
-                txtConnectError.Visibility = Visibility.Visible;
+                await conn.OpenAsync();
 
                 // Update server status summary and Pre-Step server banner
                 if (txtServerStatusSummary != null)
@@ -184,6 +225,25 @@ namespace LandPressDataMigrationDesktopApp
                 {
                     btnRunPreStep.IsEnabled = true;
                     btnRunPreStep.ToolTip = $"Restore or attach database directly to {_ServerName}";
+                }
+
+                // Check and validate Intermediate Database (DLRS_Migration_Intrm)
+                await CheckAndValidateIntermediateDbAsync();
+
+                if (_isIntermediateDbReady)
+                {
+                    LoadDatabases(conn);
+                    txtConnectError.Foreground = System.Windows.Media.Brushes.LimeGreen;
+                    txtConnectError.Text       = "✔ Connected successfully.";
+                    txtConnectError.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    lstDatabases.Items.Clear();
+                    lstDatabases.IsEnabled = false;
+                    txtConnectError.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                    txtConnectError.Text       = $"⚠ Server connected. Initialize [{AppConfig.IntermediateDbName}] below to proceed.";
+                    txtConnectError.Visibility = Visibility.Visible;
                 }
             }
             catch (Microsoft.Data.SqlClient.SqlException sqlEx)
@@ -232,9 +292,198 @@ namespace LandPressDataMigrationDesktopApp
                 btnRunPreStep.IsEnabled = false;
                 btnRunPreStep.ToolTip = "Please connect to a SQL Server in Stage 1 above first.";
             }
+
+            if (txtIntrmDbStatus != null)
+            {
+                _isIntermediateDbReady = false;
+                txtIntrmDbStatus.Text = "⚪ Disconnected";
+                txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+            }
+            if (btnCreateOrRepairIntrmDb != null)
+                btnCreateOrRepairIntrmDb.Visibility = Visibility.Collapsed;
+            if (btnViewIntrmLogs != null)
+                btnViewIntrmLogs.Visibility = Visibility.Collapsed;
+            if (txtIntrmDbDetail != null)
+                txtIntrmDbDetail.Visibility = Visibility.Collapsed;
+            if (borderIntrmBlockedNotice != null)
+                borderIntrmBlockedNotice.Visibility = Visibility.Collapsed;
         }
 
         // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────────
+        // PERMANENT INTERMEDIATE DATABASE (DLRS_Migration_Intrm) CHECK & MANAGEMENT
+        // ─────────────────────────────────────────────────────────────────────────────
+        private async Task CheckAndValidateIntermediateDbAsync()
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString))
+            {
+                _isIntermediateDbReady = false;
+                txtIntrmDbStatus.Text = "⚪ Not Connected";
+                txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(148, 163, 184));
+                btnCreateOrRepairIntrmDb.Visibility = Visibility.Collapsed;
+                if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Collapsed;
+                txtIntrmDbDetail.Visibility = Visibility.Collapsed;
+                borderIntrmBlockedNotice.Visibility = Visibility.Collapsed;
+                UpdateWorkflowState();
+                return;
+            }
+
+            try
+            {
+                // 1. Check if DB exists
+                var (exists, compatLevel) = await IntermediateDbService.CheckDatabaseExistsAsync(_baseConnectionString);
+
+                if (!exists)
+                {
+                    _isIntermediateDbReady = false;
+                    txtIntrmDbStatus.Text = "❌ Missing / Not Found";
+                    txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(239, 68, 68));
+
+                    txtBtnCreateIntrmDb.Text = $"⚡ Create {AppConfig.IntermediateDbName}";
+                    btnCreateOrRepairIntrmDb.Visibility = Visibility.Visible;
+                    btnCreateOrRepairIntrmDb.IsEnabled = true;
+                    if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Collapsed;
+
+                    txtIntrmDbDetail.Text = $"Database [{AppConfig.IntermediateDbName}] does not exist on this server. It is mandatory for staging and migration.";
+                    txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(248, 113, 113));
+                    txtIntrmDbDetail.Visibility = Visibility.Visible;
+
+                    txtIntrmBlockedReason.Text = $"Access Blocked: You must click '⚡ Create {AppConfig.IntermediateDbName}' to initialize the staging database before selecting databases or running migrations.";
+                    borderIntrmBlockedNotice.Visibility = Visibility.Visible;
+
+                    lstDatabases.IsEnabled = false;
+                    UpdateWorkflowState();
+                    return;
+                }
+
+                // 2. Database exists -> Validate schema
+                var (isValid, errors) = await IntermediateDbService.ValidateSchemaAsync(_baseConnectionString);
+
+                if (!isValid)
+                {
+                    _isIntermediateDbReady = false;
+                    txtIntrmDbStatus.Text = "⚠️ Invalid Schema / Missing Tables";
+                    txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+
+                    txtBtnCreateIntrmDb.Text = $"🔧 Repair {AppConfig.IntermediateDbName}";
+                    btnCreateOrRepairIntrmDb.Visibility = Visibility.Visible;
+                    btnCreateOrRepairIntrmDb.IsEnabled = true;
+                    if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Collapsed;
+
+                    string errSummary = string.Join("; ", errors);
+                    txtIntrmDbDetail.Text = $"Schema issues detected: {errSummary}";
+                    txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(251, 191, 36));
+                    txtIntrmDbDetail.Visibility = Visibility.Visible;
+
+                    txtIntrmBlockedReason.Text = $"Access Blocked: [{AppConfig.IntermediateDbName}] has missing tables or incompatible column types ({errors.Count} issue(s)). Click '🔧 Repair {AppConfig.IntermediateDbName}' to update schema.";
+                    borderIntrmBlockedNotice.Visibility = Visibility.Visible;
+
+                    lstDatabases.IsEnabled = false;
+                    UpdateWorkflowState();
+                    return;
+                }
+
+                // 3. Valid and Ready
+                _isIntermediateDbReady = true;
+                txtIntrmDbStatus.Text = $"✔ Ready & Verified (Compat: {(compatLevel > 0 ? compatLevel.ToString() : "130+")})";
+                txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+
+                btnCreateOrRepairIntrmDb.Visibility = Visibility.Collapsed;
+                if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Visible;
+
+                txtIntrmDbDetail.Text = "Verified all required tables (tblHalsabek, tblLinfo01, tblLinfo02, tblUnitMigrationLog) and Unicode data types.";
+                txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(148, 163, 184));
+                txtIntrmDbDetail.Visibility = Visibility.Visible;
+
+                borderIntrmBlockedNotice.Visibility = Visibility.Collapsed;
+                lstDatabases.IsEnabled = true;
+                UpdateWorkflowState();
+            }
+            catch (Exception ex)
+            {
+                _isIntermediateDbReady = false;
+                txtIntrmDbStatus.Text = "❌ Check Failed";
+                txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(239, 68, 68));
+                txtIntrmDbDetail.Text = $"Error verifying [{AppConfig.IntermediateDbName}]: {ex.Message}";
+                txtIntrmDbDetail.Visibility = Visibility.Visible;
+                borderIntrmBlockedNotice.Visibility = Visibility.Visible;
+                lstDatabases.IsEnabled = false;
+                UpdateWorkflowState();
+            }
+        }
+
+        private async void BtnCreateOrRepairIntrmDb_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString))
+            {
+                System.Windows.MessageBox.Show("Please connect to a SQL Server instance first.", "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            btnCreateOrRepairIntrmDb.IsEnabled = false;
+            pbIntrmDbAction.Visibility = Visibility.Visible;
+            txtIntrmDbStatus.Text = "⏳ Creating / Repairing database...";
+            txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(59, 130, 246));
+
+            try
+            {
+                await IntermediateDbService.CreateOrRepairDatabaseAsync(_baseConnectionString);
+
+                // Re-validate after creation
+                await CheckAndValidateIntermediateDbAsync();
+
+                if (_isIntermediateDbReady)
+                {
+                    // Refresh database list now that the database exists
+                    using (var conn = new SqlConnection(_baseConnectionString))
+                    {
+                        await conn.OpenAsync();
+                        LoadDatabases(conn);
+                    }
+
+                    System.Windows.MessageBox.Show(
+                        $"Permanent Intermediate Database [{AppConfig.IntermediateDbName}] has been successfully created and verified on \"{_ServerName}\".\n\nTables created/verified:\n • tblHalsabek (with convsts)\n • tblLinfo01 (with Unicode KRemark, ROWID, convsts)\n • tblLinfo02 (with Unicode OwnName/addr1-10, RowId, convsts)\n • tblUnitMigrationLog (audit tracking table)\n\nYou may now select a source database to proceed.",
+                        "Database Ready",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                _isIntermediateDbReady = false;
+                txtIntrmDbStatus.Text = "❌ Creation / Repair Failed";
+                txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(239, 68, 68));
+                txtIntrmDbDetail.Text = $"Error: {ex.Message}";
+                txtIntrmDbDetail.Visibility = Visibility.Visible;
+
+                System.Windows.MessageBox.Show(
+                    $"Failed to create or repair [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}\n\nPlease check server permissions (CREATE DATABASE / ALTER permissions required).",
+                    "Database Creation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                pbIntrmDbAction.Visibility = Visibility.Collapsed;
+                btnCreateOrRepairIntrmDb.IsEnabled = true;
+            }
+        }
+
+        private void BtnViewIntrmLogs_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString))
+            {
+                System.Windows.MessageBox.Show("Please connect to a SQL Server instance first.", "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new IntermediateDbLogsDialog(_baseConnectionString)
+            {
+                Owner = this
+            };
+            dialog.ShowDialog();
+        }
+
         #region PRE-STEP: Restore / Attach Database
         // ─────────────────────────────────────────────────────────────────────────────
 
@@ -652,6 +901,7 @@ namespace LandPressDataMigrationDesktopApp
                 SELECT name
                 FROM sys.databases
                 WHERE state_desc = 'ONLINE'
+                  AND name NOT IN ('master', 'tempdb', 'model', 'msdb', 'DLRS_Migration_Intrm')
                 ORDER BY name";
 
             using var cmd = new SqlCommand(sql, conn);
@@ -664,202 +914,198 @@ namespace LandPressDataMigrationDesktopApp
         // ── WORKFLOW STATE MANAGEMENT & SEQUENTIAL ENFORCEMENT ──
         private void UpdateWorkflowState()
         {
-            bool hasDb = !string.IsNullOrEmpty(_DbName);
+            bool hasDb = _isIntermediateDbReady && !string.IsNullOrEmpty(_DbName);
             bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
 
             var inactiveBorder = new SolidBrush(isDark ? MediaColor.FromRgb(51, 65, 85) : MediaColor.FromRgb(203, 213, 225));
             var inactiveBadge  = new SolidBrush(isDark ? MediaColor.FromRgb(100, 116, 139) : MediaColor.FromRgb(148, 163, 184));
             var inactiveText   = new SolidBrush(isDark ? MediaColor.FromRgb(148, 163, 184) : MediaColor.FromRgb(71, 85, 105));
 
-            // ── STEP 1 CHIP ──
-            if (hasDb)
+            // ── PANEL VISIBILITY: ONLY the current active step panel is visible! ──
+            if (panelStep1CopyToIntrm != null)
+                panelStep1CopyToIntrm.Visibility = (_currentActiveStep == 1) ? Visibility.Visible : Visibility.Collapsed;
+            if (panelStep2FontConvert != null)
+                panelStep2FontConvert.Visibility = (_currentActiveStep == 2) ? Visibility.Visible : Visibility.Collapsed;
+            if (panelStep3Migration != null)
+                panelStep3Migration.Visibility = (_currentActiveStep == 3) ? Visibility.Visible : Visibility.Collapsed;
+
+            // ── STEP 1 CHIP & STEP 1 PANEL CONTROLS ──
+            if (!_isIntermediateDbReady)
             {
-                chipStep1.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                borderChip1Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                txtChip1Num.Text = "✔";
-                txtChip1Status.Text = $"Selected: {_DbName}";
-                txtChip1Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                lstDatabases.IsEnabled = false;
+                if (btnCopyToIntrmDb != null) btnCopyToIntrmDb.IsEnabled = false;
+                if (btnDataMigrationWizard != null) btnDataMigrationWizard.IsEnabled = false;
+
+                if (!string.IsNullOrEmpty(_ServerName))
+                {
+                    chipStep1.BorderBrush = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                    borderChip1Badge.Background = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                    txtChip1Num.Text = "!";
+                    txtChip1Status.Text = "Initialize Intermediate DB";
+                    txtChip1Status.Foreground = new SolidBrush(MediaColor.FromRgb(251, 191, 36));
+                }
+                else
+                {
+                    chipStep1.BorderBrush = inactiveBorder;
+                    borderChip1Badge.Background = inactiveBadge;
+                    txtChip1Num.Text = "1";
+                    txtChip1Status.Text = "Connect to server";
+                    txtChip1Status.Foreground = inactiveText;
+                }
+
+                if (borderStep1LockBanner != null) borderStep1LockBanner.Visibility = Visibility.Visible;
             }
-            else
+            else if (!hasDb)
             {
                 chipStep1.BorderBrush = new SolidBrush(MediaColor.FromRgb(59, 130, 246));
                 borderChip1Badge.Background = new SolidBrush(MediaColor.FromRgb(59, 130, 246));
                 txtChip1Num.Text = "1";
-                txtChip1Status.Text = "Connect & select source DB";
+                txtChip1Status.Text = "Select source DB";
                 txtChip1Status.Foreground = inactiveText;
+
+                if (btnCopyToIntrmDb != null) btnCopyToIntrmDb.IsEnabled = false;
+                if (borderStep1LockBanner != null) borderStep1LockBanner.Visibility = Visibility.Visible;
+            }
+            else if (_isStage2Completed)
+            {
+                // Step 1 completed
+                chipStep1.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                borderChip1Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                txtChip1Num.Text = "✔";
+                txtChip1Status.Text = $"✔ Staged: {_DbName}";
+                txtChip1Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+
+                if (borderStep1LockBanner != null) borderStep1LockBanner.Visibility = Visibility.Collapsed;
+                if (borderStep1CompletedBanner != null) borderStep1CompletedBanner.Visibility = Visibility.Visible;
+                if (btnGoToStep2 != null) btnGoToStep2.Visibility = Visibility.Visible;
+                if (btnCopyToIntrmDb != null)
+                {
+                    btnCopyToIntrmDb.IsEnabled = true;
+                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "🔁 Re-Copy Source Data to Intermediate DB";
+                }
+            }
+            else
+            {
+                // Ready to copy
+                chipStep1.BorderBrush = (_currentActiveStep == 1)
+                    ? new SolidBrush(MediaColor.FromRgb(2, 132, 199))
+                    : new SolidBrush(MediaColor.FromRgb(59, 130, 246));
+                borderChip1Badge.Background = new SolidBrush(MediaColor.FromRgb(2, 132, 199));
+                txtChip1Num.Text = "1";
+                txtChip1Status.Text = $"Ready: {_DbName}";
+                txtChip1Status.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
+
+                if (borderStep1LockBanner != null) borderStep1LockBanner.Visibility = Visibility.Collapsed;
+                if (borderStep1CompletedBanner != null) borderStep1CompletedBanner.Visibility = Visibility.Collapsed;
+                if (btnGoToStep2 != null) btnGoToStep2.Visibility = Visibility.Collapsed;
+                if (btnCopyToIntrmDb != null)
+                {
+                    btnCopyToIntrmDb.IsEnabled = true;
+                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "Copy Source Data to DLRS_Migration_Intrm";
+                }
             }
 
-            // ── STEP 2 CHIP & STAGE 2 CARD ──
-            btnPrepareDb.IsEnabled = hasDb;
-            if (!hasDb)
+            // ── STEP 2 CHIP & STEP 2 PANEL CONTROLS ──
+            if (!_isStage2Completed)
             {
                 chipStep2.BorderBrush = inactiveBorder;
                 borderChip2Badge.Background = inactiveBadge;
                 txtChip2Num.Text = "2";
-                txtChip2Status.Text = "Waiting for DB Selection";
+                txtChip2Status.Text = "🔒 Locked (Needs Step 1)";
                 txtChip2Status.Foreground = inactiveText;
 
-                badgeStage2.Background = inactiveBadge;
-                txtStage2Badge.Text = "PENDING";
-                txtStage2StatusTitle.Text = "Select a database to verify";
-                txtStage2StatusTitle.Foreground = inactiveText;
-                txtStage2StatusDetail.Text = "Prerequisites must be completed before Stage 3 (Font Conversion) will unlock.";
+                if (borderStage3LockBanner != null) borderStage3LockBanner.Visibility = Visibility.Visible;
+                if (borderStage3UnlockedBanner != null) borderStage3UnlockedBanner.Visibility = Visibility.Collapsed;
+                if (lstTables != null) lstTables.IsEnabled = false;
+                if (fetchDataForSelectedTables != null) fetchDataForSelectedTables.IsEnabled = false;
+                if (fontConverterBTN != null) fontConverterBTN.IsEnabled = false;
+                if (updateDatabaseBTN != null) updateDatabaseBTN.IsEnabled = false;
+                if (btnGoToStep3 != null) btnGoToStep3.Visibility = Visibility.Collapsed;
             }
-            else if (_isStage2Completed)
+            else if (_isStage3Completed)
             {
                 chipStep2.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
                 borderChip2Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
                 txtChip2Num.Text = "✔";
-                txtChip2Status.Text = "✔ Preparation Completed";
+                txtChip2Status.Text = "✔ Converted & Updated";
                 txtChip2Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
 
-                badgeStage2.Background = new SolidBrush(MediaColor.FromRgb(6, 78, 59));
-                txtStage2Badge.Text = "VERIFIED";
-                txtStage2StatusTitle.Text = "✔ Database Prepared & Verified";
-                txtStage2StatusTitle.Foreground = new SolidBrush(MediaColor.FromRgb(74, 222, 128));
-                txtStage2StatusDetail.Text = "Compatibility level 130+, NVARCHAR types, RowId, and convsts are active.";
+                if (borderStage3LockBanner != null) borderStage3LockBanner.Visibility = Visibility.Collapsed;
+                if (borderStage3UnlockedBanner != null) borderStage3UnlockedBanner.Visibility = Visibility.Visible;
+                if (lstTables != null) lstTables.IsEnabled = false;
+                if (fetchDataForSelectedTables != null) fetchDataForSelectedTables.IsEnabled = false;
+                if (fontConverterBTN != null) fontConverterBTN.IsEnabled = false;
+                if (updateDatabaseBTN != null)
+                {
+                    updateDatabaseBTN.IsEnabled = false;
+                    updateDatabaseBTN.Content = "✔ Intermediate DB Updated with Unicode (Locked)";
+                }
+                if (btnGoToStep3 != null) btnGoToStep3.Visibility = Visibility.Visible;
             }
             else
             {
-                chipStep2.BorderBrush = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
-                borderChip2Badge.Background = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                chipStep2.BorderBrush = (_currentActiveStep == 2)
+                    ? new SolidBrush(MediaColor.FromRgb(16, 185, 129))
+                    : new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                borderChip2Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
                 txtChip2Num.Text = "2";
-                txtChip2Status.Text = "⚠ Action Required";
-                txtChip2Status.Foreground = new SolidBrush(MediaColor.FromRgb(252, 211, 77));
+                txtChip2Status.Text = "Ready to Convert";
+                txtChip2Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
 
-                badgeStage2.Background = new SolidBrush(MediaColor.FromRgb(69, 26, 3));
-                txtStage2Badge.Text = "ACTION REQUIRED";
-                txtStage2StatusTitle.Text = "⚠ Preparation Needed Before Conversion";
-                txtStage2StatusTitle.Foreground = new SolidBrush(MediaColor.FromRgb(251, 191, 36));
-                txtStage2StatusDetail.Text = "Click 'Open Database Preparation Wizard' below to run the 6 preparation steps.";
+                if (borderStage3LockBanner != null) borderStage3LockBanner.Visibility = Visibility.Collapsed;
+                if (borderStage3UnlockedBanner != null) borderStage3UnlockedBanner.Visibility = Visibility.Visible;
+                if (lstTables != null) lstTables.IsEnabled = true;
+                if (fetchDataForSelectedTables != null) fetchDataForSelectedTables.IsEnabled = true;
+                if (btnGoToStep3 != null) btnGoToStep3.Visibility = Visibility.Collapsed;
             }
 
-            // ── STEP 3 CHIP & STAGE 3 CARD ──
-            if (!_isStage2Completed)
+            // ── STEP 3 CHIP & STEP 3 PANEL CONTROLS ──
+            if (_isStage4Completed)
             {
-                borderStage3LockBanner.Visibility = Visibility.Visible;
-                borderStage3UnlockedBanner.Visibility = Visibility.Collapsed;
+                chipStep3.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                borderChip3Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                txtChip3Num.Text = "✔";
+                txtChip3Status.Text = "✔ Migration Completed";
+                txtChip3Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
 
-                lstTables.IsEnabled = false;
-                fetchDataForSelectedTables.IsEnabled = false;
-                fontConverterBTN.IsEnabled = false;
-                updateDatabaseBTN.IsEnabled = false;
-
+                if (borderStage4LockBanner != null) borderStage4LockBanner.Visibility = Visibility.Collapsed;
+                if (borderStage4UnlockedBanner != null) borderStage4UnlockedBanner.Visibility = Visibility.Collapsed;
+                if (borderStage4CompletedBanner != null) borderStage4CompletedBanner.Visibility = Visibility.Visible;
+                if (btnDataMigrationWizard != null) btnDataMigrationWizard.IsEnabled = true;
+                if (btnViewMigratedUnits != null) btnViewMigratedUnits.Visibility = Visibility.Visible;
+                if (txtBtnDataMigrationWizard != null) txtBtnDataMigrationWizard.Text = "✔ Migration Completed (Review Pipeline)";
+            }
+            else if (!_isStage3Completed)
+            {
                 chipStep3.BorderBrush = inactiveBorder;
                 borderChip3Badge.Background = inactiveBadge;
                 txtChip3Num.Text = "3";
                 txtChip3Status.Text = "🔒 Locked (Needs Step 2)";
                 txtChip3Status.Foreground = inactiveText;
+
+                if (borderStage4LockBanner != null) borderStage4LockBanner.Visibility = Visibility.Visible;
+                if (borderStage4UnlockedBanner != null) borderStage4UnlockedBanner.Visibility = Visibility.Collapsed;
+                if (borderStage4CompletedBanner != null) borderStage4CompletedBanner.Visibility = Visibility.Collapsed;
+                if (btnDataMigrationWizard != null) btnDataMigrationWizard.IsEnabled = false;
+                if (btnViewMigratedUnits != null) btnViewMigratedUnits.Visibility = Visibility.Collapsed;
+                if (txtBtnDataMigrationWizard != null) txtBtnDataMigrationWizard.Text = "🚀 Launch Data Migration Wizard";
             }
             else
             {
-                borderStage3LockBanner.Visibility = Visibility.Collapsed;
-                borderStage3UnlockedBanner.Visibility = Visibility.Visible;
+                chipStep3.BorderBrush = (_currentActiveStep == 3)
+                    ? new SolidBrush(MediaColor.FromRgb(139, 92, 246))
+                    : new SolidBrush(MediaColor.FromRgb(196, 181, 253));
+                borderChip3Badge.Background = new SolidBrush(MediaColor.FromRgb(139, 92, 246));
+                txtChip3Num.Text = "3";
+                txtChip3Status.Text = "🚀 Ready for Migration";
+                txtChip3Status.Foreground = new SolidBrush(MediaColor.FromRgb(196, 181, 253));
 
-                if (_isStage3Completed)
-                {
-                    // FAILSAFE: Lock Stage 3 once completed to prevent re-conversion or data corruption
-                    lstTables.IsEnabled = false;
-                    fetchDataForSelectedTables.IsEnabled = false;
-                    fontConverterBTN.IsEnabled = false;
-                    updateDatabaseBTN.IsEnabled = false;
-                    updateDatabaseBTN.Content = "✔ Database Updated with Unicode (Locked)";
-
-                    chipStep3.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                    borderChip3Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                    txtChip3Num.Text = "✔";
-                    txtChip3Status.Text = "✔ Converted & Updated";
-                    txtChip3Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
-                }
-                else
-                {
-                    lstTables.IsEnabled = true;
-                    fetchDataForSelectedTables.IsEnabled = true;
-
-                    chipStep3.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                    borderChip3Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                    txtChip3Num.Text = "3";
-                    txtChip3Status.Text = "Ready to Convert";
-                    txtChip3Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
-                }
-            }
-
-            // ── STEP 4 CHIP & STAGE 4 CARD ──
-            if (_isStage4Completed)
-            {
-                borderStage4LockBanner.Visibility = Visibility.Collapsed;
-                borderStage4UnlockedBanner.Visibility = Visibility.Collapsed;
-                if (borderStage4CompletedBanner != null)
-                    borderStage4CompletedBanner.Visibility = Visibility.Visible;
-                btnDataMigrationWizard.IsEnabled = true;
-
-                if (btnViewMigratedUnits != null)
-                    btnViewMigratedUnits.Visibility = Visibility.Visible;
-
-                // Step 4 Chip in green completed state
-                chipStep4.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                borderChip4Badge.Background = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
-                txtChip4Num.Text = "✔";
-                txtChip4Status.Text = "✔ Migration Completed";
-                txtChip4Status.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
-
-                if (txtBtnDataMigrationWizard != null)
-                    txtBtnDataMigrationWizard.Text = "✔ Migration Completed (Review Pipeline)";
-
-                btnDataMigrationWizard.Background = new System.Windows.Media.LinearGradientBrush(
-                    MediaColor.FromRgb(16, 185, 129),
-                    MediaColor.FromRgb(5, 150, 105),
-                    new System.Windows.Point(0, 0), new System.Windows.Point(1, 1));
-            }
-            else if (!_isStage3Completed)
-            {
-                borderStage4LockBanner.Visibility = Visibility.Visible;
-                borderStage4UnlockedBanner.Visibility = Visibility.Collapsed;
-                if (borderStage4CompletedBanner != null)
-                    borderStage4CompletedBanner.Visibility = Visibility.Collapsed;
-                btnDataMigrationWizard.IsEnabled = false;
-
-                if (btnViewMigratedUnits != null)
-                    btnViewMigratedUnits.Visibility = Visibility.Collapsed;
-
-                chipStep4.BorderBrush = inactiveBorder;
-                borderChip4Badge.Background = inactiveBadge;
-                txtChip4Num.Text = "4";
-                txtChip4Status.Text = "🔒 Locked (Needs Step 3)";
-                txtChip4Status.Foreground = inactiveText;
-
-                if (txtBtnDataMigrationWizard != null)
-                    txtBtnDataMigrationWizard.Text = "🚀 Launch Data Migration Wizard";
-
-                btnDataMigrationWizard.Background = new System.Windows.Media.LinearGradientBrush(
-                    MediaColor.FromRgb(139, 92, 246),
-                    MediaColor.FromRgb(217, 70, 239),
-                    new System.Windows.Point(0, 0), new System.Windows.Point(1, 1));
-            }
-            else
-            {
-                borderStage4LockBanner.Visibility = Visibility.Collapsed;
-                borderStage4UnlockedBanner.Visibility = Visibility.Visible;
-                if (borderStage4CompletedBanner != null)
-                    borderStage4CompletedBanner.Visibility = Visibility.Collapsed;
-                btnDataMigrationWizard.IsEnabled = true;
-
-                if (btnViewMigratedUnits != null)
-                    btnViewMigratedUnits.Visibility = Visibility.Collapsed;
-
-                chipStep4.BorderBrush = new SolidBrush(MediaColor.FromRgb(139, 92, 246));
-                borderChip4Badge.Background = new SolidBrush(MediaColor.FromRgb(139, 92, 246));
-                txtChip4Num.Text = "4";
-                txtChip4Status.Text = "🚀 Ready for Migration";
-                txtChip4Status.Foreground = new SolidBrush(MediaColor.FromRgb(196, 181, 253));
-
-                if (txtBtnDataMigrationWizard != null)
-                    txtBtnDataMigrationWizard.Text = "🚀 Launch Data Migration Wizard";
-
-                btnDataMigrationWizard.Background = new System.Windows.Media.LinearGradientBrush(
-                    MediaColor.FromRgb(139, 92, 246),
-                    MediaColor.FromRgb(217, 70, 239),
-                    new System.Windows.Point(0, 0), new System.Windows.Point(1, 1));
+                if (borderStage4LockBanner != null) borderStage4LockBanner.Visibility = Visibility.Collapsed;
+                if (borderStage4UnlockedBanner != null) borderStage4UnlockedBanner.Visibility = Visibility.Visible;
+                if (borderStage4CompletedBanner != null) borderStage4CompletedBanner.Visibility = Visibility.Collapsed;
+                if (btnDataMigrationWizard != null) btnDataMigrationWizard.IsEnabled = true;
+                if (btnViewMigratedUnits != null) btnViewMigratedUnits.Visibility = Visibility.Collapsed;
+                if (txtBtnDataMigrationWizard != null) txtBtnDataMigrationWizard.Text = "🚀 Launch Data Migration Wizard";
             }
         }
 
@@ -1088,6 +1334,105 @@ namespace LandPressDataMigrationDesktopApp
             });
         }
 
+        // ─────────────────────────────────────────────────────────────────────────────
+        // ── STEP 1: COPY & STAGE SOURCE DATA TO DLRS_Migration_Intrm ──
+        // ─────────────────────────────────────────────────────────────────────────────
+        private async void BtnCopyToIntrmDb_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_DbName))
+            {
+                System.Windows.MessageBox.Show("Please select a source database first.", "Source DB Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!_isIntermediateDbReady)
+            {
+                System.Windows.MessageBox.Show($"Please initialize [{AppConfig.IntermediateDbName}] first.", "Intermediate DB Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            btnCopyToIntrmDb.IsEnabled = false;
+            pbStep1Copy.Visibility = Visibility.Visible;
+            txtStep1Status.Visibility = Visibility.Visible;
+            txtStep1Status.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
+            txtStep1Status.Text = $"⏳ Copying and staging data from [{_DbName}] into [{AppConfig.IntermediateDbName}]...";
+
+            try
+            {
+                var (hsbCount, l01Count, l02Count) = await IntermediateDbService.StageDataFromSourceAsync(
+                    _baseConnectionString, _DbName);
+
+                _isStage2Completed = true; // Step 1 is completed
+                pbStep1Copy.Visibility = Visibility.Collapsed;
+                txtStep1Status.Visibility = Visibility.Collapsed;
+
+                txtStep1CompletedDetail.Text =
+                    $"Data staged successfully in [{AppConfig.IntermediateDbName}]:\n" +
+                    $" • tblHalsabek: {hsbCount:N0} rows\n" +
+                    $" • tblLinfo01: {l01Count:N0} rows (Unicode-ready KRemark, ROWID)\n" +
+                    $" • tblLinfo02: {l02Count:N0} rows (Unicode-ready OwnName/addr, RowId)\n\n" +
+                    "Click '➔ Go to Step 2' to start font conversion.";
+
+                borderStep1CompletedBanner.Visibility = Visibility.Visible;
+                btnGoToStep2.Visibility = Visibility.Visible;
+
+                // Load tables in intermediate DB for Step 2
+                await LoadIntermediateTablesAsync();
+
+                UpdateWorkflowState();
+
+                // Smoothly switch view to Step 2
+                ShowStep(2);
+            }
+            catch (Exception ex)
+            {
+                pbStep1Copy.Visibility = Visibility.Collapsed;
+                txtStep1Status.Text = $"❌ Error copying data: {ex.Message}";
+                txtStep1Status.Foreground = System.Windows.Media.Brushes.Tomato;
+                btnCopyToIntrmDb.IsEnabled = true;
+                System.Windows.MessageBox.Show($"Failed to stage data into [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}", "Error Staging Data", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async Task LoadIntermediateTablesAsync()
+        {
+            try
+            {
+                await GetTotalRowCount();
+
+                string intrmCs = BuildConnectionString(AppConfig.IntermediateDbName);
+                var alreadyConverted = await CheckTablesAlreadyConvertedInDbAsync(intrmCs);
+
+                lstTables.Items.Clear();
+
+                string displayName01 = $"dbo.tblLinfo01 ({tblInf01RowCount})";
+                if (alreadyConverted.Contains("dbo.tblLinfo01"))
+                    displayName01 += " [✔ Converted to Unicode]";
+
+                string displayName02 = $"dbo.tblLinfo02 ({tblInf02RowCount})";
+                if (alreadyConverted.Contains("dbo.tblLinfo02"))
+                    displayName02 += " [✔ Converted to Unicode]";
+
+                lstTables.Items.Add(new TableItem { Name = displayName01, IsSelected = true });
+                lstTables.Items.Add(new TableItem { Name = displayName02, IsSelected = true });
+
+                if (alreadyConverted.Contains("dbo.tblLinfo01") && alreadyConverted.Contains("dbo.tblLinfo02"))
+                {
+                    _isStage3Completed = true;
+                    updateDatabaseBTN.Content = "✔ Intermediate DB Already in Unicode (Preserved)";
+                    borderAlreadyConvertedWarning.Visibility = Visibility.Visible;
+                    txtAlreadyConvertedDetail.Text =
+                        $"Notice: The intermediate staging tables [{AppConfig.IntermediateDbName}] already contain Bengali Unicode text.\n" +
+                        "Re-converting will corrupt characters! Step 2 is marked completed; you can proceed to Step 3.";
+                }
+                else
+                {
+                    borderAlreadyConvertedWarning.Visibility = Visibility.Collapsed;
+                }
+            }
+            catch { }
+        }
+
         // ------------------------------
         // LOAD TABLES
         // ------------------------------
@@ -1098,9 +1443,35 @@ namespace LandPressDataMigrationDesktopApp
 
             try
             {
-                string dbName = lstDatabases.SelectedItem.ToString();
+                string dbName = lstDatabases.SelectedItem.ToString()!;
 
-                // Failsafe: Warn user if switching database after Stage 2, 3, or 4 is already completed
+                if (dbName == AppConfig.IntermediateDbName)
+                {
+                    System.Windows.MessageBox.Show(
+                        $"[{AppConfig.IntermediateDbName}] is the intermediate staging database and cannot be selected as the source migration database.\n\nPlease select your legacy source database to proceed.",
+                        "Intermediate Database Selected",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    lstDatabases.SelectionChanged -= Databases_SelectionChanged;
+                    lstDatabases.SelectedItem = null;
+                    lstDatabases.SelectionChanged += Databases_SelectionChanged;
+                    return;
+                }
+
+                if (string.Equals(dbName, _BaseDbName, StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Windows.MessageBox.Show(
+                        $"[{_BaseDbName}] is the core destination database and cannot be selected as the source database.\n\nPlease select your legacy source database to proceed.",
+                        "Core Target Database Selected",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    lstDatabases.SelectionChanged -= Databases_SelectionChanged;
+                    lstDatabases.SelectedItem = null;
+                    lstDatabases.SelectionChanged += Databases_SelectionChanged;
+                    return;
+                }
+
+                // Failsafe: Warn user if switching database after operations are already in progress
                 if (!string.IsNullOrEmpty(_DbName) && _DbName != dbName && (_isStage2Completed || _isStage3Completed || _isStage4Completed))
                 {
                     var confirm = System.Windows.MessageBox.Show(
@@ -1125,112 +1496,18 @@ namespace LandPressDataMigrationDesktopApp
                 _isStage2Completed = false;
                 _isStage3Completed = false;
                 _isStage4Completed = false;
-                updateDatabaseBTN.Content = "💾 Update Database";
-                UpdateWorkflowState();
-
-                // Show the Prepare Database & Migration Wizard buttons
-                btnPrepareDb.Visibility = Visibility.Visible;
-                btnDataMigrationWizard.Visibility = Visibility.Visible;
-
-                string cs = BuildConnectionString(dbName);
-
-                // Run verification check for Stage 2
-                txtStage2StatusTitle.Text = "Verifying database preparation...";
-                bool isPrepared = await CheckDatabasePreparedAsync(cs);
-                _isStage2Completed = isPrepared;
-
-                // Run check to identify whether tables are already converted to Unicode
-                var alreadyConvertedTables = await CheckTablesAlreadyConvertedInDbAsync(cs);
-                bool allTargetTablesConverted = alreadyConvertedTables.Contains("dbo.tblLinfo01") &&
-                                                 alreadyConvertedTables.Contains("dbo.tblLinfo02");
-
-                if (alreadyConvertedTables.Count > 0)
-                {
-                    borderAlreadyConvertedWarning.Visibility = Visibility.Visible;
-                    txtAlreadyConvertedDetail.Text =
-                        $"Notice: The following table(s) in \"{dbName}\" already contain Bengali Unicode text:\n" +
-                        $"• {string.Join("\n• ", alreadyConvertedTables)}\n\n" +
-                        "Re-running font conversion will distort characters and cause Mojibake." +
-                        (allTargetTablesConverted
-                            ? " Stage 3 is marked as completed; you can proceed directly to Stage 4 (Migration Pipeline)."
-                            : " Please do not re-convert the tables marked with [✔ Converted].");
-
-                    if (allTargetTablesConverted)
-                    {
-                        _isStage3Completed = true;
-                        updateDatabaseBTN.Content = "✔ Database Already in Unicode (Preserved)";
-                    }
-                }
-                else
-                {
-                    borderAlreadyConvertedWarning.Visibility = Visibility.Collapsed;
-                }
-
-                // Run check to identify whether Stage 4 (Data Migration) was already completed
-                bool isMigrationDone = await CheckMigrationAlreadyCompletedInDbAsync(cs);
-                if (isMigrationDone)
-                {
-                    _isStage4Completed = true;
-                }
+                _currentActiveStep = 1;
+                updateDatabaseBTN.Content = "💾 Update Intermediate DB";
+                borderStep1CompletedBanner.Visibility = Visibility.Collapsed;
+                btnGoToStep2.Visibility = Visibility.Collapsed;
 
                 UpdateWorkflowState();
-
-                using var conn = new SqlConnection(cs);
-                conn.Open();
-
-                lstTables.Items.Clear();
-
-                string sql = @"
-                    SELECT TABLE_SCHEMA + '.' + TABLE_NAME
-                    FROM INFORMATION_SCHEMA.TABLES
-                    WHERE TABLE_TYPE = 'BASE TABLE'
-                    ORDER BY TABLE_SCHEMA, TABLE_NAME";
-
-                using var cmd = new SqlCommand(sql, conn);
-                using var reader = cmd.ExecuteReader();
-
-                await GetTotalRowCount();
-
-                // Excluding the first table (Halsabek) with the help of the following boolean flag
-                bool isFirst = true;
-                while (reader.Read())
-                {
-                    if (isFirst)
-                    {
-                        isFirst = false;
-                        continue;
-                    }
-
-                    string tableName = reader.GetString(0);
-                    bool isTblInfo01 = tableName.Contains("tblLInfo01", StringComparison.OrdinalIgnoreCase);
-                    bool isTblInfo02 = tableName.Contains("tblLInfo02", StringComparison.OrdinalIgnoreCase);
-                    string displayName = tableName;
-                    if (isTblInfo01)
-                    {
-                        displayName = $"{tableName} ({tblInf01RowCount})";
-                        if (alreadyConvertedTables.Contains("dbo.tblLinfo01"))
-                            displayName += " [✔ Converted to Unicode]";
-                    }
-                    else if (isTblInfo02)
-                    {
-                        displayName = $"{tableName} ({tblInf02RowCount})";
-                        if (alreadyConvertedTables.Contains("dbo.tblLinfo02"))
-                            displayName += " [✔ Converted to Unicode]";
-                    }
-                    lstTables.Items.Add(new TableItem
-                    {
-                        Name = displayName,
-                        IsSelected = false
-                    });
-                }
-
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show(ex.Message, "Error");
             }
         }
-
 
         private async Task GetTotalRowCount()
         {
@@ -1249,8 +1526,7 @@ namespace LandPressDataMigrationDesktopApp
                     cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500)
                                    .Value = "GETROWCOUNTS";
 
-                    cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200)
-                                   .Value = _DbName;   // your variable
+                    cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;   // your variable
 
                     using (var adapter = new SqlDataAdapter(cmd))
                     {
@@ -1269,13 +1545,13 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!_isStage2Completed)
             {
-                System.Windows.MessageBox.Show("Stage 2 (Database Preparation & Compatibility) must be completed before converting fonts.", "Stage 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before converting fonts.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Failsafe Active: Stage 3 (Unicode Conversion & Database Update) is already completed and committed.\n\nRe-running this operation is blocked to preserve data integrity.", "Stage 3 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
+                System.Windows.MessageBox.Show("Failsafe Active: Step 2 (Unicode Conversion & Intermediate DB Update) is already completed.\n\nRe-running this operation is blocked to preserve data integrity.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1469,13 +1745,13 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!_isStage2Completed)
             {
-                System.Windows.MessageBox.Show("Stage 2 (Database Preparation & Compatibility) must be completed before updating database.", "Stage 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before updating intermediate database.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Failsafe Active: Database has already been updated with Unicode.\n\nRe-running this operation is blocked to preserve data consistency.", "Operation Locked", MessageBoxButton.OK, MessageBoxImage.Information);
+                System.Windows.MessageBox.Show("Failsafe Active: Intermediate database has already been updated with Unicode.\n\nRe-running this operation is blocked to preserve data consistency.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -1509,9 +1785,11 @@ namespace LandPressDataMigrationDesktopApp
             _isStage3Completed = true;
             UpdateWorkflowState();
             updateDatabaseBTN.IsEnabled = false;
-            updateDatabaseBTN.Content = "✔ Database Updated with Unicode (Locked)";
+            updateDatabaseBTN.Content = "✔ Intermediate DB Updated with Unicode (Locked)";
             fontConverterBTN.IsEnabled = false;
             fetchDataForSelectedTables.IsEnabled = false;
+            if (btnGoToStep3 != null) btnGoToStep3.Visibility = Visibility.Visible;
+            ShowStep(3); // Smoothly transition to Step 3 (Migration)
         }
 
         private async Task UpdateTblLinfo01InBatchesAsync()
@@ -1572,7 +1850,7 @@ namespace LandPressDataMigrationDesktopApp
                             {
                                 cmd.CommandType = CommandType.StoredProcedure;
                                 cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "UPDTTBLINF01";
-                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = _DbName;
+                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
                                 cmd.Parameters.Add("@Djson1", SqlDbType.NVarChar, -1).Value = jsonstring;
 
                                 return cmd.ExecuteScalar()?.ToString();
@@ -1625,7 +1903,7 @@ namespace LandPressDataMigrationDesktopApp
                             {
                                 cmd.CommandType = CommandType.StoredProcedure;
                                 cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "UPDTTBLINF02";
-                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = _DbName;
+                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
                                 cmd.Parameters.Add("@Djson1", SqlDbType.NVarChar, -1).Value = jsonstring;
 
                                 return cmd.ExecuteScalar()?.ToString();
@@ -1653,321 +1931,222 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!_isStage2Completed)
             {
-                System.Windows.MessageBox.Show("Stage 2 (Database Preparation & Compatibility) must be completed before fetching and converting table data.", "Stage 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before fetching table data.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Failsafe Active: Stage 3 (Unicode Conversion & Database Update) is already completed and locked.\n\nFetching tables again is disabled to prevent overwriting migrated data.", "Stage 3 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
+                System.Windows.MessageBox.Show("Failsafe Active: Step 2 (Unicode Conversion & Intermediate DB Update) is already completed.\n\nFetching tables again is disabled to prevent overwriting migrated data.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            var selectedTables = lstTables.Items .Cast<TableItem>() .Where(t => t.IsSelected) .Select(t => t.Name) .ToList();
-
+            var selectedTables = lstTables.Items.Cast<TableItem>().Where(t => t.IsSelected).Select(t => t.Name).ToList();
 
             if (selectedTables.Count == 0)
             {
-                System.Windows.MessageBox.Show("Plz select at least one table");
+                System.Windows.MessageBox.Show("Please select at least one table to fetch.", "No Table Selected", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            // ── Clear previous run data to prevent overlap / duplication ──
-            tblLinfo01List.Clear();
-            tblLinfo02List.Clear();
-            tablRowCountData.Clear();
+            fetchDataForSelectedTables.IsEnabled = false;
 
+            try
+            {
+                // ── Clear previous run data to prevent overlap / duplication ──
+                tblLinfo01List.Clear();
+                tblLinfo02List.Clear();
+                tablRowCountData.Clear();
 
+                DataFetchingStatusFortblLinfo01.Visibility = Visibility.Collapsed;
+                tblLinfo01RowCount.Visibility = Visibility.Collapsed;
+                DataFetchingStatusFortblLinfo02.Visibility = Visibility.Collapsed;
+                tblLinfo02RowCount.Visibility = Visibility.Collapsed;
 
-            string firstTableName = selectedTables
-                .FirstOrDefault(t => t.Contains("tblLInfo01", StringComparison.OrdinalIgnoreCase))
-                ?? string.Empty;
+                string firstTableName = selectedTables
+                    .FirstOrDefault(t => t.Contains("tblLInfo01", StringComparison.OrdinalIgnoreCase))
+                    ?? string.Empty;
 
-            string secondTableName = selectedTables
-                .FirstOrDefault(t => t.Contains("tblLInfo02", StringComparison.OrdinalIgnoreCase))
-                ?? string.Empty;
+                string secondTableName = selectedTables
+                    .FirstOrDefault(t => t.Contains("tblLInfo02", StringComparison.OrdinalIgnoreCase))
+                    ?? string.Empty;
 
+                var fixedConnectionString = BuildConnectionString(_BaseDbName);
 
+                if (!string.IsNullOrEmpty(firstTableName))
+                {
+                    DataFetchingStatus.Visibility = Visibility.Visible;
+                    DataFetchingStatus.Foreground = System.Windows.Media.Brushes.Gray;
+                    DataFetchingStatus.Text = $"Starting fetching data for {firstTableName.Split(' ')[0]}...";
 
-            //****************************************************************************************
+                    await Task.Run(() =>
+                    {
+                        using (var conn = new SqlConnection(fixedConnectionString))
+                        {
+                            conn.Open();
+                            using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
+                            {
+                                cmd.CommandType = CommandType.StoredProcedure;
+                                cmd.CommandTimeout = 300;
+                                cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO01";
+                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
 
-            var fixedConnectionString = BuildConnectionString(_BaseDbName);
+                                using (var reader = cmd.ExecuteReader(CommandBehavior.SequentialAccess))
+                                {
+                                    int unitCodOrd = reader.GetOrdinal("UnitCod");
+                                    int khtNumOrd = reader.GetOrdinal("KhtNum");
+                                    int pltNumOrd = reader.GetOrdinal("PltNum");
+                                    int kRemarkOrd = reader.GetOrdinal("KRemark");
+                                    int eascom1Ord = reader.GetOrdinal("eascom1");
+                                    int eascom2Ord = reader.GetOrdinal("eascom2");
+                                    int eascom3Ord = reader.GetOrdinal("eascom3");
+                                    int eascom4Ord = reader.GetOrdinal("eascom4");
+                                    int eascom5Ord = reader.GetOrdinal("eascom5");
+                                    int eascom6Ord = reader.GetOrdinal("eascom6");
+                                    int rowidOrd = reader.GetOrdinal("rowid");
 
+                                    while (reader.Read())
+                                    {
+                                        tblLinfo01List.Add(new tblLinfo01
+                                        {
+                                            UnitCod = reader.IsDBNull(unitCodOrd) ? string.Empty : reader.GetString(unitCodOrd),
+                                            KhtNum = reader.IsDBNull(khtNumOrd) ? string.Empty : reader.GetString(khtNumOrd),
+                                            PltNum = reader.IsDBNull(pltNumOrd) ? string.Empty : reader.GetString(pltNumOrd),
+                                            KRemark = reader.IsDBNull(kRemarkOrd) ? string.Empty : reader.GetString(kRemarkOrd),
+                                            eascom1 = reader.IsDBNull(eascom1Ord) ? string.Empty : reader.GetString(eascom1Ord),
+                                            eascom2 = reader.IsDBNull(eascom2Ord) ? string.Empty : reader.GetString(eascom2Ord),
+                                            eascom3 = reader.IsDBNull(eascom3Ord) ? string.Empty : reader.GetString(eascom3Ord),
+                                            eascom4 = reader.IsDBNull(eascom4Ord) ? string.Empty : reader.GetString(eascom4Ord),
+                                            eascom5 = reader.IsDBNull(eascom5Ord) ? string.Empty : reader.GetString(eascom5Ord),
+                                            eascom6 = reader.IsDBNull(eascom6Ord) ? string.Empty : reader.GetString(eascom6Ord),
+                                            rowid = reader.IsDBNull(rowidOrd) ? 0 : reader.GetInt32(rowidOrd),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    });
 
-            if(!string.IsNullOrEmpty(firstTableName))
+                    DataFetchingStatus.Visibility = Visibility.Collapsed;
+                    DataFetchingStatusFortblLinfo01.Visibility = Visibility.Visible;
+                    DataFetchingStatusFortblLinfo01.Text = "Data retrieval for tblLInfo01 completed successfully.";
+                    tblLinfo01RowCount.Visibility = Visibility.Visible;
+                    tblLinfo01RowCount.Text = $"tblLInfo01 — Total Records: {tblLinfo01List.Count:N0}";
+                }
+
+                if (!string.IsNullOrEmpty(secondTableName))
+                {
+                    DataFetchingStatus2.Visibility = Visibility.Visible;
+                    DataFetchingStatus2.Text = $"Starting fetching data for {secondTableName.Split(' ')[0]}...";
+
+                    await Task.Run(() =>
+                    {
+                        using (var conn = new SqlConnection(fixedConnectionString))
+                        {
+                            conn.Open();
+                            using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
+                            {
+                                cmd.CommandType = CommandType.StoredProcedure;
+                                cmd.CommandTimeout = 300;
+                                cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO02";
+                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
+
+                                using (var reader = cmd.ExecuteReader(CommandBehavior.SequentialAccess))
+                                {
+                                    int ownNameOrd = reader.GetOrdinal("OwnName");
+                                    int addr1Ord = reader.GetOrdinal("addr1");
+                                    int addr2Ord = reader.GetOrdinal("addr2");
+                                    int addr3Ord = reader.GetOrdinal("addr3");
+                                    int addr4Ord = reader.GetOrdinal("addr4");
+                                    int addr5Ord = reader.GetOrdinal("addr5");
+                                    int addr6Ord = reader.GetOrdinal("addr6");
+                                    int addr7Ord = reader.GetOrdinal("addr7");
+                                    int addr8Ord = reader.GetOrdinal("addr8");
+                                    int addr9Ord = reader.GetOrdinal("addr9");
+                                    int addr10Ord = reader.GetOrdinal("addr10");
+                                    int rowidOrd = reader.GetOrdinal("rowid");
+
+                                    while (reader.Read())
+                                    {
+                                        tblLinfo02List.Add(new tblLinfo02
+                                        {
+                                            OwnName = reader.IsDBNull(ownNameOrd) ? string.Empty : reader.GetString(ownNameOrd),
+                                            addr1 = reader.IsDBNull(addr1Ord) ? string.Empty : reader.GetString(addr1Ord),
+                                            addr2 = reader.IsDBNull(addr2Ord) ? string.Empty : reader.GetString(addr2Ord),
+                                            addr3 = reader.IsDBNull(addr3Ord) ? string.Empty : reader.GetString(addr3Ord),
+                                            addr4 = reader.IsDBNull(addr4Ord) ? string.Empty : reader.GetString(addr4Ord),
+                                            addr5 = reader.IsDBNull(addr5Ord) ? string.Empty : reader.GetString(addr5Ord),
+                                            addr6 = reader.IsDBNull(addr6Ord) ? string.Empty : reader.GetString(addr6Ord),
+                                            addr7 = reader.IsDBNull(addr7Ord) ? string.Empty : reader.GetString(addr7Ord),
+                                            addr8 = reader.IsDBNull(addr8Ord) ? string.Empty : reader.GetString(addr8Ord),
+                                            addr9 = reader.IsDBNull(addr9Ord) ? string.Empty : reader.GetString(addr9Ord),
+                                            addr10 = reader.IsDBNull(addr10Ord) ? string.Empty : reader.GetString(addr10Ord),
+                                            rowid = reader.IsDBNull(rowidOrd) ? 0 : reader.GetInt32(rowidOrd),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    DataFetchingStatus2.Visibility = Visibility.Collapsed;
+                    DataFetchingStatusFortblLinfo02.Visibility = Visibility.Visible;
+                    DataFetchingStatusFortblLinfo02.Text = "Data retrieval for tblLInfo02 completed successfully.";
+                    tblLinfo02RowCount.Visibility = Visibility.Visible;
+                    tblLinfo02RowCount.Text = $"tblLInfo02 — Total Records: {tblLinfo02List.Count:N0}";
+                }
+
+                // Check if fetched records already contain Bengali Unicode
+                var inMemoryConverted = new List<string>();
+                if (tblLinfo01List.Any(r => ContainsBengaliUnicode(r.KRemark)))
+                    inMemoryConverted.Add("dbo.tblLinfo01 (KRemark)");
+                if (tblLinfo02List.Any(r => ContainsBengaliUnicode(r.OwnName) || ContainsBengaliUnicode(r.addr1)))
+                    inMemoryConverted.Add("dbo.tblLinfo02 (OwnName / Addresses)");
+
+                if (inMemoryConverted.Count > 0)
+                {
+                    borderAlreadyConvertedWarning.Visibility = Visibility.Visible;
+                    txtAlreadyConvertedDetail.Text =
+                        $"Notice: The fetched table(s) [{string.Join(", ", inMemoryConverted)}] ALREADY contain Bengali Unicode text.\n" +
+                        "Re-running font conversion will distort characters and cause Mojibake!";
+
+                    fontConversionPermission.Visibility = Visibility.Visible;
+                    fontConversionPermission.Foreground = System.Windows.Media.Brushes.Tomato;
+                    fontConversionPermission.Text = $"⚠️ Notice: {string.Join(" and ", inMemoryConverted)} already formatted in Unicode.";
+
+                    System.Windows.MessageBox.Show(
+                        $"⚠️ Warning: Converted Data Detected!\n\n" +
+                        $"The following table(s) retrieved from intermediate database (source: \"{_DbName}\") already contain Bengali Unicode text:\n" +
+                        $"• {string.Join("\n• ", inMemoryConverted)}\n\n" +
+                        "Running font conversion on already-converted Unicode text will cause irreversible font distortion (Mojibake).\n\n" +
+                        (UserSession.IsAdmin
+                            ? "As Admin, you can review this or force re-conversion if strictly required."
+                            : "For safety, font conversion will be blocked for standard users."),
+                        "Already Converted Tables Detected",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                else
+                {
+                    borderAlreadyConvertedWarning.Visibility = Visibility.Collapsed;
+                    fontConversionPermission.Visibility = Visibility.Visible;
+                    fontConversionPermission.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+                    fontConversionPermission.Text = "✅ All set! You can now start the font conversion operation.";
+                }
+
+                fontConverterBTN.IsEnabled = true;
+            }
+            catch (Exception ex)
             {
                 DataFetchingStatus.Visibility = Visibility.Visible;
-                DataFetchingStatus.Text = $"Starting Fetching Data for {firstTableName.Split(' ')[0]}";
-
-                //using (var conn = new SqlConnection(fixedConnectionString))
-                //{
-                //    conn.Open();
-
-                //    using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                //    {
-                //        cmd.CommandType = CommandType.StoredProcedure;
-
-                //        // Required parameters
-                //        cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500)
-                //                       .Value = "SLCTLINFO01";
-
-                //        cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200)
-                //                       .Value = _DbName;   // your variable
-
-                //        using (var adapter = new SqlDataAdapter(cmd))
-                //        {
-                //            adapter.Fill(table1Data); // DataTable
-                //        }
-                //    }
-                //}
-
-
-
-                //await Task.Run(() =>
-                //{
-                //    using (var conn = new SqlConnection(fixedConnectionString))
-                //    {
-                //        conn.Open();
-                //        using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                //        {
-                //            cmd.CommandType = CommandType.StoredProcedure;
-                //            cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO01";
-                //            cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = _DbName;
-                //            using (var adapter = new SqlDataAdapter(cmd))
-                //            {
-                //                adapter.Fill(table1Data);
-                //            }
-                //        }
-                //    }
-                //});
-
-
-
-                await Task.Run(() =>
-                {
-                    using (var conn = new SqlConnection(fixedConnectionString))
-                    {
-                        conn.Open();
-                        using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                        {
-                            cmd.CommandType = CommandType.StoredProcedure;
-                            cmd.CommandTimeout = 300;
-                            cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO01";
-                            cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = _DbName;
-
-                            using (var reader = cmd.ExecuteReader(CommandBehavior.SequentialAccess))
-                            {
-                                int unitCodOrd = reader.GetOrdinal("UnitCod");
-                                int khtNumOrd = reader.GetOrdinal("KhtNum");
-                                int pltNumOrd = reader.GetOrdinal("PltNum");
-                                int kRemarkOrd = reader.GetOrdinal("KRemark");
-                                int eascom1Ord = reader.GetOrdinal("eascom1");
-                                int eascom2Ord = reader.GetOrdinal("eascom2");
-                                int eascom3Ord = reader.GetOrdinal("eascom3");
-                                int eascom4Ord = reader.GetOrdinal("eascom4");
-                                int eascom5Ord = reader.GetOrdinal("eascom5");
-                                int eascom6Ord = reader.GetOrdinal("eascom6");
-                                int rowidOrd = reader.GetOrdinal("rowid");
-
-                                while (reader.Read())
-                                {
-                                    tblLinfo01List.Add(new tblLinfo01
-                                    {
-                                        UnitCod = reader.IsDBNull(unitCodOrd) ? string.Empty : reader.GetString(unitCodOrd),
-                                        KhtNum = reader.IsDBNull(khtNumOrd) ? string.Empty : reader.GetString(khtNumOrd),
-                                        PltNum = reader.IsDBNull(pltNumOrd) ? string.Empty : reader.GetString(pltNumOrd),
-                                        KRemark = reader.IsDBNull(kRemarkOrd) ? string.Empty : reader.GetString(kRemarkOrd),
-                                        eascom1 = reader.IsDBNull(eascom1Ord) ? string.Empty : reader.GetString(eascom1Ord),
-                                        eascom2 = reader.IsDBNull(eascom2Ord) ? string.Empty : reader.GetString(eascom2Ord),
-                                        eascom3 = reader.IsDBNull(eascom3Ord) ? string.Empty : reader.GetString(eascom3Ord),
-                                        eascom4 = reader.IsDBNull(eascom4Ord) ? string.Empty : reader.GetString(eascom4Ord),
-                                        eascom5 = reader.IsDBNull(eascom5Ord) ? string.Empty : reader.GetString(eascom5Ord),
-                                        eascom6 = reader.IsDBNull(eascom6Ord) ? string.Empty : reader.GetString(eascom6Ord),
-                                        rowid = reader.IsDBNull(rowidOrd) ? 0 : reader.GetInt32(rowidOrd),
-                                    });
-                                }
-                            }
-                        }
-                    }
-                });
-
-
-
-
-                DataFetchingStatus.Visibility = Visibility.Collapsed;
-                DataFetchingStatusFortblLinfo01.Visibility = Visibility.Visible;
-                DataFetchingStatusFortblLinfo01.Text = "Data retrieval for tblLInfo01 completed successfully.";
-                tblLinfo01RowCount.Visibility = Visibility.Visible;
-                tblLinfo01RowCount.Text = $"tblLInfo01 — Total Records: {tblInf01RowCount}";
-
+                DataFetchingStatus.Foreground = System.Windows.Media.Brushes.Tomato;
+                DataFetchingStatus.Text = $"❌ Error: {ex.Message}";
+                System.Windows.MessageBox.Show($"Failed to fetch table data from intermediate database:\n\n{ex.Message}", "Fetch Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-
-
-
-            if(!string.IsNullOrEmpty(secondTableName))
+            finally
             {
-
-                DataFetchingStatus2.Visibility = Visibility.Visible;
-
-                DataFetchingStatus2.Text = $"Starting Fetching Data for {secondTableName.Split(' ')[0]}";
-
-
-                //using (var conn = new SqlConnection(fixedConnectionString))
-                //{
-                //    conn.Open();
-
-                //    using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                //    {
-                //        cmd.CommandType = CommandType.StoredProcedure;
-
-                //        // Required parameters
-                //        cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500)
-                //                       .Value = "SLCTLINFO02";
-
-                //        cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200)
-                //                       .Value = _DbName;   // your variable
-
-                //        using (var adapter = new SqlDataAdapter(cmd))
-                //        {
-                //            adapter.Fill(table2Data); // DataTable
-                //        }
-                //    }
-                //}
-
-                //await Task.Run(() =>
-                //{
-                //    using (var conn = new SqlConnection(fixedConnectionString))
-                //    {
-                //        conn.Open();
-                //        using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                //        {
-                //            cmd.CommandType = CommandType.StoredProcedure;
-                //            cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO02";
-                //            cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = _DbName;
-                //            using (var adapter = new SqlDataAdapter(cmd))
-                //            {
-                //                adapter.Fill(table2Data);
-                //            }
-                //        }
-                //    }
-                //});
-
-
-
-                await Task.Run(() =>
-                {
-                    using (var conn = new SqlConnection(fixedConnectionString))
-                    {
-                        conn.Open();
-                        using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                        {
-                            cmd.CommandType = CommandType.StoredProcedure;
-                            cmd.CommandTimeout = 300;
-                            cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO02";
-                            cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = _DbName;
-
-                            using (var reader = cmd.ExecuteReader(CommandBehavior.SequentialAccess))
-                            {
-                                int ownNameOrd = reader.GetOrdinal("OwnName");
-                                int addr1Ord = reader.GetOrdinal("addr1");
-                                int addr2Ord = reader.GetOrdinal("addr2");
-                                int addr3Ord = reader.GetOrdinal("addr3");
-                                int addr4Ord = reader.GetOrdinal("addr4");
-                                int addr5Ord = reader.GetOrdinal("addr5");
-                                int addr6Ord = reader.GetOrdinal("addr6");
-                                int addr7Ord = reader.GetOrdinal("addr7");
-                                int addr8Ord = reader.GetOrdinal("addr8");
-                                int addr9Ord = reader.GetOrdinal("addr9");
-                                int addr10Ord = reader.GetOrdinal("addr10");
-                                int rowidOrd = reader.GetOrdinal("rowid");
-
-                                while (reader.Read())
-                                {
-                                    tblLinfo02List.Add(new tblLinfo02
-                                    {
-                                        OwnName = reader.IsDBNull(ownNameOrd) ? string.Empty : reader.GetString(ownNameOrd),
-                                        addr1 = reader.IsDBNull(addr1Ord) ? string.Empty : reader.GetString(addr1Ord),
-                                        addr2 = reader.IsDBNull(addr2Ord) ? string.Empty : reader.GetString(addr2Ord),
-                                        addr3 = reader.IsDBNull(addr3Ord) ? string.Empty : reader.GetString(addr3Ord),
-                                        addr4 = reader.IsDBNull(addr4Ord) ? string.Empty : reader.GetString(addr4Ord),
-                                        addr5 = reader.IsDBNull(addr5Ord) ? string.Empty : reader.GetString(addr5Ord),
-                                        addr6 = reader.IsDBNull(addr6Ord) ? string.Empty : reader.GetString(addr6Ord),
-                                        addr7 = reader.IsDBNull(addr7Ord) ? string.Empty : reader.GetString(addr7Ord),
-                                        addr8 = reader.IsDBNull(addr8Ord) ? string.Empty : reader.GetString(addr8Ord),
-                                        addr9 = reader.IsDBNull(addr9Ord) ? string.Empty : reader.GetString(addr9Ord),
-                                        addr10 = reader.IsDBNull(addr10Ord) ? string.Empty : reader.GetString(addr10Ord),
-                                        rowid = reader.IsDBNull(rowidOrd) ? 0 : reader.GetInt32(rowidOrd),
-                                    });
-                                }
-                            }
-                        }
-                    }
-                });
-
-
-                DataFetchingStatus2.Visibility = Visibility.Collapsed;
-                DataFetchingStatusFortblLinfo02.Visibility = Visibility.Visible;
-                DataFetchingStatusFortblLinfo02.Text = "Data retrieval for tblLInfo02 completed successfully.";
-                tblLinfo02RowCount.Visibility = Visibility.Visible;
-                tblLinfo02RowCount.Text = $"tblLInfo02 — Total Records: {tblInf02RowCount}";
-
+                fetchDataForSelectedTables.IsEnabled = true;
             }
-
-            //string jsonString1 = JsonConvert.SerializeObject(table1Data);
-            //string jsonString2 = JsonConvert.SerializeObject(table2Data);
-
-
-            //*****************************************************************
-
-
-            //tblLinfo01List = JsonConvert.DeserializeObject<List<tblLinfo01>>(jsonString1);
-            //tblLinfo02List = JsonConvert.DeserializeObject<List<tblLinfo02>>(jsonString2);
-
-
-            //tblLinfo01List = JsonConvert.DeserializeObject<List<tblLinfo01>>(JsonConvert.SerializeObject(table1Data));
-            //tblLinfo02List = JsonConvert.DeserializeObject<List<tblLinfo02>>(JsonConvert.SerializeObject(table2Data));
-
-
-
-            // Check if fetched records already contain Bengali Unicode
-            var inMemoryConverted = new List<string>();
-            if (tblLinfo01List.Any(r => ContainsBengaliUnicode(r.KRemark)))
-                inMemoryConverted.Add("dbo.tblLinfo01 (KRemark)");
-            if (tblLinfo02List.Any(r => ContainsBengaliUnicode(r.OwnName) || ContainsBengaliUnicode(r.addr1)))
-                inMemoryConverted.Add("dbo.tblLinfo02 (OwnName / Addresses)");
-
-            if (inMemoryConverted.Count > 0)
-            {
-                borderAlreadyConvertedWarning.Visibility = Visibility.Visible;
-                txtAlreadyConvertedDetail.Text =
-                    $"Notice: The fetched table(s) [{string.Join(", ", inMemoryConverted)}] ALREADY contain Bengali Unicode text.\n" +
-                    "Re-running font conversion will distort characters and cause Mojibake!";
-
-                fontConversionPermission.Visibility = Visibility.Visible;
-                fontConversionPermission.Foreground = System.Windows.Media.Brushes.Tomato;
-                fontConversionPermission.Text = $"⚠️ Notice: {string.Join(" and ", inMemoryConverted)} already formatted in Unicode.";
-
-                System.Windows.MessageBox.Show(
-                    $"⚠️ Warning: Converted Data Detected!\n\n" +
-                    $"The following table(s) retrieved from database \"{_DbName}\" already contain Bengali Unicode text:\n" +
-                    $"• {string.Join("\n• ", inMemoryConverted)}\n\n" +
-                    "Running font conversion on already-converted Unicode text will cause irreversible font distortion (Mojibake).\n\n" +
-                    (UserSession.IsAdmin
-                        ? "As Admin, you can review this or force re-conversion if strictly required."
-                        : "For safety, font conversion will be blocked for standard users."),
-                    "Already Converted Tables Detected",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-            }
-            else
-            {
-                borderAlreadyConvertedWarning.Visibility = Visibility.Collapsed;
-                fontConversionPermission.Visibility = Visibility.Visible;
-                fontConversionPermission.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
-                fontConversionPermission.Text = "✅ All set! You can now start the font conversion operation.";
-            }
-
-            fontConverterBTN.IsEnabled = true;
         }
 
         // ------------------------------
@@ -2021,15 +2200,22 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             string targetCs = BuildConnectionString(_BaseDbName);
-            var wizard = new DataMigrationWizardWindow(targetCs, _DbName)
+            // Staged and Unicode-converted data resides in DLRS_Migration_Intrm
+            var wizard = new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName)
             {
                 Owner = this
             };
 
-            wizard.MigrationCompleted += () =>
+            bool logged = false;
+            wizard.MigrationCompleted += async () =>
             {
                 _isStage4Completed = true;
                 UpdateWorkflowState();
+                if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                {
+                    logged = true;
+                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                }
             };
 
             wizard.ShowDialog();
@@ -2038,6 +2224,11 @@ namespace LandPressDataMigrationDesktopApp
             {
                 _isStage4Completed = true;
                 UpdateWorkflowState();
+                if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                {
+                    logged = true;
+                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                }
             }
             else
             {
@@ -2048,6 +2239,11 @@ namespace LandPressDataMigrationDesktopApp
                 {
                     _isStage4Completed = true;
                     UpdateWorkflowState();
+                    if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                    {
+                        logged = true;
+                        await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                    }
                 }
             }
         }

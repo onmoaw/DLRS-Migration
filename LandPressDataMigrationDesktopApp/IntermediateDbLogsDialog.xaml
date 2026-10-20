@@ -1,0 +1,220 @@
+<Window x:Class="LandPressDataMigrationDesktopApp.IntermediateDbLogsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Unit Migration Audit Logs — DLRS_Migration_Intrm"
+        Height="640" Width="960"
+        MinHeight="480" MinWidth="720"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        Icon="/Assets/DLRS-Migration App Icon.png"
+        Background="{DynamicResource ThemeWindowBg}">
+
+    <Window.Resources>
+        <Style x:Key="DialogBtn" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="StatCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,10"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Stat Cards -->
+            <RowDefinition Height="*"/>    <!-- DataGrid of Logs -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Action Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0" Padding="20,12" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="📜" FontSize="26" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Unit Migration Audit Logs" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="18" FontWeight="Bold"/>
+                            <Border Background="#0D9488" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="DLRS_Migration_Intrm" Foreground="White" FontSize="10.5" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock x:Name="txtDbInfo" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" Margin="0,3,0,0"
+                                   Text="Table: [DLRS_Migration_Intrm].dbo.tblUnitMigrationLog • Permanent Audit History"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Theme Toggle Button -->
+                <Button x:Name="btnThemeToggle" Grid.Column="1" VerticalAlignment="Center" Padding="12,6"
+                        Style="{StaticResource DialogBtn}" Background="{DynamicResource ThemeCardBg}"
+                        BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                        Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnThemeToggle_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="txtThemeIcon" Text="☀️" Margin="0,0,5,0" FontSize="12"/>
+                        <TextBlock x:Name="txtThemeLabel" Text="Light" FontSize="11" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- STAT CARDS -->
+        <Border Grid.Row="1" Padding="20,10" Background="{DynamicResource ThemeWindowBg}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Card 1: Total Log Entries -->
+                <Border Grid.Column="0" Style="{StaticResource StatCard}">
+                    <StackPanel>
+                        <TextBlock Text="TOTAL RUNS / LOGS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource ThemeTextSecondary}"/>
+                        <TextBlock x:Name="txtTotalRuns" Text="0" FontSize="20" FontWeight="Bold" Foreground="#38BDF8" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 2: Distinct Units -->
+                <Border Grid.Column="2" Style="{StaticResource StatCard}">
+                    <StackPanel>
+                        <TextBlock Text="DISTINCT UNITS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource ThemeTextSecondary}"/>
+                        <TextBlock x:Name="txtTotalUnits" Text="0" FontSize="20" FontWeight="Bold" Foreground="#34D399" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 3: Total Migrated Records -->
+                <Border Grid.Column="4" Style="{StaticResource StatCard}">
+                    <StackPanel>
+                        <TextBlock Text="TOTAL RECORDS LOGGED" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource ThemeTextSecondary}"/>
+                        <TextBlock x:Name="txtTotalRecords" Text="0" FontSize="20" FontWeight="Bold" Foreground="#A78BFA" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 4: Last Completed Run -->
+                <Border Grid.Column="6" Style="{StaticResource StatCard}">
+                    <StackPanel>
+                        <TextBlock Text="LATEST EXECUTION" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource ThemeTextSecondary}"/>
+                        <TextBlock x:Name="txtLatestRun" Text="-" FontSize="12" FontWeight="SemiBold" Foreground="#F59E0B" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- MAIN DATAGRID -->
+        <Border Grid.Row="2" Margin="20,0,20,10" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="2">
+            <Grid>
+                <!-- Loading indicator -->
+                <TextBlock x:Name="txtLoading" Text="Loading migration audit logs from DLRS_Migration_Intrm..."
+                           Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Visible"/>
+
+                <!-- Empty state notice -->
+                <TextBlock x:Name="txtEmpty" Text="No migration runs have been logged yet in dbo.tblUnitMigrationLog."
+                           Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+
+                <DataGrid x:Name="dgLogs" AutoGenerateColumns="False" IsReadOnly="True"
+                          Background="Transparent" RowBackground="Transparent" AlternatingRowBackground="{DynamicResource ThemeInsetBg}"
+                          Foreground="{DynamicResource ThemeTextPrimary}" BorderThickness="0"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource ThemeCardBorder}"
+                          HeadersVisibility="Column" SelectionMode="Single"
+                          CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False"
+                          FontSize="11.5" RowHeight="28" Visibility="Collapsed">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="{DynamicResource ThemeHeaderBg}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondary}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="Padding" Value="8,6"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="#" Binding="{Binding LogId}" Width="50"/>
+                        <DataGridTextColumn Header="Unit Code" Binding="{Binding [Unit Code]}" FontWeight="Bold" Width="100"/>
+                        <DataGridTextColumn Header="Source DB" Binding="{Binding [Source DB]}" Width="130"/>
+                        <DataGridTextColumn Header="Halsabek Rows" Binding="{Binding [Halsabek Rows], StringFormat={}{0:N0}}" Width="100"/>
+                        <DataGridTextColumn Header="Linfo01 Rows" Binding="{Binding [Linfo01 Rows], StringFormat={}{0:N0}}" Width="95"/>
+                        <DataGridTextColumn Header="Linfo02 Rows" Binding="{Binding [Linfo02 Rows], StringFormat={}{0:N0}}" Width="95"/>
+                        <DataGridTextColumn Header="Total Records" Binding="{Binding [Total Records], StringFormat={}{0:N0}}" FontWeight="SemiBold" Width="100"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
+                        <DataGridTextColumn Header="Completed At" Binding="{Binding [Completed At]}" Width="140"/>
+                        <DataGridTextColumn Header="User" Binding="{Binding User}" Width="80"/>
+                        <DataGridTextColumn Header="Machine" Binding="{Binding Machine}" Width="100"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- BOTTOM ACTION BAR -->
+        <Border Grid.Row="3" Padding="20,10" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left actions: Refresh & Export CSV -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button x:Name="btnRefresh" Content="🔄 Refresh Logs" Style="{StaticResource DialogBtn}"
+                            Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                            Foreground="{DynamicResource ThemeTextPrimary}" Padding="14,6" Margin="0,0,8,0" Click="BtnRefresh_Click"/>
+                    <Button x:Name="btnExportCsv" Content="📥 Export to CSV" Style="{StaticResource DialogBtn}"
+                            Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                            Foreground="{DynamicResource ThemeTextPrimary}" Padding="14,6" Click="BtnExportCsv_Click"/>
+                </StackPanel>
+
+                <!-- Right action: Close -->
+                <Button Grid.Column="2" Content="✕ Close" Style="{StaticResource DialogBtn}"
+                        Background="#334155" Foreground="White" Padding="22,6" Click="BtnClose_Click"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
