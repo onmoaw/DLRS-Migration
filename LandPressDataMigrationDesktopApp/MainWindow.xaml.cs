@@ -1908,6 +1908,19 @@ namespace LandPressDataMigrationDesktopApp
                     }
                     if (txtFullAutoDetail != null)
                         txtFullAutoDetail.Text = "You can re-open Step 3 manually at any time to run or retry pending steps.";
+
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                        {
+                            await IntermediateDbService.LogCompletedUnitsAsync(
+                                _baseConnectionString, 
+                                _DbName, 
+                                status: "INCOMPLETE", 
+                                remarks: "Migration wizard closed before all required steps finished.");
+                        }
+                    }
+                    catch { }
                     return;
                 }
 
@@ -1959,9 +1972,36 @@ namespace LandPressDataMigrationDesktopApp
                     txtFullAutoStatus.Text = "⚠️ Automated pipeline was stopped by user.";
                     txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
                 }
+                PipelineExecutionLogger.LogWarning("Automated Pipeline", "Pipeline was cancelled by user.");
+                try
+                {
+                    if (!string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                    {
+                        await IntermediateDbService.LogCompletedUnitsAsync(
+                            _baseConnectionString, 
+                            _DbName, 
+                            status: "CANCELLED", 
+                            remarks: "Pipeline was stopped by user.");
+                    }
+                }
+                catch { }
             }
             catch (Exception ex)
             {
+                PipelineExecutionLogger.LogError("Automated Pipeline", $"Pipeline failed: {ex.Message}");
+                try
+                {
+                    if (!string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                    {
+                        await IntermediateDbService.LogCompletedUnitsAsync(
+                            _baseConnectionString, 
+                            _DbName, 
+                            status: "FAILED", 
+                            remarks: ex.Message.Length > 450 ? ex.Message.Substring(0, 450) : ex.Message);
+                    }
+                }
+                catch { }
+
                 PipelineAlertWindow.ShowAlert(
                     this,
                     "Pipeline Error",

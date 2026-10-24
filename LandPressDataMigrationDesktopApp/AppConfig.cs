@@ -31,7 +31,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v0.14";
+        public const string Version = "v0.15";
 
         /// <summary>
         /// Permanent intermediate staging database required on the connected SQL Server instance.
@@ -63,7 +63,7 @@ namespace LandPressDataMigrationDesktopApp
         /// Default: 0 ms (TRUE REAL-TIME maximum speed, ~10,000+ rec/sec).
         /// Set to 1 or 2 ms if you want to intentionally throttle CPU usage.
         /// </summary>
-        public static int ConversionRowDelayMs = 0;
+        public static int ConversionRowDelayMs = 2;
 
         /// <summary>
         /// Real-time progress refresh interval in milliseconds for the conversion progress bar,

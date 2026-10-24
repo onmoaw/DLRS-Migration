@@ -517,6 +517,14 @@ namespace LandPressDataMigrationDesktopApp
 
         private void BtnStopAuto_Click(object sender, RoutedEventArgs e)
         {
+            var res = MessageBox.Show(
+                "Are you sure you want to stop the automated migration sequence?\n\nCurrently active procedure execution will complete, but subsequent migration steps will be halted.",
+                "Confirm Stop Auto-Run",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (res != MessageBoxResult.Yes) return;
+
             _isAutoRunning = false;
             _isAutoPaused  = false;
             lblAutoStatus.Text = "⏹ Auto-Run Stopped by user.";

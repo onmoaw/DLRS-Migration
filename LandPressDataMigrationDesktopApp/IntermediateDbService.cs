@@ -618,7 +618,8 @@ namespace LandPressDataMigrationDesktopApp
                     Status,
                     FORMAT(CompletedDate, 'yyyy-MM-dd HH:mm:ss') AS [Completed At],
                     ExecutedBy AS [User],
-                    MachineName AS [Machine]
+                    MachineName AS [Machine],
+                    Remarks
                 FROM [{DbName}].dbo.tblUnitMigrationLog
                 ORDER BY LogId DESC;";
 
