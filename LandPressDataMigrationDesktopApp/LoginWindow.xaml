@@ -184,7 +184,7 @@
                 </Button>
 
                 <!-- ACCOUNT INFO HINT -->
-                <TextBlock Text="Admin: Full System Access  •  User: Standard Operation Mode"
+                <TextBlock Text="Role-Based Authentication  •  Enter username and password"
                            Foreground="{DynamicResource ThemeTextMuted}"
                            FontSize="10"
                            HorizontalAlignment="Center"

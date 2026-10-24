@@ -155,68 +155,7 @@
             </Grid>
         </Border>
 
-        <!-- ================= TOP WORKFLOW STEPPER BANNER (3 Steps) ================= -->
-        <Border DockPanel.Dock="Top" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Padding="18,10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- STEP 1 CHIP: Copy to Intermediate DB -->
-                <Border Grid.Column="0" x:Name="chipStep1" Background="{DynamicResource ThemeCardBg}" BorderBrush="#3B82F6" BorderThickness="2" CornerRadius="8" Padding="14,8"
-                        Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep1_Click">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border x:Name="borderChip1Badge" Width="28" Height="28" CornerRadius="14" Background="#3B82F6" Margin="0,0,10,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtChip1Num" Text="1" Foreground="White" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Step 1: Copy to Intermediate DB" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13.5"/>
-                            <TextBlock x:Name="txtChip1Status" Text="Select DB &amp; stage data" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" FontWeight="SemiBold" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- ARROW 1 -->
-                <TextBlock Grid.Column="1" Text="➔" Foreground="#38BDF8" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0"/>
-
-                <!-- STEP 2 CHIP: Unicode Font Conversion -->
-                <Border Grid.Column="2" x:Name="chipStep2" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5" CornerRadius="8" Padding="14,8"
-                        Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep2_Click">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border x:Name="borderChip2Badge" Width="28" Height="28" CornerRadius="14" Background="#64748B" Margin="0,0,10,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtChip2Num" Text="2" Foreground="White" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Step 2: Font Conversion" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13.5"/>
-                            <TextBlock x:Name="txtChip2Status" Text="Convert to Unicode in intermediate DB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" FontWeight="SemiBold" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- ARROW 2 -->
-                <TextBlock Grid.Column="3" Text="➔" Foreground="#38BDF8" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0"/>
-
-                <!-- STEP 3 CHIP: Data Migration -->
-                <Border Grid.Column="4" x:Name="chipStep3" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5" CornerRadius="8" Padding="14,8"
-                        Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep3_Click">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border x:Name="borderChip3Badge" Width="28" Height="28" CornerRadius="14" Background="#64748B" Margin="0,0,10,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtChip3Num" Text="3" Foreground="White" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Step 3: Core Data Migration" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13.5"/>
-                            <TextBlock x:Name="txtChip3Status" Text="Migrate to DLRSLSINF_4103PRSDB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" FontWeight="SemiBold" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-
-        <!-- ================= MAIN WORKFLOW CONTENT (2-COLUMN PIPELINE) ================= -->
+        <!-- ================= MAIN WORKFLOW CONTENT (2-COLUMN PIPELINE: FULL HEIGHT LEFT + STEPS RIGHT) ================= -->
         <Grid Margin="12,10,12,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="450"/>
@@ -509,9 +448,77 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- ================= RIGHT COLUMN (SEQUENTIAL PIPELINE PANELS) ================= -->
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel>
+            <!-- ================= RIGHT COLUMN (STEP PREVIEW & SEQUENTIAL PIPELINE PANELS) ================= -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- ================= WORKFLOW STEPPER PREVIEW BANNER (3 Steps) ================= -->
+                <Border Grid.Row="0" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="10" Padding="14,8" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- STEP 1 CHIP: Copy to Intermediate DB -->
+                        <Border Grid.Column="0" x:Name="chipStep1" Background="{DynamicResource ThemeCardBg}" BorderBrush="#3B82F6" BorderThickness="2" CornerRadius="8" Padding="12,8"
+                                Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep1_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="borderChip1Badge" Width="26" Height="26" CornerRadius="13" Background="#3B82F6" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtChip1Num" Text="1" Foreground="White" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Step 1: Staging &amp; Prep" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13"/>
+                                    <TextBlock x:Name="txtChip1Status" Text="Select DB &amp; stage data" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ARROW 1 -->
+                        <TextBlock Grid.Column="1" Text="➔" Foreground="#38BDF8" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="8,0"/>
+
+                        <!-- STEP 2 CHIP: Unicode Font Conversion -->
+                        <Border Grid.Column="2" x:Name="chipStep2" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5" CornerRadius="8" Padding="12,8"
+                                Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep2_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="borderChip2Badge" Width="26" Height="26" CornerRadius="13" Background="#64748B" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtChip2Num" Text="2" Foreground="White" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Step 2: Font Conversion" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13"/>
+                                    <TextBlock x:Name="txtChip2Status" Text="Convert to Unicode in intermediate DB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ARROW 2 -->
+                        <TextBlock Grid.Column="3" Text="➔" Foreground="#38BDF8" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="8,0"/>
+
+                        <!-- STEP 3 CHIP: Data Migration -->
+                        <Border Grid.Column="4" x:Name="chipStep3" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5" CornerRadius="8" Padding="12,8"
+                                Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep3_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="borderChip3Badge" Width="26" Height="26" CornerRadius="13" Background="#64748B" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtChip3Num" Text="3" Foreground="White" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Step 3: Core Migration" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13"/>
+                                    <TextBlock x:Name="txtChip3Status" Text="Migrate to DLRSLSINF_4103PRSDB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- ================= RIGHT COLUMN (SEQUENTIAL PIPELINE PANELS) ================= -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
 
                     <!-- ═════════════════════════════════════════════════════════════════════════ -->
                     <!-- STEP 1 PANEL: COPY SOURCE DATA TO INTERMEDIATE DB                         -->
@@ -1078,6 +1085,7 @@
 
                 </StackPanel>
             </ScrollViewer>
+            </Grid>
         </Grid>
     </DockPanel>
 

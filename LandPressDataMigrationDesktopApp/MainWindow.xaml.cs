@@ -280,8 +280,13 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (UserSession.IsAdmin)
             {
-                txtUserRoleBadge.Text = "👤 Admin (Full Access)";
-                borderUserRoleBadge.Background = new SolidBrush(MediaColor.FromRgb(6, 95, 70));
+                if (borderUserRoleBadge != null)
+                {
+                    borderUserRoleBadge.Visibility = Visibility.Visible;
+                    borderUserRoleBadge.Background = new SolidBrush(MediaColor.FromRgb(6, 95, 70));
+                }
+                if (txtUserRoleBadge != null)
+                    txtUserRoleBadge.Text = "👤 Admin (Full Access)";
 
                 if (panelAdminDelayControl != null)
                     panelAdminDelayControl.Visibility = Visibility.Visible;
@@ -298,8 +303,11 @@ namespace LandPressDataMigrationDesktopApp
             }
             else
             {
-                txtUserRoleBadge.Text = "👤 User (Standard Mode)";
-                borderUserRoleBadge.Background = new SolidBrush(MediaColor.FromRgb(30, 58, 138));
+                // Remove the standard mode text label for the normal user
+                if (borderUserRoleBadge != null)
+                    borderUserRoleBadge.Visibility = Visibility.Collapsed;
+                if (txtUserRoleBadge != null)
+                    txtUserRoleBadge.Text = string.Empty;
 
                 if (panelAdminDelayControl != null)
                     panelAdminDelayControl.Visibility = Visibility.Collapsed;
