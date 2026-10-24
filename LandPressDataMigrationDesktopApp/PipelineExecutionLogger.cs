@@ -174,6 +174,9 @@ namespace LandPressDataMigrationDesktopApp
             return hasIssue;
         }
 
+        public static string LogsDirectory => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+        public static string TodayLogFilePath => Path.Combine(LogsDirectory, $"Pipeline_{DateTime.Now:yyyyMMdd}.log");
+
         private static void AddEntry(PipelineLogEntry entry)
         {
             lock (_lock)
@@ -194,6 +197,24 @@ namespace LandPressDataMigrationDesktopApp
                 {
                     Entries.Add(entry);
                 }
+
+                // Automatically write to physical disk log file: Logs\Pipeline_yyyyMMdd.log
+                try
+                {
+                    if (!Directory.Exists(LogsDirectory))
+                    {
+                        Directory.CreateDirectory(LogsDirectory);
+                    }
+                    string prefix = $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss}] [{entry.Severity.ToString().ToUpperInvariant()}] [{entry.Phase}]";
+                    string recPart = !string.IsNullOrEmpty(entry.RecordId) ? $"[{entry.RecordId}] " : "";
+                    string line = $"{prefix} {recPart}{entry.Message}";
+                    if (!string.IsNullOrEmpty(entry.RawValue) || !string.IsNullOrEmpty(entry.ConvertedValue))
+                    {
+                        line += $" [Raw: '{entry.RawValue}' -> Converted: '{entry.ConvertedValue}']";
+                    }
+                    File.AppendAllText(TodayLogFilePath, line + Environment.NewLine, Encoding.UTF8);
+                }
+                catch { }
             }
             LogsUpdated?.Invoke();
         }

@@ -214,6 +214,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
@@ -228,15 +229,22 @@
                 </Button.Background>
             </Button>
 
+            <!-- Open Log File -->
+            <Button Grid.Column="1" Content="📄 Open Log File (.log)" Style="{StaticResource LogBtn}" Padding="12,6" Margin="0,0,8,0" Click="BtnOpenLogFile_Click">
+                <Button.Background>
+                    <SolidColorBrush Color="#0D9488"/>
+                </Button.Background>
+            </Button>
+
             <!-- Clear Logs -->
-            <Button Grid.Column="1" Content="🗑 Clear Logs" Style="{StaticResource LogBtn}" Padding="12,6" Click="BtnClearLogs_Click">
+            <Button Grid.Column="2" Content="🗑 Clear Logs" Style="{StaticResource LogBtn}" Padding="12,6" Click="BtnClearLogs_Click">
                 <Button.Background>
                     <SolidColorBrush Color="#475569"/>
                 </Button.Background>
             </Button>
 
             <!-- Close Button -->
-            <Button Grid.Column="3" Content="Close" Width="100" Style="{StaticResource LogBtn}" Padding="14,6" Click="BtnClose_Click">
+            <Button Grid.Column="4" Content="Close" Width="100" Style="{StaticResource LogBtn}" Padding="14,6" Click="BtnClose_Click">
                 <Button.Background>
                     <SolidColorBrush Color="#334155"/>
                 </Button.Background>

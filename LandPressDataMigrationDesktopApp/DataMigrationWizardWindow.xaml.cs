@@ -65,6 +65,24 @@ namespace LandPressDataMigrationDesktopApp
         public bool IsMigrationCompleted { get; private set; }
         private readonly bool _autoStartOnLoad = false;
 
+        /// <summary>
+        /// Returns a formatted summary of all executed, bypassed, and skipped ProcIDs.
+        /// </summary>
+        public string GetExecutionSummary()
+        {
+            var executed = _steps.Where(s => s.IsCompleted && !s.IsBypassedDueToDb).Select(s => s.Config.ProcId).ToList();
+            var bypassed = _steps.Where(s => s.IsBypassedDueToDb).Select(s => s.Config.ProcId).ToList();
+            var skipped  = _steps.Where(s => s.IsSkipped).Select(s => s.Config.ProcId).ToList();
+
+            var parts = new List<string>();
+            if (executed.Count > 0) parts.Add($"Executed: {string.Join(",", executed)}");
+            if (bypassed.Count > 0) parts.Add($"Bypassed: {string.Join(",", bypassed)}");
+            if (skipped.Count > 0)  parts.Add($"Skipped: {string.Join(",", skipped)}");
+
+            string summary = string.Join(" | ", parts);
+            return summary.Length > 490 ? summary.Substring(0, 490) : summary;
+        }
+
         public DataMigrationWizardWindow(string targetConnectionString, string sourceDbName, bool autoStart = false)
         {
             InitializeComponent();
@@ -639,6 +657,7 @@ namespace LandPressDataMigrationDesktopApp
                         step.IsStatusWarning = true;
                         step.IsStatusError = false;
                         step.StatusText = $"ℹ Notice: Bypassed — Branch '{procId}' was commented out or omitted in the database. Safely continued.";
+                        PipelineExecutionLogger.LogWarning("Step 3 (Migration SP)", $"Bypassed {procId} — branch commented out in database.", recordId: procId);
                         RenderActiveStep();
                         RefreshStepDots();
                         return true; // Successfully bypassed without breaking pipeline!
@@ -787,6 +806,7 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             CurrentStep.IsSkipped = true;
+            PipelineExecutionLogger.LogInfo("Step 3 (Migration SP)", $"User skipped step {_currentStepIndex}: {CurrentStep.Config.ProcId} ({CurrentStep.Config.Title})", recordId: CurrentStep.Config.ProcId);
             RefreshStepDots();
 
             if (_currentStepIndex < _steps.Count)
@@ -809,6 +829,8 @@ namespace LandPressDataMigrationDesktopApp
             if (allRequiredDone)
             {
                 IsMigrationCompleted = true;
+                string summary = GetExecutionSummary();
+                PipelineExecutionLogger.LogInfo("Step 3 (Migration SP)", $"All required migration steps finished successfully! {summary}");
                 if (doneBanner != null)
                     doneBanner.Visibility = Visibility.Visible;
 

@@ -134,6 +134,32 @@ namespace LandPressDataMigrationDesktopApp
             }
         }
 
+        private void BtnOpenLogFile_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string path = PipelineExecutionLogger.TodayLogFilePath;
+                string dir = PipelineExecutionLogger.LogsDirectory;
+                if (!System.IO.Directory.Exists(dir))
+                {
+                    System.IO.Directory.CreateDirectory(dir);
+                }
+                if (!System.IO.File.Exists(path))
+                {
+                    System.IO.File.WriteAllText(path, $"--- Pipeline Execution Log ({DateTime.Now:yyyy-MM-dd}) ---" + Environment.NewLine, System.Text.Encoding.UTF8);
+                }
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                WpfMessageBox.Show($"Could not open log file:\n{ex.Message}", "Open Log File", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
         {
             var res = WpfMessageBox.Show("Are you sure you want to clear all log entries?", "Confirm Clear Logs", MessageBoxButton.YesNo, MessageBoxImage.Question);

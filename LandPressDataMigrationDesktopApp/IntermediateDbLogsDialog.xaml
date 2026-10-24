@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Unit Migration Audit Logs — DLRS_Migration_Intrm"
-        Height="640" Width="960"
-        MinHeight="480" MinWidth="720"
+        Height="640" Width="1150"
+        MinHeight="480" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         Icon="/Assets/DLRS-Migration App Icon.png"
@@ -187,6 +187,7 @@
                         <DataGridTextColumn Header="Completed At" Binding="{Binding [Completed At]}" Width="140"/>
                         <DataGridTextColumn Header="User" Binding="{Binding User}" Width="80"/>
                         <DataGridTextColumn Header="Machine" Binding="{Binding Machine}" Width="100"/>
+                        <DataGridTextColumn Header="Execution Remarks / ProcIDs" Binding="{Binding Remarks}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
@@ -201,7 +202,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left actions: Refresh & Export CSV -->
+                <!-- Left actions: Refresh, Export CSV & Open Disk Log -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <Button x:Name="btnRefresh" Content="🔄 Refresh Logs" Style="{StaticResource DialogBtn}"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
@@ -209,6 +210,9 @@
                     <Button x:Name="btnExportCsv" Content="📥 Export to CSV" Style="{StaticResource DialogBtn}"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                             Foreground="{DynamicResource ThemeTextPrimary}" Padding="14,6" Click="BtnExportCsv_Click"/>
+                    <Button x:Name="btnOpenPipelineLog" Content="📄 Open Disk Log File" Style="{StaticResource DialogBtn}"
+                            Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                            Foreground="{DynamicResource ThemeTextPrimary}" Padding="14,6" Margin="8,0,0,0" Click="BtnOpenPipelineLog_Click"/>
                 </StackPanel>
 
                 <!-- Right action: Close -->

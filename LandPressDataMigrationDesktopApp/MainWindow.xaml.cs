@@ -1893,7 +1893,7 @@ namespace LandPressDataMigrationDesktopApp
                     if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
                     {
                         logged = true;
-                        await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                        await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
                     }
                 };
 
@@ -1950,7 +1950,11 @@ namespace LandPressDataMigrationDesktopApp
                 // Audit log in Intermediate DB
                 try
                 {
-                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                    if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                    {
+                        logged = true;
+                        await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
+                    }
                 }
                 catch { }
 
@@ -3270,7 +3274,7 @@ namespace LandPressDataMigrationDesktopApp
                 if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
                 {
                     logged = true;
-                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
                 }
             };
 
@@ -3283,7 +3287,7 @@ namespace LandPressDataMigrationDesktopApp
                 if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
                 {
                     logged = true;
-                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
                 }
             }
             else
