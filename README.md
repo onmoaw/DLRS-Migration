@@ -1,4 +1,6 @@
-DLRS-Migration
+DLRS-Migration Application 
+
+- Added proper conversion methods.
 
 The primary areainfo migration query,
 INSERT INTO \[DLRSLSINF\_4103PRSDB].\[dbo].\[AREAINF]
