@@ -629,6 +629,71 @@ namespace LandPressDataMigrationDesktopApp
             return dt;
         }
 
+        /// <summary>
+        /// Pre-check: Checks if any UnitCod present in the selected source database has already been
+        /// migrated and logged as 'COMPLETED' in [DLRS_Migration_Intrm].dbo.tblUnitMigrationLog.
+        /// </summary>
+        public static async Task<(bool IsMigrated, List<string> MigratedUnits, string Message)> CheckUnitAlreadyMigratedAsync(
+            string masterConnectionString, 
+            string sourceDbName)
+        {
+            var migratedUnits = new List<string>();
+
+            try
+            {
+                using var conn = new SqlConnection(masterConnectionString);
+                await conn.OpenAsync();
+
+                // First verify tblUnitMigrationLog exists
+                using (var chkCmd = new SqlCommand($"SELECT OBJECT_ID('{DbName}.dbo.tblUnitMigrationLog');", conn))
+                {
+                    var chk = await chkCmd.ExecuteScalarAsync();
+                    if (chk == null || chk == DBNull.Value)
+                        return (false, migratedUnits, string.Empty);
+                }
+
+                // Query for already completed units matching source database
+                string sql = $@"
+                    SELECT DISTINCT LTRIM(RTRIM(UnitCod))
+                    FROM [{DbName}].dbo.tblUnitMigrationLog
+                    WHERE UPPER(Status) = 'COMPLETED'
+                      AND UnitCod IN (
+                          SELECT DISTINCT LTRIM(RTRIM(UnitCod)) 
+                          FROM [{sourceDbName}].dbo.tblHalsabek 
+                          WHERE UnitCod IS NOT NULL AND LTRIM(RTRIM(UnitCod)) <> ''
+                          UNION
+                          SELECT DISTINCT LTRIM(RTRIM(UnitCod)) 
+                          FROM [{sourceDbName}].dbo.tblLinfo01 
+                          WHERE UnitCod IS NOT NULL AND LTRIM(RTRIM(UnitCod)) <> ''
+                      );";
+
+                using var cmd = new SqlCommand(sql, conn);
+                cmd.CommandTimeout = 60;
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    if (!reader.IsDBNull(0))
+                    {
+                        string u = reader.GetString(0).Trim();
+                        if (!string.IsNullOrEmpty(u) && !migratedUnits.Contains(u))
+                            migratedUnits.Add(u);
+                    }
+                }
+
+                if (migratedUnits.Count > 0)
+                {
+                    string msg = $"Unit code(s) [{string.Join(", ", migratedUnits)}] in database '{sourceDbName}' have ALREADY been migrated and logged in tblUnitMigrationLog.";
+                    return (true, migratedUnits, msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, migratedUnits, $"Pre-check warning: {ex.Message}");
+            }
+
+            return (false, migratedUnits, string.Empty);
+        }
+
         private static async Task<bool> ColumnExistsAsync(SqlConnection conn, string db, string table, string column)
         {
             string sql = $"SELECT CASE WHEN COL_LENGTH('[{db}].dbo.[{table}]', '{column}') IS NOT NULL THEN 1 ELSE 0 END;";

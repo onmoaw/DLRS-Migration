@@ -25,5 +25,89 @@
         <SolidColorBrush x:Key="ThemeWarningBg" Color="#FEF3C7"/>
         <SolidColorBrush x:Key="ThemeWarningBorder" Color="#D97706"/>
         <SolidColorBrush x:Key="ThemeWarningText" Color="#92400E"/>
+
+        <!-- ========================================================= -->
+        <!-- PROFESSIONAL APPLICATION TYPOGRAPHY SYSTEM               -->
+        <!-- Clean, crisp, high-legibility font stack with Bengali    -->
+        <!-- Unicode fallback (Kalpurush / Vrinda) and Cascadia Mono. -->
+        <!-- ========================================================= -->
+        <FontFamily x:Key="AppFontPrimary">Segoe UI, Segoe UI Variable, Kalpurush, Vrinda, Nirmala UI, Arial, sans-serif</FontFamily>
+        <FontFamily x:Key="AppFontMono">Cascadia Code, Consolas, Courier New, monospace</FontFamily>
+        <FontFamily x:Key="AppFontBengali">Kalpurush, Vrinda, Segoe UI, sans-serif</FontFamily>
+
+        <!-- Global Window Typography & ClearType Rendering Defaults -->
+        <Style TargetType="{x:Type Window}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+
+        <!-- Global TextBlock Typography Defaults -->
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+
+        <!-- Global Control Typography Defaults -->
+        <Style TargetType="{x:Type Control}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+
+        <!-- Typography Hierarchy Scale Styles -->
+        <Style x:Key="TypeTitleLarge" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        </Style>
+
+        <Style x:Key="TypeTitleMedium" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        </Style>
+
+        <Style x:Key="TypeTitleSmall" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        </Style>
+
+        <Style x:Key="TypeBody" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        </Style>
+
+        <Style x:Key="TypeBodyMedium" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        </Style>
+
+        <Style x:Key="TypeCaption" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondary}"/>
+        </Style>
+
+        <Style x:Key="TypeBadge" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontPrimary}"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style x:Key="TypeMono" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontFamily" Value="{StaticResource AppFontMono}"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
     </Application.Resources>
 </Application>

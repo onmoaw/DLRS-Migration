@@ -1,0 +1,232 @@
+USE [DLRSLSINF_4103PRSDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK]    Script Date: 24-Oct-26 16:18:37 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		<Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:	<Description,,>
+-- =============================================
+ALTER PROCEDURE [dbo].[SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK] 
+	-- Add the parameters for the stored procedure here
+	--@ComCod nvarchar(2500)='',	
+	--@ProcID nvarchar(2500)='',
+	--@Dxml01 xml = null,
+	--@Dxml02 xml = null,
+	--@Dbin01 varbinary(max) = null, 
+	--@Desc01 nvarchar(2500)=N'',
+	--@Desc02 nvarchar(2500)=N'',
+	--@Desc03 nvarchar(2500)=N'',
+	--@Desc04 nvarchar(2500)=N'', 
+	--@Desc05 nvarchar(2500)=N'',
+	--@Desc06 nvarchar(2500)=N'',	
+	--@Desc07 nvarchar(2500)=N'',	
+	--@Desc08 nvarchar(2500)=N'', 	
+	--@Desc09 nvarchar(2500)=N'', 	
+	--@Desc10 nvarchar(2500)=N'',	
+	--@Desc11 nvarchar(max)=N'',
+	--@Desc12 nvarchar(max)=N'',
+	--@Desc13 nvarchar(max)=N'',
+	--@Desc14 nvarchar(max)=N'',
+	--@Desc15 nvarchar(max)=N'', 
+	--@Desc16 nvarchar(max)=N'', 
+	--@Desc17 nvarchar(max)=N'',
+	--@Desc18 nvarchar(max)=N'',
+	--@Desc19 nvarchar(max)=N'',
+	--@Desc20 nvarchar(max)=N''
+
+
+	@ComCod nvarchar(2500) = N'',	
+	@ProcID nvarchar(2500) = N'',
+	@Djson1 nvarchar(max) = N'',
+	@Djson2 nvarchar(max) = N'',
+	@Dbin01 varbinary(max) = null, 
+	@Desc01 nvarchar(2500) = N'',
+	@Desc02 nvarchar(2500) = N'',
+	@Desc03 nvarchar(2500) = N'',
+	@Desc04 nvarchar(2500) = N'', 
+	@Desc05 nvarchar(2500) = N'',
+	@Desc06 nvarchar(2500) = N'',	
+	@Desc07 nvarchar(2500) = N'',	
+	@Desc08 nvarchar(2500) = N'', 	
+	@Desc09 nvarchar(2500) = N'', 	
+	@Desc10 nvarchar(2500) = N'' ,
+	@Desc11 nvarchar(2500) = N'' ,
+	@Desc12 nvarchar(2500) = N'' ,
+	@Desc13 nvarchar(2500) = N'' ,
+	@Desc14 nvarchar(2500) = N'' ,
+	@Desc15 nvarchar(2500) = N'' ,
+	@Desc16 nvarchar(2500) = N'' ,
+	@Desc17 nvarchar(2500) = N'' ,
+	@Desc18 nvarchar(2500) = N'' ,
+	@Desc19 nvarchar(2500) = N'' ,
+	@Desc20 nvarchar(2500) = N'' 
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- SET XACT_ABORT ON will cause the transaction to be uncommittable when the constraint violation occurs. 
+	SET XACT_ABORT ON;
+	SET QUERY_GOVERNOR_COST_LIMIT 0;
+
+begin
+	begin try
+		if @ProcID = 'SLCTLINFO01'			GOTO SELECT_ALL_FROM_LINFO01; 
+		if @ProcID = 'SLCTLINFO02'			GOTO SELECT_ALL_FROM_LINFO02;
+		if @ProcID = 'UPDTTBLINF01'         GOTO UPDATE_KREMARK_TBLLINFO_01;
+		if @ProcID = 'UPDTTBLINF02'         GOTO UPDATE_KREMARK_TBLLINFO_02;
+
+		if @ProcID = 'GETROWCOUNTS'			GOTO GET_ROW_COUNTS;
+
+	--------------------------------------------------------
+		set @ProcID = char(13) + 'Process ID "' + @ProcID + '" not found to execute';
+		raiserror(@ProcID, 16, 1);
+	end try
+	begin catch
+		execute dbo.sp_lis_common_utility_info 'XXX', 'GETERRORINFO01', @Desc01=@ProcID;
+	end catch; 
+	return;
+end;
+--****************************************************************
+--****************************************************************
+SELECT_ALL_FROM_LINFO01:
+-- [dbo].[SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK] @Procid = "SLCTLINFO01", @Desc01 = "softbd_tangail_07012026"
+begin
+	declare @tbllinfo01slctsql nvarchar(max);
+	SET @tblLinfo01SLCTSQL = N'SELECT UnitCod, KhtNum, PltNum, KRemark, eascom1, eascom2, eascom3, eascom4, eascom5, eascom6, ROWID FROM ' + QUOTENAME(@Desc01) + N'.dbo.tblLinfo01;';
+
+    EXEC sys.sp_executesql @tblLinfo01SLCTSQL;
+return
+end
+--*****************************************************************
+SELECT_ALL_FROM_LINFO02:
+-- [dbo].[SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK] @Procid = "SLCTLINFO02", @Desc01 = "softbd_tangail_07012026"
+begin
+	declare @tbllinfo02slctsql nvarchar(max);
+	 SET @tbllinfo02slctsql = N'select ownname, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, addr10, rowid from' + quotename(@desc01) + N'.dbo.tbllinfo02;';
+
+    EXEC sys.sp_executesql @tbllinfo02slctsql;
+
+return
+end
+--*****************************************************************
+
+UPDATE_KREMARK_TBLLINFO_01:
+/*
+
+[dbo].[SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK] @Procid = "UPDTTBLINF01", @Desc01 = "softbd_tangail_07012026",
+@Djson1 = N'{"tbl_tblLinfo01":[[{"UnitCod":"010109012","KhtNum":"355","PltNum":"4547","KRemark":"ঘর/২ ঘর/১০","eascom1":null,"eascom2":null,"eascom3":null,"eascom4":null,"eascom5":null,
+"eascom6":null,"rowid":45754413}]]}'
+
+*/
+begin
+    -- 1. Parse JSON into temp table
+    select *
+    into #tbllinfo01_temp
+    from openjson(@djson1, '$.tbl_tblLinfo01[0]')
+    with (
+        unitCod     nvarchar(9)    '$.UnitCod',
+        khtNum      nvarchar(10)   '$.KhtNum',
+        pltnum      nvarchar(10)   '$.PltNum',
+        kremark     nvarchar(255)  '$.KRemark',
+        eascom1     nvarchar(255)  '$.eascom1',
+        eascom2     nvarchar(255)  '$.eascom2',
+        eascom3     nvarchar(255)  '$.eascom3',
+        eascom4     nvarchar(255)  '$.eascom4',
+        eascom5     nvarchar(255)  '$.eascom5',
+        eascom6     nvarchar(255)  '$.eascom6',
+        rowid       bigint         '$.rowid'
+    );
+
+	--select * from #tbllinfo01_temp
+	--return;
+
+    -- 2. Build dynamic UPDATE
+    declare @UpdatetblLinfo01SQL nvarchar(MAX);
+
+    --set @UpdatetblLinfo01SQL = N'
+    --    update a set a.KRemark = b.KRemark from ' + QUOTENAME(@Desc01) + N'.dbo.tblLinfo01 AS a inner join #tbllinfo01_temp as b on a.rowid = b.rowid where len(a.kremark) > 0;';
+
+	set @UpdatetblLinfo01SQL = N'
+        update a set a.KRemark = b.KRemark from ' + QUOTENAME(@Desc01) + N'.dbo.tblLinfo01 AS a inner join #tbllinfo01_temp as b on a.rowid = b.rowid;';
+
+    -- 3. Execute dynamic SQL
+    exec sys.sp_executesql @UpdatetblLinfo01SQL;
+
+	select 'Succesfully updated tblLinfo01' as successMessage;
+
+    return;
+end;
+
+--*******************************************************************************************
+UPDATE_KREMARK_TBLLINFO_02:
+/*
+[dbo].[SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK] @Procid = "UPDTTBLINF02", @Desc01 = "softbd_tangail_07012026",
+@Djson1 = N'
+{"tbl_tblLinfo02":[[{"OwnName":"ছাইফুল ইসলাম","addr1":"পিং আনিছুর রহমান","addr2":"","addr3":"","addr4":"","addr5":"","addr6":"","addr7":"","addr8":"","addr9":"","addr10":"","rowid":1},
+{"OwnName":"এনামুল হক","addr1":"পিং আনিছুর রহমান","addr2":"সাং নরিল্যা","addr3":"উপজেলা মধুপুর","addr4":"","addr5":"","addr6":"","addr7":"","addr8":"","addr9":"","addr10":"","rowid":2}]]}
+'
+
+
+*/
+
+begin
+    -- 1. Parse JSON into temp table
+    select * into #tbllinfo02_temp
+    from openjson(@djson1, '$.tbl_tblLinfo02[0]')
+    with (
+        OwnName     nvarchar(150)  '$.OwnName',
+        addr1       nvarchar(150)  '$.addr1',
+        addr2       nvarchar(150)  '$.addr2',
+        addr3       nvarchar(150)  '$.addr3',
+        addr4       nvarchar(150)  '$.addr4',
+        addr5       nvarchar(150)  '$.addr5',
+        addr6       nvarchar(150)  '$.addr6',
+        addr7       nvarchar(150)  '$.addr7',
+        addr8       nvarchar(150)  '$.addr8',
+        addr9       nvarchar(150)  '$.addr9',
+        addr10      nvarchar(150)  '$.addr10',
+        rowid       bigint         '$.rowid'
+    );
+
+    select * from #tbllinfo02_temp
+    --return;
+
+    -- 2. Build dynamic UPDATE
+    declare @UpdatetblLinfo02SQL nvarchar(MAX);
+
+    set @UpdatetblLinfo02SQL = N'
+        update a set a.OwnName = b.OwnName, a.addr1 = b.addr1, a.addr2 = b.addr2, a.addr3 = b.addr3, a.addr4 = b.addr4, a.addr5 = b.addr5,
+        a.addr6 = b.addr6, a.addr7 = b.addr7, a.addr8 = b.addr8, a.addr9 = b.addr9, a.addr10 = b.addr10
+        from ' + QUOTENAME(@Desc01) + N'.dbo.tblLinfo02 AS a inner join #tbllinfo02_temp AS b on a.rowid = b.rowid;';
+
+    -- 3. Execute dynamic SQL
+    exec sys.sp_executesql @UpdatetblLinfo02SQL;
+
+    select 'Succesfully updated tblLinfo02' as successMessage;
+
+    return;
+end;
+
+--****************************************************************************************
+GET_ROW_COUNTS:
+-- [dbo].[SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK] @Procid = "GETROWCOUNTS", @Desc01 = "sylhet371"
+begin
+	declare @rowcountsql nvarchar(max);
+
+    set @rowCountSql = N' select
+        ( select count(*) from ' + quotename(@desc01) + N'.dbo.tbllinfo01 ) as tbllinfo01count,
+        ( select count(*) from ' + quotename(@desc01) + N'.dbo.tbllinfo02 ) as tbllinfo02count;';
+
+    EXEC sp_executesql @rowCountSql;
+
+end
+
+
+
+END

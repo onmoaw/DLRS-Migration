@@ -17,6 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\DevResource\SP_LIS_DATA_MIGRATION v2.txt" Link="Scripts\SP_LIS_DATA_MIGRATION.sql" />
+    <EmbeddedResource Include="..\DevResource\SP_LIS_DATA_MIGRATION_01 v1.txt" Link="Scripts\SP_LIS_DATA_MIGRATION_01.sql" />
+    <EmbeddedResource Include="..\DevResource\SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK v1.txt" Link="Scripts\SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
@@ -27,4 +33,3 @@
   </ItemGroup>
 
 </Project>
-

@@ -62,6 +62,17 @@ namespace LandPressDataMigrationDesktopApp
         // Only the current step panel is displayed to the user
         private int _currentActiveStep = 1;
 
+        // Failsafe tracking for active long-running operations
+        private bool _isOperationRunning = false;
+        private string _currentRunningOperationName = string.Empty;
+        private CancellationTokenSource? _currentOperationCts = null;
+
+        // Execution control mode: default false = 1-Click Automated Pipeline; true = Manual Step-by-Step
+        private bool _isManualModeEnabled = false;
+        private bool _isAutoPipelinePaused = false;
+        private readonly System.Diagnostics.Stopwatch _autoPipelineStopwatch = new();
+        private System.Windows.Threading.DispatcherTimer? _autoPipelineTimer = null;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -70,11 +81,40 @@ namespace LandPressDataMigrationDesktopApp
 
             UpdateThemeButton();
             ApplyRoleView();
+            ApplyControlModeView();
 
             ThemeManager.ThemeChanged += OnThemeChanged;
+            Closing += MainWindow_Closing;
             Closed += (s, e) => ThemeManager.ThemeChanged -= OnThemeChanged;
 
             UpdateWorkflowState();
+        }
+
+        private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_isOperationRunning)
+            {
+                var result = System.Windows.MessageBox.Show(
+                    $"⚠️ Operation in Progress!\n\n" +
+                    $"Currently executing: [{_currentRunningOperationName}]\n\n" +
+                    "Closing the application now will interrupt active database staging/conversion operations and may leave data in an incomplete state.\n\n" +
+                    "Are you sure you want to abort the current operation and exit?",
+                    "Warning: Operation in Progress",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+
+                try
+                {
+                    _currentOperationCts?.Cancel();
+                }
+                catch { }
+            }
         }
 
         private void BtnThemeToggle_Click(object sender, RoutedEventArgs e)
@@ -94,6 +134,109 @@ namespace LandPressDataMigrationDesktopApp
             bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
             txtThemeIcon.Text = isDark ? "🌙" : "☀️";
             txtThemeLabel.Text = isDark ? "Dark" : "Light";
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // ── TOP-RIGHT CONTROL MODE SWITCHER (Auto Execution Default vs Manual) ──
+        // ─────────────────────────────────────────────────────────────────────────────
+        private void BtnToggleControlMode_Click(object sender, RoutedEventArgs e)
+        {
+            _isManualModeEnabled = !_isManualModeEnabled;
+            ApplyControlModeView();
+        }
+
+        private void ApplyControlModeView()
+        {
+            if (btnToggleControlMode == null) return;
+
+            if (_isManualModeEnabled)
+            {
+                if (txtControlModeIcon != null) txtControlModeIcon.Text = "🖐";
+                if (txtControlModeText != null)
+                {
+                    txtControlModeText.Text = "Manual Control Mode";
+                    txtControlModeText.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                }
+                btnToggleControlMode.ToolTip = "Currently in Manual Step-by-Step execution mode. Click to switch to 1-Click Automated Pipeline (Default).";
+
+                if (cardAutoPipelineHero != null) cardAutoPipelineHero.Visibility = Visibility.Collapsed;
+                if (panelManualStep1 != null) panelManualStep1.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                if (txtControlModeIcon != null) txtControlModeIcon.Text = "⚡";
+                if (txtControlModeText != null)
+                {
+                    txtControlModeText.Text = "Auto Execution (Default)";
+                    txtControlModeText.Foreground = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                }
+                btnToggleControlMode.ToolTip = "Currently in 1-Click Automated Pipeline mode (default). Click to switch to Manual Step-by-Step.";
+
+                if (cardAutoPipelineHero != null) cardAutoPipelineHero.Visibility = Visibility.Visible;
+                if (panelManualStep1 != null) panelManualStep1.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // ── PIPELINE EXECUTION & VALUE MAPPING LOG VIEWER ──
+        // ─────────────────────────────────────────────────────────────────────────────
+        private void BtnOpenPipelineLogs_Click(object sender, RoutedEventArgs e)
+        {
+            PipelineLogViewerWindow.ShowLogViewer(this);
+        }
+
+        /// <summary>
+        /// Converts Adarshalipi ANSI text to Unicode and verifies value mapping integrity,
+        /// logging any anomalies, unmapped character codes, or truncations into PipelineExecutionLogger.
+        /// </summary>
+        private string ConvertAndCheckMapping(string? raw, string table, string column, string recordId)
+        {
+            if (string.IsNullOrEmpty(raw)) return string.Empty;
+            string converted = ConvertToAdarshalipi(raw);
+            PipelineExecutionLogger.CheckAndLogMappingAnomaly("Step 2 (Font Conversion)", table, column, recordId, raw, converted);
+            return converted;
+        }
+
+        /// <summary>
+        /// Pre-check: Inspects [DLRS_Migration_Intrm].dbo.tblUnitMigrationLog to determine if any UnitCod
+        /// in the selected source database is already recorded with Status = 'COMPLETED'.
+        /// If already migrated, displays an alert banner, disables migration buttons, and blocks execution.
+        /// </summary>
+        private async Task<bool> CheckSelectedDatabaseMigrationStatusAsync()
+        {
+            if (string.IsNullOrEmpty(_DbName) || string.IsNullOrEmpty(_baseConnectionString) || !_isIntermediateDbReady)
+            {
+                if (borderAlreadyMigratedNotice != null) borderAlreadyMigratedNotice.Visibility = Visibility.Collapsed;
+                return false;
+            }
+
+            try
+            {
+                var (isMigrated, migratedUnits, msg) = await IntermediateDbService.CheckUnitAlreadyMigratedAsync(_baseConnectionString, _DbName);
+
+                if (isMigrated)
+                {
+                    if (borderAlreadyMigratedNotice != null) borderAlreadyMigratedNotice.Visibility = Visibility.Visible;
+                    if (txtAlreadyMigratedReason != null)
+                        txtAlreadyMigratedReason.Text = $"Unit code(s) [{string.Join(", ", migratedUnits)}] in database '{_DbName}' are ALREADY logged as COMPLETED in tblUnitMigrationLog. Migration cannot proceed to prevent duplicate records.";
+
+                    if (btnStartFullAuto != null) btnStartFullAuto.IsEnabled = false;
+                    if (btnCopyToIntrmDb != null) btnCopyToIntrmDb.IsEnabled = false;
+
+                    PipelineExecutionLogger.LogWarning("Pre-Check", msg, table: "Source DB", recordId: string.Join(",", migratedUnits));
+                    return true;
+                }
+                else
+                {
+                    if (borderAlreadyMigratedNotice != null) borderAlreadyMigratedNotice.Visibility = Visibility.Collapsed;
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                PipelineExecutionLogger.LogWarning("Pre-Check", $"Pre-check warning: {ex.Message}");
+                return false;
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────────────
@@ -398,6 +541,9 @@ namespace LandPressDataMigrationDesktopApp
                 borderIntrmBlockedNotice.Visibility = Visibility.Collapsed;
                 lstDatabases.IsEnabled = true;
                 UpdateWorkflowState();
+
+                // Run pre-check: inspect if unit code in selected database is already migrated in tblUnitMigrationLog
+                await CheckSelectedDatabaseMigrationStatusAsync();
             }
             catch (Exception ex)
             {
@@ -621,6 +767,10 @@ namespace LandPressDataMigrationDesktopApp
             pbPreStep.Value          = 0;
             ShowPreStepStatus("⏳ Starting...", isError: false);
 
+            _isOperationRunning = true;
+            _currentRunningOperationName = isRestore ? $"Restoring backup [{txtBakPath.Text}] as database [{dbName}]" : $"Attaching data file [{txtMdfPath.Text}] as database [{dbName}]";
+            _currentOperationCts = new CancellationTokenSource();
+
             try
             {
                 if (isRestore)
@@ -656,6 +806,8 @@ namespace LandPressDataMigrationDesktopApp
             }
             finally
             {
+                _isOperationRunning = false;
+                _currentRunningOperationName = string.Empty;
                 btnRunPreStep.IsEnabled = true;
             }
         }
@@ -1001,7 +1153,98 @@ namespace LandPressDataMigrationDesktopApp
                 if (btnCopyToIntrmDb != null)
                 {
                     btnCopyToIntrmDb.IsEnabled = true;
-                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "Copy Source Data to DLRS_Migration_Intrm";
+                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "Copy Source Data to DLRS_Migration_Intrm (Single Step)";
+                }
+            }
+
+            // ── 1-CLICK AUTOMATED PIPELINE HERO STATE ──
+            if (btnStartFullAuto != null)
+            {
+                if (!_isIntermediateDbReady)
+                {
+                    btnStartFullAuto.IsEnabled = false;
+                    if (txtFullAutoStatus != null)
+                    {
+                        txtFullAutoStatus.Text = "Waiting: Initialize [DLRS_Migration_Intrm] before starting.";
+                        txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                    }
+                }
+                else if (!hasDb)
+                {
+                    btnStartFullAuto.IsEnabled = false;
+                    if (txtFullAutoStatus != null)
+                    {
+                        txtFullAutoStatus.Text = "Waiting: Connect to server & select a source database to begin.";
+                        txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                    }
+                }
+                else if (_isStage4Completed)
+                {
+                    btnStartFullAuto.IsEnabled = false;
+                    if (txtFullAutoStatus != null)
+                    {
+                        txtFullAutoStatus.Text = "✔ Migration Pipeline Already Completed for this database.";
+                        txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                    }
+                    if (borderAutoCompletedBanner != null) borderAutoCompletedBanner.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    btnStartFullAuto.IsEnabled = !_isOperationRunning;
+                    if (txtFullAutoStatus != null && !_isOperationRunning)
+                    {
+                        txtFullAutoStatus.Text = $"Ready: 1-Click Automated Pipeline for [{_DbName}]";
+                        txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
+                    }
+                }
+            }
+
+            // Visual 3-phase pill updates on the hero card
+            if (borderAutoPhase1 != null)
+            {
+                if (_isStage2Completed)
+                {
+                    borderAutoPhase1.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                    if (txtAutoPhase1Icon != null) txtAutoPhase1Icon.Text = "✔";
+                    if (txtAutoPhase1Text != null) txtAutoPhase1Text.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                }
+                else
+                {
+                    borderAutoPhase1.BorderBrush = (_currentActiveStep == 1) ? new SolidBrush(MediaColor.FromRgb(59, 130, 246)) : inactiveBorder;
+                    if (txtAutoPhase1Icon != null) txtAutoPhase1Icon.Text = "📥";
+                    if (txtAutoPhase1Text != null) txtAutoPhase1Text.Foreground = inactiveText;
+                }
+            }
+
+            if (borderAutoPhase2 != null)
+            {
+                if (_isStage3Completed)
+                {
+                    borderAutoPhase2.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                    if (txtAutoPhase2Icon != null) txtAutoPhase2Icon.Text = "✔";
+                    if (txtAutoPhase2Text != null) txtAutoPhase2Text.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                }
+                else
+                {
+                    borderAutoPhase2.BorderBrush = (_currentActiveStep == 2) ? new SolidBrush(MediaColor.FromRgb(16, 185, 129)) : inactiveBorder;
+                    if (txtAutoPhase2Icon != null) txtAutoPhase2Icon.Text = "🔤";
+                    if (txtAutoPhase2Text != null) txtAutoPhase2Text.Foreground = inactiveText;
+                }
+            }
+
+            if (borderAutoPhase3 != null)
+            {
+                if (_isStage4Completed)
+                {
+                    borderAutoPhase3.BorderBrush = new SolidBrush(MediaColor.FromRgb(16, 185, 129));
+                    if (txtAutoPhase3Icon != null) txtAutoPhase3Icon.Text = "✔";
+                    if (txtAutoPhase3Text != null) txtAutoPhase3Text.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                }
+                else
+                {
+                    borderAutoPhase3.BorderBrush = (_currentActiveStep == 3) ? new SolidBrush(MediaColor.FromRgb(139, 92, 246)) : inactiveBorder;
+                    if (txtAutoPhase3Icon != null) txtAutoPhase3Icon.Text = "🚀";
+                    if (txtAutoPhase3Text != null) txtAutoPhase3Text.Foreground = inactiveText;
                 }
             }
 
@@ -1335,6 +1578,685 @@ namespace LandPressDataMigrationDesktopApp
         }
 
         // ─────────────────────────────────────────────────────────────────────────────
+        // ── 1-CLICK AUTOMATED PIPELINE ORCHESTRATION (DEFAULT HANDS-FREE EXECUTION) ──
+        // ─────────────────────────────────────────────────────────────────────────────
+        private async void BtnStartFullAuto_Click(object sender, RoutedEventArgs e)
+        {
+            await RunCompleteAutoPipelineAsync();
+        }
+
+        private void BtnPauseFullAuto_Click(object sender, RoutedEventArgs e)
+        {
+            _isAutoPipelinePaused = !_isAutoPipelinePaused;
+            if (btnPauseFullAuto != null)
+                btnPauseFullAuto.Content = _isAutoPipelinePaused ? "▶ Resume" : "⏸ Pause";
+        }
+
+        private void BtnStopFullAuto_Click(object sender, RoutedEventArgs e)
+        {
+            var res = System.Windows.MessageBox.Show(
+                "Are you sure you want to stop the automated pipeline?\n\nAny currently executing SQL command will finish, and subsequent pipeline steps will be cancelled.",
+                "Confirm Pipeline Stop",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    _currentOperationCts?.Cancel();
+                }
+                catch { }
+            }
+        }
+
+        private async Task RunCompleteAutoPipelineAsync()
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString))
+            {
+                PipelineAlertWindow.ShowAlert(
+                    this,
+                    "Server Not Connected",
+                    "Preparation",
+                    "Please enter your SQL Server name and click 'Connect' in the left Preparation panel before starting the pipeline.",
+                    "Connection string is not set.",
+                    allowSkip: false);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_DbName))
+            {
+                PipelineAlertWindow.ShowAlert(
+                    this,
+                    "Source Database Required",
+                    "Preparation",
+                    "Please select a legacy source database from the list in the left panel to proceed.",
+                    "No source database selected.",
+                    allowSkip: false);
+                return;
+            }
+
+            if (!_isIntermediateDbReady)
+            {
+                PipelineAlertWindow.ShowAlert(
+                    this,
+                    "Intermediate DB Not Ready",
+                    "Preparation",
+                    $"The intermediate staging database [{AppConfig.IntermediateDbName}] is not initialized. Please click 'Create DB' or 'Validate' in the left panel.",
+                    "Intermediate DB validation failed or not executed.",
+                    allowSkip: false);
+                return;
+            }
+
+            // Pre-check: Verify unit code in selected database has not already been migrated
+            if (await CheckSelectedDatabaseMigrationStatusAsync())
+            {
+                PipelineAlertWindow.ShowAlert(
+                    this,
+                    "Migration Blocked: Unit Already Migrated",
+                    "Pre-Check (tblUnitMigrationLog)",
+                    $"Unit code(s) in database [{_DbName}] have already been migrated and recorded as COMPLETED in tblUnitMigrationLog.\n\nAutomated pipeline will NOT proceed for this unit code to prevent duplicate data insertion.",
+                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_Migration_Intrm].dbo.tblUnitMigrationLog.",
+                    allowSkip: false);
+                PipelineExecutionLogger.LogError("Pre-Check", $"Automated pipeline blocked: Unit code(s) in [{_DbName}] already migrated.");
+                return;
+            }
+
+            if (_isOperationRunning) return;
+
+            _isOperationRunning = true;
+            _currentRunningOperationName = $"Automated Pipeline (Stage -> Convert -> Migrate) for [{_DbName}]";
+            _currentOperationCts = new CancellationTokenSource();
+            var ct = _currentOperationCts.Token;
+
+            if (btnStartFullAuto != null) btnStartFullAuto.IsEnabled = false;
+            if (panelAutoControls != null) panelAutoControls.Visibility = Visibility.Visible;
+            if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 2;
+            if (borderAutoCompletedBanner != null) borderAutoCompletedBanner.Visibility = Visibility.Collapsed;
+
+            _isAutoPipelinePaused = false;
+            if (btnPauseFullAuto != null) btnPauseFullAuto.Content = "⏸ Pause";
+
+            _autoPipelineStopwatch.Restart();
+            _autoPipelineTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _autoPipelineTimer.Tick += (s, e) =>
+            {
+                if (txtFullAutoTimer != null)
+                    txtFullAutoTimer.Text = $"⏱ {_autoPipelineStopwatch.Elapsed:mm\\:ss}";
+            };
+            _autoPipelineTimer.Start();
+
+            try
+            {
+                // ══════════════════════════════════════════════════════════════════
+                // PHASE 1: STAGE DATA FROM SOURCE INTO DLRS_Migration_Intrm
+                // ══════════════════════════════════════════════════════════════════
+                _currentActiveStep = 1;
+                UpdateWorkflowState();
+
+                if (txtFullAutoStatus != null)
+                {
+                    txtFullAutoStatus.Text = "Phase 1/3: Staging tables from source into DLRS_Migration_Intrm...";
+                    txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
+                }
+                if (txtFullAutoDetail != null)
+                    txtFullAutoDetail.Text = $"Copying tblHalsabek, tblLinfo01, and tblLinfo02 from [{_DbName}]...";
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 5;
+
+                bool phase1Success = false;
+                int hsb = 0, l01 = 0, l02 = 0;
+
+                while (!phase1Success)
+                {
+                    if (ct.IsCancellationRequested) return;
+
+                    try
+                    {
+                        (hsb, l01, l02) = await IntermediateDbService.StageDataFromSourceAsync(_baseConnectionString, _DbName);
+                        phase1Success = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        var (action, _) = PipelineAlertWindow.ShowAlert(
+                            this,
+                            "Phase 1 (Staging) Error",
+                            "Step 1: Staging Tables",
+                            $"Failed to copy tables from [{_DbName}] to [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}",
+                            ex.ToString(),
+                            allowSkip: false);
+
+                        if (action == PipelineAlertAction.Retry)
+                            continue;
+                        else
+                            return; // Abort
+                    }
+                }
+
+                _isStage2Completed = true;
+                if (txtStep1CompletedDetail != null)
+                    txtStep1CompletedDetail.Text = $"Staged {hsb:N0} Halsabek, {l01:N0} Linfo01, {l02:N0} Linfo02 records into [{AppConfig.IntermediateDbName}].";
+                if (borderStep1CompletedBanner != null) borderStep1CompletedBanner.Visibility = Visibility.Visible;
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 30;
+
+                await LoadIntermediateTablesAsync();
+                await Task.Delay(AppConfig.AutoRunStepDelayMs, ct);
+
+                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
+                    await Task.Delay(200, ct);
+
+                // ══════════════════════════════════════════════════════════════════
+                // PHASE 2: UNICODE FONT CONVERSION & INTERMEDIATE DB UPDATE
+                // ══════════════════════════════════════════════════════════════════
+                _currentActiveStep = 2;
+                UpdateWorkflowState();
+
+                if (txtFullAutoStatus != null)
+                    txtFullAutoStatus.Text = "Phase 2/3: Fetching staged records from DLRS_Migration_Intrm...";
+                if (txtFullAutoDetail != null)
+                    txtFullAutoDetail.Text = "Loading tblLinfo01 and tblLinfo02 for Unicode font conversion...";
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 35;
+
+                bool fetchSuccess = false;
+                while (!fetchSuccess)
+                {
+                    if (ct.IsCancellationRequested) return;
+
+                    try
+                    {
+                        await FetchStagedDataForAutoAsync(ct);
+                        fetchSuccess = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        var (action, _) = PipelineAlertWindow.ShowAlert(
+                            this,
+                            "Phase 2 (Data Fetch) Error",
+                            "Step 2: Staged Record Fetch",
+                            $"Failed to fetch staged records from [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}",
+                            ex.ToString(),
+                            allowSkip: false);
+
+                        if (action == PipelineAlertAction.Retry)
+                            continue;
+                        else
+                            return; // Abort
+                    }
+                }
+
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45;
+
+                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
+                    await Task.Delay(200, ct);
+
+                // Perform in-memory Unicode font conversion
+                if (txtFullAutoStatus != null)
+                    txtFullAutoStatus.Text = "Phase 2/3: Converting font to Unicode in real-time...";
+                if (txtFullAutoDetail != null)
+                    txtFullAutoDetail.Text = $"Converting text for {tblLinfo01List.Count + tblLinfo02List.Count:N0} records...";
+
+                await ConvertFontForAutoAsync(ct);
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 60;
+
+                int mappingWarns = PipelineExecutionLogger.WarningCount;
+                if (mappingWarns > 0 && txtFullAutoDetail != null)
+                {
+                    txtFullAutoDetail.Text = $"Converted {tblLinfo01List.Count + tblLinfo02List.Count:N0} records ({mappingWarns} mapping notice(s) recorded in [📋 Logs]).";
+                }
+
+                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
+                    await Task.Delay(200, ct);
+
+                // Commit Unicode updates to DLRS_Migration_Intrm
+                if (txtFullAutoStatus != null)
+                    txtFullAutoStatus.Text = "Phase 2/3: Writing converted Unicode records to DLRS_Migration_Intrm...";
+                if (txtFullAutoDetail != null)
+                    txtFullAutoDetail.Text = "Committing batch updates via SQL JSON chunks...";
+
+                bool updateSuccess = false;
+                while (!updateSuccess)
+                {
+                    if (ct.IsCancellationRequested) return;
+
+                    try
+                    {
+                        await CommitUnicodeUpdateForAutoAsync(ct);
+                        updateSuccess = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        var (action, _) = PipelineAlertWindow.ShowAlert(
+                            this,
+                            "Phase 2 (Database Update) Error",
+                            "Step 2: Commit Unicode Data",
+                            $"Failed to write Unicode data to [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}",
+                            ex.ToString(),
+                            allowSkip: false);
+
+                        if (action == PipelineAlertAction.Retry)
+                            continue;
+                        else
+                            return; // Abort
+                    }
+                }
+
+                _isStage3Completed = true;
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 75;
+                await Task.Delay(AppConfig.AutoRunStepDelayMs, ct);
+
+                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
+                    await Task.Delay(200, ct);
+
+                // ══════════════════════════════════════════════════════════════════
+                // PHASE 3: SEQUENTIAL STORED PROCEDURES MIGRATION TO CORE DB
+                // ══════════════════════════════════════════════════════════════════
+                _currentActiveStep = 3;
+                UpdateWorkflowState();
+
+                if (txtFullAutoStatus != null)
+                    txtFullAutoStatus.Text = "Phase 3/3: Executing sequential core migration stored procedures...";
+                if (txtFullAutoDetail != null)
+                    txtFullAutoDetail.Text = $"Migrating data from [{AppConfig.IntermediateDbName}] into [{_BaseDbName}]...";
+
+                string targetCs = BuildConnectionString(_BaseDbName);
+
+                // Auto-deploy stored procedures if missing
+                try
+                {
+                    await StoredProcedureDeployer.EnsureProceduresDeployedAsync(targetCs);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"StoredProcedureDeployer notice: {ex.Message}");
+                }
+
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 80;
+
+                // Launch Data Migration Wizard popup in Auto-Run mode so the user sees live execution!
+                var wizard = new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName, autoStart: true)
+                {
+                    Owner = this
+                };
+
+                bool logged = false;
+                wizard.MigrationCompleted += async () =>
+                {
+                    _isStage4Completed = true;
+                    UpdateWorkflowState();
+                    if (!logged && !string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                    {
+                        logged = true;
+                        await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                    }
+                };
+
+                wizard.ShowDialog();
+
+                if (!wizard.IsMigrationCompleted)
+                {
+                    if (txtFullAutoStatus != null)
+                    {
+                        txtFullAutoStatus.Text = "⚠️ Migration wizard was closed or stopped before completion.";
+                        txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                    }
+                    if (txtFullAutoDetail != null)
+                        txtFullAutoDetail.Text = "You can re-open Step 3 manually at any time to run or retry pending steps.";
+                    return;
+                }
+
+                // ══════════════════════════════════════════════════════════════════
+                // COMPLETION
+                // ══════════════════════════════════════════════════════════════════
+                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 100;
+                _isStage4Completed = true;
+                _currentActiveStep = 1; // Return view to Step 1 summary
+                UpdateWorkflowState();
+
+                if (txtFullAutoStatus != null)
+                {
+                    txtFullAutoStatus.Text = "🎉 COMPLETE AUTOMATED PIPELINE FINISHED SUCCESSFULLY!";
+                    txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                }
+                if (txtFullAutoDetail != null)
+                    txtFullAutoDetail.Text = $"All records from [{_DbName}] staged, converted to Unicode, and migrated into [{_BaseDbName}].";
+
+                if (borderAutoCompletedBanner != null)
+                {
+                    borderAutoCompletedBanner.Visibility = Visibility.Visible;
+                    if (txtAutoCompletedDetail != null)
+                        txtAutoCompletedDetail.Text = $"Successfully completed all 3 phases in {_autoPipelineStopwatch.Elapsed:mm\\:ss}. Unit migration recorded in audit log.";
+                }
+
+                // Audit log in Intermediate DB
+                try
+                {
+                    await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED");
+                }
+                catch { }
+
+                System.Windows.MessageBox.Show(
+                    $"🎉 Complete Conversion & Migration Pipeline Finished!\n\n" +
+                    $"Source Database: {_DbName}\n" +
+                    $"Intermediate DB: {AppConfig.IntermediateDbName}\n" +
+                    $"Target Core DB: {_BaseDbName}\n" +
+                    $"Total Time Elapsed: {_autoPipelineStopwatch.Elapsed:mm\\:ss}\n\n" +
+                    "All data has been staged, converted to Unicode, and migrated successfully.",
+                    "Pipeline Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException)
+            {
+                if (txtFullAutoStatus != null)
+                {
+                    txtFullAutoStatus.Text = "⚠️ Automated pipeline was stopped by user.";
+                    txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                }
+            }
+            catch (Exception ex)
+            {
+                PipelineAlertWindow.ShowAlert(
+                    this,
+                    "Pipeline Error",
+                    "Automated Pipeline",
+                    $"An unexpected error occurred during pipeline execution:\n\n{ex.Message}",
+                    ex.ToString(),
+                    allowSkip: false);
+            }
+            finally
+            {
+                _autoPipelineTimer?.Stop();
+                _isOperationRunning = false;
+                _currentRunningOperationName = string.Empty;
+                _currentOperationCts = null;
+
+                if (btnStartFullAuto != null)
+                    btnStartFullAuto.IsEnabled = (!_isStage4Completed && !string.IsNullOrEmpty(_DbName));
+                if (panelAutoControls != null)
+                    panelAutoControls.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private async Task FetchStagedDataForAutoAsync(CancellationToken ct)
+        {
+            tblLinfo01List.Clear();
+            tblLinfo02List.Clear();
+            tablRowCountData.Clear();
+
+            var fixedConnectionString = BuildConnectionString(_BaseDbName);
+
+            // Fetch tblLinfo01 from DLRS_Migration_Intrm
+            await Task.Run(() =>
+            {
+                using var conn = new SqlConnection(fixedConnectionString);
+                conn.Open();
+                using var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn)
+                {
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 300
+                };
+                cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO01";
+                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
+
+                using var reader = cmd.ExecuteReader(CommandBehavior.SequentialAccess);
+                int unitCodOrd = reader.GetOrdinal("UnitCod");
+                int khtNumOrd = reader.GetOrdinal("KhtNum");
+                int pltNumOrd = reader.GetOrdinal("PltNum");
+                int kRemarkOrd = reader.GetOrdinal("KRemark");
+                int eascom1Ord = reader.GetOrdinal("eascom1");
+                int eascom2Ord = reader.GetOrdinal("eascom2");
+                int eascom3Ord = reader.GetOrdinal("eascom3");
+                int eascom4Ord = reader.GetOrdinal("eascom4");
+                int eascom5Ord = reader.GetOrdinal("eascom5");
+                int eascom6Ord = reader.GetOrdinal("eascom6");
+                int rowidOrd = reader.GetOrdinal("rowid");
+
+                while (reader.Read())
+                {
+                    ct.ThrowIfCancellationRequested();
+                    tblLinfo01List.Add(new tblLinfo01
+                    {
+                        UnitCod = reader.IsDBNull(unitCodOrd) ? string.Empty : reader.GetString(unitCodOrd),
+                        KhtNum = reader.IsDBNull(khtNumOrd) ? string.Empty : reader.GetString(khtNumOrd),
+                        PltNum = reader.IsDBNull(pltNumOrd) ? string.Empty : reader.GetString(pltNumOrd),
+                        KRemark = reader.IsDBNull(kRemarkOrd) ? string.Empty : reader.GetString(kRemarkOrd),
+                        eascom1 = reader.IsDBNull(eascom1Ord) ? string.Empty : reader.GetString(eascom1Ord),
+                        eascom2 = reader.IsDBNull(eascom2Ord) ? string.Empty : reader.GetString(eascom2Ord),
+                        eascom3 = reader.IsDBNull(eascom3Ord) ? string.Empty : reader.GetString(eascom3Ord),
+                        eascom4 = reader.IsDBNull(eascom4Ord) ? string.Empty : reader.GetString(eascom4Ord),
+                        eascom5 = reader.IsDBNull(eascom5Ord) ? string.Empty : reader.GetString(eascom5Ord),
+                        eascom6 = reader.IsDBNull(eascom6Ord) ? string.Empty : reader.GetString(eascom6Ord),
+                        rowid = reader.IsDBNull(rowidOrd) ? 0 : reader.GetInt32(rowidOrd),
+                    });
+                }
+            }, ct);
+
+            // Fetch tblLinfo02 from DLRS_Migration_Intrm
+            await Task.Run(() =>
+            {
+                using var conn = new SqlConnection(fixedConnectionString);
+                conn.Open();
+                using var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn)
+                {
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 300
+                };
+                cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "SLCTLINFO02";
+                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
+
+                using var reader = cmd.ExecuteReader(CommandBehavior.SequentialAccess);
+                int ownNameOrd = reader.GetOrdinal("ownname");
+                int addr1Ord = reader.GetOrdinal("addr1");
+                int addr2Ord = reader.GetOrdinal("addr2");
+                int addr3Ord = reader.GetOrdinal("addr3");
+                int addr4Ord = reader.GetOrdinal("addr4");
+                int addr5Ord = reader.GetOrdinal("addr5");
+                int addr6Ord = reader.GetOrdinal("addr6");
+                int addr7Ord = reader.GetOrdinal("addr7");
+                int addr8Ord = reader.GetOrdinal("addr8");
+                int addr9Ord = reader.GetOrdinal("addr9");
+                int addr10Ord = reader.GetOrdinal("addr10");
+                int rowidOrd = reader.GetOrdinal("rowid");
+
+                while (reader.Read())
+                {
+                    ct.ThrowIfCancellationRequested();
+                    tblLinfo02List.Add(new tblLinfo02
+                    {
+                        OwnName = reader.IsDBNull(ownNameOrd) ? string.Empty : reader.GetString(ownNameOrd),
+                        addr1 = reader.IsDBNull(addr1Ord) ? string.Empty : reader.GetString(addr1Ord),
+                        addr2 = reader.IsDBNull(addr2Ord) ? string.Empty : reader.GetString(addr2Ord),
+                        addr3 = reader.IsDBNull(addr3Ord) ? string.Empty : reader.GetString(addr3Ord),
+                        addr4 = reader.IsDBNull(addr4Ord) ? string.Empty : reader.GetString(addr4Ord),
+                        addr5 = reader.IsDBNull(addr5Ord) ? string.Empty : reader.GetString(addr5Ord),
+                        addr6 = reader.IsDBNull(addr6Ord) ? string.Empty : reader.GetString(addr6Ord),
+                        addr7 = reader.IsDBNull(addr7Ord) ? string.Empty : reader.GetString(addr7Ord),
+                        addr8 = reader.IsDBNull(addr8Ord) ? string.Empty : reader.GetString(addr8Ord),
+                        addr9 = reader.IsDBNull(addr9Ord) ? string.Empty : reader.GetString(addr9Ord),
+                        addr10 = reader.IsDBNull(addr10Ord) ? string.Empty : reader.GetString(addr10Ord),
+                        rowid = reader.IsDBNull(rowidOrd) ? 0 : reader.GetInt32(rowidOrd),
+                    });
+                }
+            }, ct);
+
+            // Update UI on Step 2
+            Dispatcher.Invoke(() =>
+            {
+                if (tblLinfo01RowCount != null)
+                {
+                    tblLinfo01RowCount.Visibility = Visibility.Visible;
+                    tblLinfo01RowCount.Text = $"tblLInfo01: {tblLinfo01List.Count:N0} records";
+                }
+                if (tblLinfo02RowCount != null)
+                {
+                    tblLinfo02RowCount.Visibility = Visibility.Visible;
+                    tblLinfo02RowCount.Text = $"tblLInfo02: {tblLinfo02List.Count:N0} records";
+                }
+            });
+        }
+
+        private async Task ConvertFontForAutoAsync(CancellationToken ct)
+        {
+            int totalToConvert = tblLinfo01List.Count + tblLinfo02List.Count;
+            if (totalToConvert == 0) return;
+
+            bool alreadyUnicode = tblLinfo01List.Any(r => ContainsBengaliUnicode(r.KRemark)) ||
+                                  tblLinfo02List.Any(r => ContainsBengaliUnicode(r.OwnName));
+
+            if (alreadyUnicode)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (txtFullAutoDetail != null)
+                        txtFullAutoDetail.Text = "Data is already Unicode. Skipping text re-conversion to prevent character corruption.";
+                });
+                return;
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            int processed = 0;
+            DateTime lastUi = DateTime.MinValue;
+
+            await Task.Run(() =>
+            {
+                for (int i = 0; i < tblLinfo01List.Count; i++)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var item = tblLinfo01List[i];
+                    string recId = item.rowid > 0 ? item.rowid.ToString() : (item.UnitCod + ":" + item.KhtNum);
+
+                    if (!string.IsNullOrEmpty(item.KRemark)) item.KRemark = ConvertAndCheckMapping(item.KRemark, "tblLinfo01", "KRemark", recId);
+                    if (!string.IsNullOrEmpty(item.eascom1)) item.eascom1 = ConvertAndCheckMapping(item.eascom1, "tblLinfo01", "eascom1", recId);
+                    if (!string.IsNullOrEmpty(item.eascom2)) item.eascom2 = ConvertAndCheckMapping(item.eascom2, "tblLinfo01", "eascom2", recId);
+                    if (!string.IsNullOrEmpty(item.eascom3)) item.eascom3 = ConvertAndCheckMapping(item.eascom3, "tblLinfo01", "eascom3", recId);
+                    if (!string.IsNullOrEmpty(item.eascom4)) item.eascom4 = ConvertAndCheckMapping(item.eascom4, "tblLinfo01", "eascom4", recId);
+                    if (!string.IsNullOrEmpty(item.eascom5)) item.eascom5 = ConvertAndCheckMapping(item.eascom5, "tblLinfo01", "eascom5", recId);
+                    if (!string.IsNullOrEmpty(item.eascom6)) item.eascom6 = ConvertAndCheckMapping(item.eascom6, "tblLinfo01", "eascom6", recId);
+
+                    processed++;
+
+                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= 100 || processed == totalToConvert)
+                    {
+                        lastUi = DateTime.UtcNow;
+                        int curr = processed;
+                        double pct = (double)curr / totalToConvert * 100.0;
+                        double sec = sw.Elapsed.TotalSeconds;
+                        double spd = sec > 0.05 ? curr / sec : 0;
+                        double rem = spd > 0 ? (totalToConvert - curr) / spd : 0;
+
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (pbConversion != null) pbConversion.Value = pct;
+                            if (lblConversionPercent != null) lblConversionPercent.Text = $"{pct:F1}%";
+                            if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
+                            if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
+                            if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+
+                            if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
+                        });
+                    }
+                }
+
+                for (int i = 0; i < tblLinfo02List.Count; i++)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var item = tblLinfo02List[i];
+                    string recId = item.rowid > 0 ? item.rowid.ToString() : item.OwnName;
+
+                    if (!string.IsNullOrEmpty(item.OwnName)) item.OwnName = ConvertAndCheckMapping(item.OwnName, "tblLinfo02", "OwnName", recId);
+                    if (!string.IsNullOrEmpty(item.addr1)) item.addr1 = ConvertAndCheckMapping(item.addr1, "tblLinfo02", "addr1", recId);
+                    if (!string.IsNullOrEmpty(item.addr2)) item.addr2 = ConvertAndCheckMapping(item.addr2, "tblLinfo02", "addr2", recId);
+                    if (!string.IsNullOrEmpty(item.addr3)) item.addr3 = ConvertAndCheckMapping(item.addr3, "tblLinfo02", "addr3", recId);
+                    if (!string.IsNullOrEmpty(item.addr4)) item.addr4 = ConvertAndCheckMapping(item.addr4, "tblLinfo02", "addr4", recId);
+                    if (!string.IsNullOrEmpty(item.addr5)) item.addr5 = ConvertAndCheckMapping(item.addr5, "tblLinfo02", "addr5", recId);
+                    if (!string.IsNullOrEmpty(item.addr6)) item.addr6 = ConvertAndCheckMapping(item.addr6, "tblLinfo02", "addr6", recId);
+                    if (!string.IsNullOrEmpty(item.addr7)) item.addr7 = ConvertAndCheckMapping(item.addr7, "tblLinfo02", "addr7", recId);
+                    if (!string.IsNullOrEmpty(item.addr8)) item.addr8 = ConvertAndCheckMapping(item.addr8, "tblLinfo02", "addr8", recId);
+                    if (!string.IsNullOrEmpty(item.addr9)) item.addr9 = ConvertAndCheckMapping(item.addr9, "tblLinfo02", "addr9", recId);
+                    if (!string.IsNullOrEmpty(item.addr10)) item.addr10 = ConvertAndCheckMapping(item.addr10, "tblLinfo02", "addr10", recId);
+
+                    processed++;
+
+                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= 100 || processed == totalToConvert)
+                    {
+                        lastUi = DateTime.UtcNow;
+                        int curr = processed;
+                        double pct = (double)curr / totalToConvert * 100.0;
+                        double sec = sw.Elapsed.TotalSeconds;
+                        double spd = sec > 0.05 ? curr / sec : 0;
+                        double rem = spd > 0 ? (totalToConvert - curr) / spd : 0;
+
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (pbConversion != null) pbConversion.Value = pct;
+                            if (lblConversionPercent != null) lblConversionPercent.Text = $"{pct:F1}%";
+                            if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
+                            if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
+                            if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+
+                            if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
+                        });
+                    }
+                }
+            }, ct);
+
+            Dispatcher.Invoke(() =>
+            {
+                if (pbConversion != null) pbConversion.Value = 100;
+                if (lblConversionPercent != null) lblConversionPercent.Text = "100%";
+                if (lblConversionEta != null) lblConversionEta.Text = "⏱ Finished";
+            });
+        }
+
+        private async Task CommitUnicodeUpdateForAutoAsync(CancellationToken ct)
+        {
+            if (tblLinfo01List.Count > 0)
+            {
+                await UpdateTblLinfo01InBatchesAsync();
+            }
+            if (tblLinfo02List.Count > 0)
+            {
+                await UpdateTblLinfo02InBatchesAsync();
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+                if (pbDbUpdate != null) pbDbUpdate.Value = 100;
+                if (lblDbUpdatePercent != null) lblDbUpdatePercent.Text = "100%";
+                if (dbUpdateSts != null)
+                {
+                    dbUpdateSts.Text = "✨ All records updated in intermediate database.";
+                    dbUpdateSts.Visibility = Visibility.Visible;
+                }
+            });
+        }
+
+        private async Task ExecuteSingleSpStepAsync(string targetCs, MigrationStepConfig cfg, CancellationToken ct)
+        {
+            await Task.Run(() =>
+            {
+                using var conn = new SqlConnection(targetCs);
+                conn.Open();
+
+                using var cmd = new SqlCommand(cfg.SpName, conn)
+                {
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 900 // 15 mins for heavy operations
+                };
+
+                cmd.Parameters.Add(new SqlParameter("@ComCod", SqlDbType.NVarChar, 2500) { Value = "4103" });
+                cmd.Parameters.Add(new SqlParameter("@ProcID", SqlDbType.NVarChar, 2500) { Value = cfg.ProcId });
+                cmd.Parameters.Add(new SqlParameter("@Desc01", SqlDbType.NVarChar, 2500) { Value = AppConfig.IntermediateDbName });
+
+                if (cfg.RequiresRsNumber)
+                {
+                    cmd.Parameters.Add(new SqlParameter("@Desc02", SqlDbType.NVarChar, 2500) { Value = "201901" });
+                }
+
+                cmd.ExecuteNonQuery();
+            }, ct);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
         // ── STEP 1: COPY & STAGE SOURCE DATA TO DLRS_Migration_Intrm ──
         // ─────────────────────────────────────────────────────────────────────────────
         private async void BtnCopyToIntrmDb_Click(object sender, RoutedEventArgs e)
@@ -1351,11 +2273,27 @@ namespace LandPressDataMigrationDesktopApp
                 return;
             }
 
+            if (await CheckSelectedDatabaseMigrationStatusAsync())
+            {
+                PipelineAlertWindow.ShowAlert(
+                    this,
+                    "Migration Blocked: Unit Already Migrated",
+                    "Pre-Check (tblUnitMigrationLog)",
+                    $"Unit code(s) in database [{_DbName}] have already been migrated and recorded as COMPLETED in tblUnitMigrationLog.\n\nStaging data is blocked for this unit code to prevent duplicate data insertion.",
+                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_Migration_Intrm].dbo.tblUnitMigrationLog.",
+                    allowSkip: false);
+                return;
+            }
+
             btnCopyToIntrmDb.IsEnabled = false;
             pbStep1Copy.Visibility = Visibility.Visible;
             txtStep1Status.Visibility = Visibility.Visible;
             txtStep1Status.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
             txtStep1Status.Text = $"⏳ Copying and staging data from [{_DbName}] into [{AppConfig.IntermediateDbName}]...";
+
+            _isOperationRunning = true;
+            _currentRunningOperationName = $"Step 1: Staging data from [{_DbName}] into [{AppConfig.IntermediateDbName}]";
+            _currentOperationCts = new CancellationTokenSource();
 
             try
             {
@@ -1391,6 +2329,12 @@ namespace LandPressDataMigrationDesktopApp
                 txtStep1Status.Foreground = System.Windows.Media.Brushes.Tomato;
                 btnCopyToIntrmDb.IsEnabled = true;
                 System.Windows.MessageBox.Show($"Failed to stage data into [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}", "Error Staging Data", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isOperationRunning = false;
+                _currentRunningOperationName = string.Empty;
+                if (!_isStage2Completed) btnCopyToIntrmDb.IsEnabled = true;
             }
         }
 
@@ -1502,6 +2446,9 @@ namespace LandPressDataMigrationDesktopApp
                 btnGoToStep2.Visibility = Visibility.Collapsed;
 
                 UpdateWorkflowState();
+
+                // Run pre-check: inspect if unit code in selected database is already migrated in tblUnitMigrationLog
+                await CheckSelectedDatabaseMigrationStatusAsync();
             }
             catch (Exception ex)
             {
@@ -1608,6 +2555,10 @@ namespace LandPressDataMigrationDesktopApp
             lblConversionSpeed.Text = "";
             FontConversionSts.Visibility = Visibility.Collapsed;
 
+            _isOperationRunning = true;
+            _currentRunningOperationName = "Step 2: Unicode Font Conversion in memory";
+            _currentOperationCts = new CancellationTokenSource();
+
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int processed = 0;
             DateTime lastUiUpdate = DateTime.MinValue;
@@ -1631,114 +2582,151 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             // =========================================================================
-            // CONVERSION THROTTLE DELAY CONFIGURATION:
-            // - Admin User: Can toggle delay ON/OFF via UI checkbox (chkConversionDelay).
-            // - Standard User: Delay is ALWAYS forced ON (2ms per row) to prevent CPU starvation.
-            // Note: The delay is applied in MULTIPLE places (2 locations):
-            //   Location 1: tblLinfo01 loop below (line ~668)
-            //   Location 2: tblLinfo02 loop below (line ~716)
+            // CENTRALIZED PERFORMANCE & CONVERSION PROGRESS CONFIGURATION:
+            // - By default, conversion runs in TRUE REAL-TIME (0ms delay, ~10,000+ rec/sec).
+            // - If the user checks the Throttle checkbox, a 2ms delay per row is applied.
+            // - Both the delay and UI refresh rate can be configured globally in AppConfig.cs.
             // =========================================================================
-            bool applyDelay = !UserSession.IsAdmin || (chkConversionDelay?.IsChecked == true);
+            int rowDelayMs = (chkConversionDelay?.IsChecked == true)
+                ? (AppConfig.ConversionRowDelayMs > 0 ? AppConfig.ConversionRowDelayMs : 2)
+                : AppConfig.ConversionRowDelayMs;
+            int uiUpdateIntervalMs = Math.Max(20, AppConfig.ConversionUiUpdateIntervalMs);
 
-            await Task.Run(() =>
+            try
             {
-                // Convert tblLinfo01
-                if (tblLinfo01List.Count > 0)
+                await Task.Run(() =>
                 {
-                    Dispatcher.Invoke(() =>
+                    // Convert tblLinfo01
+                    if (tblLinfo01List.Count > 0)
                     {
-                        FontConversionSts1.Text = "🚀 Converting dbo.tblLinfo01...";
-                        FontConversionSts1.Visibility = Visibility.Visible;
-                    });
-
-                    for (int i = 0; i < tblLinfo01List.Count; i++)
-                    {
-                        var item = tblLinfo01List[i];
-                        if (!string.IsNullOrEmpty(item.KRemark))
+                        Dispatcher.Invoke(() =>
                         {
-                            item.KRemark = ConvertToAdarshalipi(item.KRemark);
+                            FontConversionSts1.Text = "🚀 Converting dbo.tblLinfo01...";
+                            FontConversionSts1.Visibility = Visibility.Visible;
+                        });
+
+                        for (int i = 0; i < tblLinfo01List.Count; i++)
+                        {
+                            if (_currentOperationCts?.IsCancellationRequested == true)
+                                break;
+
+                            var item = tblLinfo01List[i];
+                            string recId = item.rowid > 0 ? item.rowid.ToString() : (item.UnitCod + ":" + item.KhtNum);
+
+                            if (!string.IsNullOrEmpty(item.KRemark)) item.KRemark = ConvertAndCheckMapping(item.KRemark, "tblLinfo01", "KRemark", recId);
+                            if (!string.IsNullOrEmpty(item.eascom1)) item.eascom1 = ConvertAndCheckMapping(item.eascom1, "tblLinfo01", "eascom1", recId);
+                            if (!string.IsNullOrEmpty(item.eascom2)) item.eascom2 = ConvertAndCheckMapping(item.eascom2, "tblLinfo01", "eascom2", recId);
+                            if (!string.IsNullOrEmpty(item.eascom3)) item.eascom3 = ConvertAndCheckMapping(item.eascom3, "tblLinfo01", "eascom3", recId);
+                            if (!string.IsNullOrEmpty(item.eascom4)) item.eascom4 = ConvertAndCheckMapping(item.eascom4, "tblLinfo01", "eascom4", recId);
+                            if (!string.IsNullOrEmpty(item.eascom5)) item.eascom5 = ConvertAndCheckMapping(item.eascom5, "tblLinfo01", "eascom5", recId);
+                            if (!string.IsNullOrEmpty(item.eascom6)) item.eascom6 = ConvertAndCheckMapping(item.eascom6, "tblLinfo01", "eascom6", recId);
+
+                            if (rowDelayMs > 0)
+                            {
+                                System.Threading.Thread.Sleep(rowDelayMs);
+                            }
+
+                            processed++;
+
+                            if ((DateTime.UtcNow - lastUiUpdate).TotalMilliseconds > uiUpdateIntervalMs || processed == totalToConvert)
+                            {
+                                lastUiUpdate = DateTime.UtcNow;
+                                UpdateUi(processed, "tblLinfo01");
+                            }
                         }
 
-                        // DELAY LOCATION 1: Per-row throttling delay for tblLinfo01 (2ms)
-                        if (applyDelay)
+                        Dispatcher.Invoke(() =>
                         {
-                            System.Threading.Thread.Sleep(2);
-                        }
-
-                        processed++;
-
-                        if ((DateTime.UtcNow - lastUiUpdate).TotalMilliseconds > 100 || processed == totalToConvert)
-                        {
-                            lastUiUpdate = DateTime.UtcNow;
-                            UpdateUi(processed, "tblLinfo01");
-                        }
+                            FontConversionSts1.Text = "🎉 dbo.tblLinfo01 completed!";
+                        });
                     }
 
-                    Dispatcher.Invoke(() =>
+                    // Convert tblLinfo02
+                    if (tblLinfo02List.Count > 0)
                     {
-                        FontConversionSts1.Text = "🎉 dbo.tblLinfo01 completed!";
-                    });
-                }
-
-                // Convert tblLinfo02
-                if (tblLinfo02List.Count > 0)
-                {
-                    Dispatcher.Invoke(() =>
-                    {
-                        FontConversionSts2.Text = "🚀 Converting dbo.tblLinfo02...";
-                        FontConversionSts2.Visibility = Visibility.Visible;
-                    });
-
-                    for (int i = 0; i < tblLinfo02List.Count; i++)
-                    {
-                        var item = tblLinfo02List[i];
-                        if (!string.IsNullOrEmpty(item.OwnName)) item.OwnName = ConvertToAdarshalipi(item.OwnName);
-                        if (!string.IsNullOrEmpty(item.addr1)) item.addr1 = ConvertToAdarshalipi(item.addr1);
-                        if (!string.IsNullOrEmpty(item.addr2)) item.addr2 = ConvertToAdarshalipi(item.addr2);
-                        if (!string.IsNullOrEmpty(item.addr3)) item.addr3 = ConvertToAdarshalipi(item.addr3);
-                        if (!string.IsNullOrEmpty(item.addr4)) item.addr4 = ConvertToAdarshalipi(item.addr4);
-                        if (!string.IsNullOrEmpty(item.addr5)) item.addr5 = ConvertToAdarshalipi(item.addr5);
-                        if (!string.IsNullOrEmpty(item.addr6)) item.addr6 = ConvertToAdarshalipi(item.addr6);
-                        if (!string.IsNullOrEmpty(item.addr7)) item.addr7 = ConvertToAdarshalipi(item.addr7);
-                        if (!string.IsNullOrEmpty(item.addr8)) item.addr8 = ConvertToAdarshalipi(item.addr8);
-                        if (!string.IsNullOrEmpty(item.addr9)) item.addr9 = ConvertToAdarshalipi(item.addr9);
-                        if (!string.IsNullOrEmpty(item.addr10)) item.addr10 = ConvertToAdarshalipi(item.addr10);
-
-                        // DELAY LOCATION 2: Per-row throttling delay for tblLinfo02 (2ms)
-                        if (applyDelay)
+                        Dispatcher.Invoke(() =>
                         {
-                            System.Threading.Thread.Sleep(2);
+                            FontConversionSts2.Text = "🚀 Converting dbo.tblLinfo02...";
+                            FontConversionSts2.Visibility = Visibility.Visible;
+                        });
+
+                        for (int i = 0; i < tblLinfo02List.Count; i++)
+                        {
+                            if (_currentOperationCts?.IsCancellationRequested == true)
+                                break;
+
+                            var item = tblLinfo02List[i];
+                            string recId = item.rowid > 0 ? item.rowid.ToString() : item.OwnName;
+
+                            if (!string.IsNullOrEmpty(item.OwnName)) item.OwnName = ConvertAndCheckMapping(item.OwnName, "tblLinfo02", "OwnName", recId);
+                            if (!string.IsNullOrEmpty(item.addr1)) item.addr1 = ConvertAndCheckMapping(item.addr1, "tblLinfo02", "addr1", recId);
+                            if (!string.IsNullOrEmpty(item.addr2)) item.addr2 = ConvertAndCheckMapping(item.addr2, "tblLinfo02", "addr2", recId);
+                            if (!string.IsNullOrEmpty(item.addr3)) item.addr3 = ConvertAndCheckMapping(item.addr3, "tblLinfo02", "addr3", recId);
+                            if (!string.IsNullOrEmpty(item.addr4)) item.addr4 = ConvertAndCheckMapping(item.addr4, "tblLinfo02", "addr4", recId);
+                            if (!string.IsNullOrEmpty(item.addr5)) item.addr5 = ConvertAndCheckMapping(item.addr5, "tblLinfo02", "addr5", recId);
+                            if (!string.IsNullOrEmpty(item.addr6)) item.addr6 = ConvertAndCheckMapping(item.addr6, "tblLinfo02", "addr6", recId);
+                            if (!string.IsNullOrEmpty(item.addr7)) item.addr7 = ConvertAndCheckMapping(item.addr7, "tblLinfo02", "addr7", recId);
+                            if (!string.IsNullOrEmpty(item.addr8)) item.addr8 = ConvertAndCheckMapping(item.addr8, "tblLinfo02", "addr8", recId);
+                            if (!string.IsNullOrEmpty(item.addr9)) item.addr9 = ConvertAndCheckMapping(item.addr9, "tblLinfo02", "addr9", recId);
+                            if (!string.IsNullOrEmpty(item.addr10)) item.addr10 = ConvertAndCheckMapping(item.addr10, "tblLinfo02", "addr10", recId);
+
+                            if (rowDelayMs > 0)
+                            {
+                                System.Threading.Thread.Sleep(rowDelayMs);
+                            }
+
+                            processed++;
+
+                            if ((DateTime.UtcNow - lastUiUpdate).TotalMilliseconds > uiUpdateIntervalMs || processed == totalToConvert)
+                            {
+                                lastUiUpdate = DateTime.UtcNow;
+                                UpdateUi(processed, "tblLinfo02");
+                            }
                         }
 
-                        processed++;
-
-                        if ((DateTime.UtcNow - lastUiUpdate).TotalMilliseconds > 100 || processed == totalToConvert)
+                        Dispatcher.Invoke(() =>
                         {
-                            lastUiUpdate = DateTime.UtcNow;
-                            UpdateUi(processed, "tblLinfo02");
-                        }
+                            FontConversionSts2.Text = "🎉 dbo.tblLinfo02 completed!";
+                        });
                     }
+                });
 
-                    Dispatcher.Invoke(() =>
-                    {
-                        FontConversionSts2.Text = "🎉 dbo.tblLinfo02 completed!";
-                    });
+                sw.Stop();
+
+                if (_currentOperationCts?.IsCancellationRequested == true)
+                {
+                    FontConversionSts.Text = "⚠️ Conversion was cancelled by user.";
+                    FontConversionSts.Visibility = Visibility.Visible;
+                    return;
                 }
-            });
 
-            sw.Stop();
+                pbConversion.Value = 100;
+                lblConversionPercent.Text = "100.0%";
+                lblConversionCount.Text = $"{totalToConvert:N0} / {totalToConvert:N0} records";
+                lblConversionEta.Text = $"⏱ Finished in {sw.Elapsed:mm\\:ss}";
+                lblConversionSpeed.Text = $"  •  Avg: {(totalToConvert / Math.Max(0.1, sw.Elapsed.TotalSeconds)):N0} rec/s";
 
-            pbConversion.Value = 100;
-            lblConversionPercent.Text = "100.0%";
-            lblConversionCount.Text = $"{totalToConvert:N0} / {totalToConvert:N0} records";
-            lblConversionEta.Text = $"⏱ Finished in {sw.Elapsed:mm\\:ss}";
-            lblConversionSpeed.Text = $"  •  Avg: {(totalToConvert / Math.Max(0.1, sw.Elapsed.TotalSeconds)):N0} rec/s";
+                int warnCount = PipelineExecutionLogger.WarningCount;
+                if (warnCount > 0)
+                {
+                    FontConversionSts.Text = $"⚠️ Converted with {warnCount} character mapping notice(s). Click [📋 Logs] in the top bar to inspect.";
+                    FontConversionSts.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                }
+                else
+                {
+                    FontConversionSts.Text = "✅ All records converted to Unicode with 100% mapping accuracy! Proceed to update database.";
+                    FontConversionSts.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+                }
+                FontConversionSts.Visibility = Visibility.Visible;
 
-            FontConversionSts.Text = "✅ All records converted to Unicode! Proceed to update database.";
-            FontConversionSts.Visibility = Visibility.Visible;
-
-            updateDatabaseBTN.IsEnabled = true;
-            fontConverterBTN.IsEnabled = true;
+                updateDatabaseBTN.IsEnabled = true;
+            }
+            finally
+            {
+                _isOperationRunning = false;
+                _currentRunningOperationName = string.Empty;
+                fontConverterBTN.IsEnabled = true;
+            }
         }
 
         private async void updateDatabaseBTN_On_Click(object sender, RoutedEventArgs e)
@@ -1757,46 +2745,73 @@ namespace LandPressDataMigrationDesktopApp
 
             updateDatabaseBTN.IsEnabled = false;
 
-            int totalBatches1 = (int)Math.Ceiling((double)tblLinfo01List.Count / 50000);
-            int totalBatches2 = (int)Math.Ceiling((double)tblLinfo02List.Count / 50000);
+            int batchSize = AppConfig.BatchChunkSize;
+            int totalBatches1 = (int)Math.Ceiling((double)tblLinfo01List.Count / batchSize);
+            int totalBatches2 = (int)Math.Ceiling((double)tblLinfo02List.Count / batchSize);
             int totalBatches  = totalBatches1 + totalBatches2;
 
             pbDbUpdate.Value = 0;
             lblDbUpdatePercent.Text = "0%";
             lblDbUpdateBatchInfo.Text = $"Updating {totalBatches} batch(es)...";
 
-            if (tblLinfo01List.Count > 0)
+            _isOperationRunning = true;
+            _currentRunningOperationName = "Step 2: Updating intermediate database with Unicode records";
+            _currentOperationCts = new CancellationTokenSource();
+
+            try
             {
-                await UpdateTblLinfo01InBatchesAsync();
-            }
+                if (tblLinfo01List.Count > 0)
+                {
+                    await UpdateTblLinfo01InBatchesAsync();
+                }
 
-            if (tblLinfo02List.Count > 0)
+                if (_currentOperationCts?.IsCancellationRequested == true)
+                {
+                    dbUpdateSts.Text = "⚠️ Database update was cancelled by user.";
+                    dbUpdateSts.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                if (tblLinfo02List.Count > 0)
+                {
+                    await UpdateTblLinfo02InBatchesAsync();
+                }
+
+                if (_currentOperationCts?.IsCancellationRequested == true)
+                {
+                    dbUpdateSts.Text = "⚠️ Database update was cancelled by user.";
+                    dbUpdateSts.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                pbDbUpdate.Value = 100;
+                lblDbUpdatePercent.Text = "100%";
+                lblDbUpdateBatchInfo.Text = $"All {totalBatches} batches completed.";
+
+                dbUpdateSts.Text = "✨ 🎉 All records updated — database is good to go! Ready for Stage 4 (Migration). 🎯";
+                dbUpdateSts.Visibility = Visibility.Visible;
+
+                _isStage3Completed = true;
+                UpdateWorkflowState();
+                updateDatabaseBTN.IsEnabled = false;
+                updateDatabaseBTN.Content = "✔ Intermediate DB Updated with Unicode (Locked)";
+                fontConverterBTN.IsEnabled = false;
+                fetchDataForSelectedTables.IsEnabled = false;
+                if (btnGoToStep3 != null) btnGoToStep3.Visibility = Visibility.Visible;
+                ShowStep(3); // Smoothly transition to Step 3 (Migration)
+            }
+            finally
             {
-                await UpdateTblLinfo02InBatchesAsync();
+                _isOperationRunning = false;
+                _currentRunningOperationName = string.Empty;
+                if (!_isStage3Completed) updateDatabaseBTN.IsEnabled = true;
             }
-
-            pbDbUpdate.Value = 100;
-            lblDbUpdatePercent.Text = "100%";
-            lblDbUpdateBatchInfo.Text = $"All {totalBatches} batches completed.";
-
-            dbUpdateSts.Text = "✨ 🎉 All records updated — database is good to go! Ready for Stage 4 (Migration). 🎯";
-            dbUpdateSts.Visibility = Visibility.Visible;
-
-            _isStage3Completed = true;
-            UpdateWorkflowState();
-            updateDatabaseBTN.IsEnabled = false;
-            updateDatabaseBTN.Content = "✔ Intermediate DB Updated with Unicode (Locked)";
-            fontConverterBTN.IsEnabled = false;
-            fetchDataForSelectedTables.IsEnabled = false;
-            if (btnGoToStep3 != null) btnGoToStep3.Visibility = Visibility.Visible;
-            ShowStep(3); // Smoothly transition to Step 3 (Migration)
         }
 
         private async Task UpdateTblLinfo01InBatchesAsync()
         {
-
             var fixedConnectionString = BuildConnectionString(_BaseDbName);
-            const int batchSize = 50_000;
+            int batchSize = AppConfig.BatchChunkSize;
             int batchNumber = 0;
 
             try
@@ -1806,6 +2821,12 @@ namespace LandPressDataMigrationDesktopApp
 
                 foreach (var batch in batches)
                 {
+                    if (_currentOperationCts?.IsCancellationRequested == true)
+                    {
+                        tblLinfo01_Update_Status.Text = "⚠️ Update cancelled by user.";
+                        break;
+                    }
+
                     batchNumber++;
 
                     tblLinfo01_Update_Status.Text =
@@ -1816,30 +2837,6 @@ namespace LandPressDataMigrationDesktopApp
                     var dataList = new List<object> { batch };
 
                     string jsonstring = UtilityFunction.ListToJsonString(dataList, "tbl_tblLinfo01");
-
-
-                    //await Task.Run(() =>
-                    //{
-                    //    using (var conn = new SqlConnection(fixedConnectionString))
-                    //    {
-                    //        conn.Open();
-                    //        using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                    //        {
-                    //            cmd.CommandType = CommandType.StoredProcedure;
-                    //            cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "UPDATE_KREMARK_TBLLINFO_01";
-                    //            cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = _DbName;
-                    //            cmd.Parameters.Add("@Djson1", SqlDbType.NVarChar, -1).Value = jsonstring;
-                    //            //using (var adapter = new SqlDataAdapter(cmd))
-                    //            //{
-                    //            //    adapter.Fill(table1Data);
-                    //            //}
-                    //            //string? result = cmd.ExecuteScalar()?.ToString();
-                    //            return cmd.ExecuteScalar()?.ToString();
-                    //        }
-                    //    }
-                    //});
-
-
 
                     string? result = await Task.Run(() =>
                     {
@@ -1858,10 +2855,11 @@ namespace LandPressDataMigrationDesktopApp
                         }
                     });
 
+                    if (AppConfig.BatchUpdateDelayMs > 0)
+                        await Task.Delay(AppConfig.BatchUpdateDelayMs);
                 }
 
                 tblLinfo01_Update_Status.Text = $"tblLinfo01 updated successfully ({totalBatches} batches).";
-                //await Task.Delay(3);
             }
             catch (Exception ex)
             {
@@ -1874,7 +2872,7 @@ namespace LandPressDataMigrationDesktopApp
         private async Task UpdateTblLinfo02InBatchesAsync()
         {
             var fixedConnectionString = BuildConnectionString(_BaseDbName);
-            const int batchSize = 50_000;
+            int batchSize = AppConfig.BatchChunkSize;
             int batchNumber = 0;
 
             try
@@ -1884,6 +2882,12 @@ namespace LandPressDataMigrationDesktopApp
 
                 foreach (var batch in batches)
                 {
+                    if (_currentOperationCts?.IsCancellationRequested == true)
+                    {
+                        tblLinfo02_Update_Status.Text = "⚠️ Update cancelled by user.";
+                        break;
+                    }
+
                     batchNumber++;
 
                     tblLinfo02_Update_Status.Text = $"Updating tblLinfo02: batch {batchNumber} of {totalBatches}...";
@@ -1911,19 +2915,17 @@ namespace LandPressDataMigrationDesktopApp
                         }
                     });
 
+                    if (AppConfig.BatchUpdateDelayMs > 0)
+                        await Task.Delay(AppConfig.BatchUpdateDelayMs);
                 }
 
                 tblLinfo02_Update_Status.Text = $"tblLinfo02 updated successfully ({totalBatches} batches).";
-                await Task.Delay(3);
             }
             catch (Exception ex)
             {
                 tblLinfo02_Update_Status.Text = $"Unexpected error: {ex.Message}";
                 return;
             }
-
-
-
         }
 
 
@@ -1950,6 +2952,10 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             fetchDataForSelectedTables.IsEnabled = false;
+
+            _isOperationRunning = true;
+            _currentRunningOperationName = "Step 2: Fetching staging tables from intermediate database";
+            _currentOperationCts = new CancellationTokenSource();
 
             try
             {
@@ -2145,6 +3151,8 @@ namespace LandPressDataMigrationDesktopApp
             }
             finally
             {
+                _isOperationRunning = false;
+                _currentRunningOperationName = string.Empty;
                 fetchDataForSelectedTables.IsEnabled = true;
             }
         }

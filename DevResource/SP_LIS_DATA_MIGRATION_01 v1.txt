@@ -1,0 +1,224 @@
+USE [DLRSLSINF_4103PRSDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_LIS_DATA_MIGRATION_01]    Script Date: 24-Oct-26 16:18:35 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		<Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:	<Description,,>
+-- =============================================
+ALTER PROCEDURE [dbo].[SP_LIS_DATA_MIGRATION_01] 
+	@ComCod nvarchar(2500)='',	
+	@ProcID nvarchar(2500)='',
+	@Dxml01 xml = null,
+	@Dxml02 xml = null,
+	@Dbin01 varbinary(max) = null, 
+	@Desc01 nvarchar(2500)='',
+	@Desc02 nvarchar(2500)='',
+	@Desc03 nvarchar(2500)='',
+	@Desc04 nvarchar(2500)='', 
+	@Desc05 nvarchar(2500)='',
+	@Desc06 nvarchar(2500)='',	
+	@Desc07 nvarchar(2500)='',	
+	@Desc08 nvarchar(2500)='', 	
+	@Desc09 nvarchar(2500)='', 	
+	@Desc10 nvarchar(2500)='',	
+	@Desc11 nvarchar(max)='',
+	@Desc12 nvarchar(max)='',
+	@Desc13 nvarchar(max)='',
+	@Desc14 nvarchar(max)='',
+	@Desc15 nvarchar(max)='', 
+	@Desc16 nvarchar(max)='', 
+	@Desc17 nvarchar(max)='',
+	@Desc18 nvarchar(max)='',
+	@Desc19 nvarchar(max)='',
+	@Desc20 nvarchar(max)=''
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+	-- SET XACT_ABORT ON will cause the transaction to be uncommittable when the constraint violation occurs. 
+	SET XACT_ABORT ON;
+	SET QUERY_GOVERNOR_COST_LIMIT 0;
+begin
+	begin try
+		declare @Trcod1 nvarchar(200);
+		set @Trcod1 = @Desc01;
+
+		if @ProcID = 'MTO_LINFO00'		goto MIGRATE_LANDINFO_TO_LINFO00; 
+		if @ProcID = 'MTO_LINFO01'		goto MIGRATE_LANDINFO_TO_LINFO01;
+		if @ProcID = 'MTO_LINFO02'		goto MIGRATE_LANDINFO_TO_LINFO02; 
+
+		if @ProcID = 'MTO_LINFUSR'		goto MIGRATE_LANDINFO_TO_LINFUSR;
+		if @ProcID = 'MTO_LRSINF01'		goto MIGRATE_LANDINFO_TO_LRSINF01;
+		if @ProcID = 'MTO_LRSINF02'		goto MIGRATE_LANDINFO_TO_LRSINF02; 
+
+		if @ProcID = 'MTO_PLOTINF01'		goto MIGRATE_LANDINFO_TO_PLOTINF01;
+
+	--------------------------------------------------------
+		set @ProcID = char(13) + 'Process ID "' + @ProcID + '" not found to execute';
+		raiserror(@ProcID, 16, 1);
+	end try
+	begin catch
+		execute dbo.sp_lis_common_utility_info 'XXX', 'GETERRORINFO01', @Desc01=@ProcID;
+	end catch; 
+	return;
+end;
+--****************************************************************
+
+MIGRATE_LANDINFO_TO_LINFO00:
+-- [dbo].[SP_LIS_DATA_MIGRATION_01] @ComCod = '4103', @ProcID = 'MTO_LINFO00', @Desc01='joarsahara_u';
+
+begin
+
+	create table #templf00 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), ekhtnum nvarchar(20), pkhtnum nvarchar(20), shetnum nvarchar(5),ltcode nchar(2), kremark nvarchar(1000), khtnote nvarchar(100), khtdat1 xml, khtdat2 xml, khtdat3 xml, khtdat4 xml, khtdat5 xml, khtdat6 xml, khtstatus nvarchar(250), 	usrid nchar(12), sealid nchar(3), sealdesc nvarchar(250), usrses nvarchar(10), termid nvarchar(50), rowtime datetime);
+
+  
+	declare @DynamicQuerylf00 nvarchar(max);
+	set @DynamicQuerylf00 = N'insert into #templf00 select @comcod as comcod, @desc02 as rsnum, ltrim(rtrim(a.unitcod)) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, ltrim(rtrim(a.KhtNum)) as ekhtnum,N'''' as pkhtnum, N''000'' AS shetnum, ltrim(rtrim(a.LndTyp)) as ltcode,ltrim(rtrim(a.KRemark)) as kremark,N'''' as khtnote,NULL AS khtdat1,NULL as khtdat2,NULL as khtdat3,NULL as khtdat4,NULL as khtdat5,NULL as khtdat6,N'''' as khtstatus,ltrim(rtrim(a.UsrId)) as usrid,N''000'' AS sealid,N'''' as sealdesc,N'''' as usrses,N'''' as termid,ltrim(rtrim(a.Entdate)) as ROWTIME from '+quotename(@desc01)+'.dbo.tbllinfo01 a';	
+	 exec sp_executesql @DynamicQuerylf00,  N'@ComCod nchar(4), @Desc02 nvarchar(50)',  @ComCod, @Desc02;   
+     
+
+	with temp001 as ( select  a.comcod, a.rsnum, a.unitcod, a.khtnum, a.ekhtnum, a.pkhtnum, a.shetnum, a.ltcode, ISNULL(a.kremark, '') as kremark,  ISNULL(a.khtnote, '') as khtnote, ISNULL(a.khtstatus, '') as khtstatus, a.usrid,a.sealid, a.sealdesc, a.usrses, a.termid, a.rowtime, a.khtdat1, a.khtdat2, a.khtdat3, a.khtdat4, a.khtdat5, a.khtdat6,
+        ROW_NUMBER() over ( partition by a.comcod, a.rsnum, a.unitcod, a.khtnum  order by a.rowtime desc) as newrownum from #templf00 a)
+    insert into DLRSLSINF_4103PRSDB.dbo_lis.linfo00 (comcod, rsnum, unitcod, khtnum, ekhtnum, pkhtnum, shetnum, ltcode, kremark, khtnote,  khtdat1, khtdat2, khtdat3, khtdat4, khtdat5, khtdat6, khtstatus, usrid, sealid,  sealdesc, usrses, termid, rowtime)
+    select  comcod, rsnum, unitcod, khtnum, ekhtnum, pkhtnum, shetnum, ltcode,  kremark, khtnote, khtdat1, khtdat2, khtdat3, khtdat4, khtdat5, khtdat6,  khtstatus, usrid, sealid, sealdesc, usrses, termid, rowtime from temp001   where newrownum = 1;    
+    drop table #templf00;	
+return;
+
+
+end; -- MIGRATE_LANDINFO_TO_LINFO00:
+--****************************************************************
+
+MIGRATE_LANDINFO_TO_LINFO01:
+-- [dbo].[SP_LIS_DATA_MIGRATION_01] @ComCod = '4103', @ProcID = 'MTO_LINFO01', @Desc01='joarsahara_u', @Desc02='201901';
+begin
+
+	create table #templf01 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), pltnum nvarchar(15), slnum int, lucode nchar(5), tpltarea decimal(18,6), 
+	khtshare decimal(18,6), kpltarea decimal(18,6), kpltrmrk nvarchar(1500), skhtnum nvarchar(250), spltnum nvarchar(500), cpltnum nvarchar(250), rowtime datetime);
+
+	declare @DynamicQuerylf05 nvarchar(max);
+ 
+	 SET @DynamicQuerylf05 = N'with cte as (select @comcod as comcod, @desc02 as rsnum, LTRIM(RTRIM(a.unitcod)) as unitcod, LTRIM(RTRIM(a.khtnum)) as khtnum, 
+	 LTRIM(RTRIM(a.pltnum)) as pltnum, 1 as slnum, N'''' as lucode, 0.0 as tpltarea, 0.0 as khtshare, 0.0 as kpltarea, N'''' as kpltrmrk, N'''' as skhtnum, 
+     LTRIM(RTRIM(a.HSPltNum)) as spltnum, N'''' as cpltnum, a.entdt as rowtime FROM '+quotename(@desc01)+'.dbo.tblHalsabek a)
+	 INSERT INTO #templf01 (comcod, rsnum, unitcod, khtnum, pltnum, slnum, lucode, tpltarea, khtshare, kpltarea, kpltrmrk, skhtnum, spltnum, cpltnum, rowtime) 
+	 SELECT comcod, rsnum, unitcod, khtnum, pltnum, MAX(slnum), MAX(lucode) as lucode, MAX(tpltarea) as tpltarea, MAX(khtshare) as khtshare, MAX(kpltarea) as kpltarea,  
+	 MAX(kpltrmrk) as kpltrmrk, MAX(skhtnum) as skhtnum, STRING_AGG(spltnum, '','') as spltnum, MAX(cpltnum) as cpltnum, MAX(rowtime) as rowtime FROM CTE GROUP BY comcod, rsnum, unitcod, khtnum, pltnum;';
+
+	EXEC sp_executesql @DynamicQuerylf05, N'@ComCod nchar(4), @Desc02 nvarchar(50)',  @ComCod, @Desc02;
+
+	select*from #templf01;
+
+
+	DECLARE @DynamicQuerylf06 NVARCHAR(MAX); 
+
+	SET @DynamicQuerylf06 = N'update a set a.tpltarea = b.TPltArea, a.KHTSHARE=b.KhtShare, a.KPLTAREA=b.KPltArea, a.KPLTRMRK=b.KRemark
+	from #templf01 a inner join ' + QUOTENAME(@desc01) + '.dbo.tblLinfo01 b on a.unitcod=b.unitcod and a.khtnum=b.khtnum and a.pltnum=b.pltnum';
+
+	EXEC sp_executesql @DynamicQuerylf06, N'@ComCod nchar(4), @Desc02 nvarchar(50)', @ComCod, @Desc02;
+
+	SELECT * FROM #templf01;
+
+
+RETURN;
+END;
+ -- MIGRATE_LANDINFO_TO_LINFO01:
+--****************************************************************
+
+
+MIGRATE_LANDINFO_TO_LINFO02:
+-- exec [dbo].[SP_LIS_DATA_MIGRATION_01] @ComCod = '4103', @ProcID = 'MTO_LINFO02', @Desc01='joarsahara_u', @Desc02='201901';
+begin
+	
+	create table #templf02 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), khtnum nvarchar(20), ownrgrp int, ownrnum int, ownname nvarchar(300),
+	gender nvarchar(20), nidnum nvarchar(50), bregnum nvarchar(50), fathernam nvarchar(200), mothernam nvarchar(200), spousenam nvarchar(200), 
+	phone01 nvarchar(50), email01 nvarchar(50), address01 nvarchar(350), ownrarea decimal(18, 6), rowtime datetime);
+
+	declare @DynamicQuerylf02 nvarchar(max);
+
+	set @DynamicQuerylf02 = N'insert into #templf02 select @comcod as comcod, @desc02 as rsnum, ltrim(rtrim(a.unitcod)) as unitcod, ltrim(rtrim(a.khtnum)) as khtnum, a.ownrgrp, 
+	a.ownrnum, ltrim(rtrim(a.ownname)) as ownname, case when ltrim(rtrim(a.addr1)) like N''জং%'' then N''মহিলা'' else N'''' end as gender, N'''' as nidnum, N'''' as bregnum, 
+	case when ltrim(rtrim(a.addr1)) like N''পিং%'' then ltrim(rtrim(a.addr1)) else N'''' end as fathernam, N'''' as mothernam, case when ltrim(rtrim(a.addr1)) like N''জং%'' then ltrim(rtrim(a.addr1)) else N'''' end as spousenam, 
+	N'''' as phone01, N'''' as email01, left(ltrim(rtrim(isnull(a.addr2, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr3, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr4, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr5, N''''))) + 
+	N'' '' + ltrim(rtrim(isnull(a.addr6, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr7, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr8, N''''))) + N'' '' + ltrim(rtrim(isnull(a.addr9, N''''))) + N'' '' + 
+	ltrim(rtrim(isnull(a.addr10, N''''))), 350) as address01, cast(a.ownrarea as decimal(18,6)) as ownrarea, a.entdate as rowtime from '+quotename(@desc01)+'.dbo.tbllinfo02 a';
+	
+	exec sp_executesql @DynamicQuerylf02, N'@Desc02 nchar(9), @ComCod nchar(4)', @Desc02, @ComCod;
+
+	--deleted the CASCADE constraint with LINF00 table before inserting to main table. 
+
+	insert into DLRSLSINF_4103PRSDB.dbo_lis.linfo02 (comcod, rsnum, unitcod, khtnum, ownrgrp, ownrnum, ownname, gender, nidnum, bregnum, fathernam, mothernam, spousenam, phone01, email01, address01, ownrarea, rowtime)
+	select a.comcod, a.rsnum, a.unitcod, a.khtnum, a.ownrgrp, a.ownrnum, a.ownname, a.gender, a.nidnum, a.bregnum, a.fathernam, a.mothernam, a.spousenam, a.phone01, a.email01, a.address01, a.ownrarea, a.rowtime
+	from #templf02 a;
+
+	select*from #templf02;
+	select*from DLRSLSINF_4103PRSDB.dbo_lis.linfo02;
+
+return;
+
+end; -- MIGRATE_LANDINFO_TO_LINFO02:
+--****************************************************************
+
+
+MIGRATE_LANDINFO_TO_LINFUSR:
+-- [dbo].[SP_LIS_DATA_MIGRATION_01] @ComCod = '4103', @ProcID = 'MTO_LINFUSR', @Desc01='joarsahara_u';
+begin
+
+return;
+
+end; -- MIGRATE_LANDINFO_TO_LINFUSR:
+--****************************************************************
+
+
+MIGRATE_LANDINFO_TO_LRSINF01:
+-- [dbo].[SP_LIS_DATA_MIGRATION_01] @ComCod = '4103', @ProcID = 'MTO_LRSINF01', @Desc01='joarsahara_u';
+begin
+
+return;
+
+end; -- MIGRATE_LANDINFO_TO_LINFO01:
+--****************************************************************
+
+
+MIGRATE_LANDINFO_TO_LRSINF02:
+-- [dbo].[SP_LIS_DATA_MIGRATION_01] @ComCod = '4103', @ProcID = 'MTO_LRSINF02', @Desc01='joarsahara_u';
+begin
+
+return;
+
+end; -- MIGRATE_LANDINFO_TO_LRSINF02:
+--****************************************************************
+
+
+MIGRATE_LANDINFO_TO_PLOTINF01:
+-- [dbo].[SP_LIS_DATA_MIGRATION_01] @ComCod = '4103', @ProcID = 'MTO_PLOTINF01', @Desc01='joarsahara_u', @Desc02='201901';
+
+begin
+
+	create table #temppltinf01 (comcod nchar(4), rsnum nchar(6), unitcod nchar(9), shetnum nvarchar(5), pltnum nvarchar(15), tpltarea nvarchar(30), lucode nchar (5));
+
+	declare @DynamicQueryplt01 nvarchar(max);
+	
+	set @DynamicQueryplt01 = N'insert into #temppltinf01 select distinct @ComCod as comcod, @Desc02 as rsnum, ltrim(rtrim(a.unitcod)) as unitcod, N''00'' as shetnum, 
+	ltrim(rtrim(a.pltnum)) as pltnum, ltrim(rtrim(a.TPltArea)) as tpltarea, N'''' as lucode from '+quotename(@desc01)+'.dbo.tblLinfo01 a';
+	
+	exec sp_executesql @DynamicQueryplt01, N'@Desc02 nchar(9), @ComCod nchar(4)', @Desc02, @ComCod;
+	
+	insert into DLRSLSINF_4103PRSDB.dbo_lis.plotinf01 (comcod, rsnum, unitcod, shetnum, pltnum, tpltarea, lucode) select a.comcod, a.rsnum, a.unitcod, a.shetnum, a.pltnum, 
+	a.tpltarea, a.lucode from #temppltinf01 a where not exists (select 1 from DLRSLSINF_4103PRSDB.dbo_lis.plotinf01 p where p.comcod=a.comcod and p.rsnum=a.rsnum and 
+	p.unitcod=a.unitcod); 
+
+	select distinct *from #temppltinf01 order by pltnum;
+	select*from DLRSLSINF_4103PRSDB.dbo_lis.plotinf01;
+
+return;
+
+end; -- MIGRATE_LANDINFO_TO_PLOTINF01:
+--****************************************************************
+END;

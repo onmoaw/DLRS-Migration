@@ -6,11 +6,16 @@
         xmlns:local="clr-namespace:LandPressDataMigrationDesktopApp"
         mc:Ignorable="d"
         Title="{x:Static local:AppConfig.MigrationWizardTitle}"
-        Height="800" Width="1020"
+        Height="840" Width="1080"
+        MinHeight="720" MinWidth="940"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         Icon="/Assets/DLRS-Migration App Icon.png"
-        Background="{DynamicResource ThemeWindowBg}">
+        Background="{DynamicResource ThemeWindowBg}"
+        FontFamily="Segoe UI, Kalpurush, Vrinda, Arial"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
 
     <Window.Resources>
         <!-- Button Style -->
@@ -56,8 +61,8 @@
         <Style x:Key="StepCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource ThemeCardBg}"/>
             <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="22,18"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="24,20"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
@@ -81,52 +86,65 @@
             <GradientStop Color="#10B981" Offset="0"/>
             <GradientStop Color="#059669" Offset="1"/>
         </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="AmberBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F59E0B" Offset="0"/>
+            <GradientStop Color="#D97706" Offset="1"/>
+        </LinearGradientBrush>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <!-- Header -->
-            <RowDefinition Height="Auto"/>
-            <!-- Source DB (Read-Only) & Global Config -->
-            <RowDefinition Height="Auto"/>
-            <!-- Step Indicators & Overall Progress -->
-            <RowDefinition Height="*"/>
-            <!-- Content -->
-            <RowDefinition Height="Auto"/>
-            <!-- Navigation -->
-            <RowDefinition Height="Auto"/>
-            <!-- Footer -->
+            <RowDefinition Height="Auto"/> <!-- 0: Header with Top-Right Mode Control -->
+            <RowDefinition Height="Auto"/> <!-- 1: Staging Source DB & Global Config -->
+            <RowDefinition Height="Auto"/> <!-- 2: Step Indicators & Progress Strip -->
+            <RowDefinition Height="Auto"/> <!-- 3: Auto-Run Control Bar (When in Auto mode) -->
+            <RowDefinition Height="*"/>    <!-- 4: Active Step Content -->
+            <RowDefinition Height="Auto"/> <!-- 5: Navigation Bar -->
+            <RowDefinition Height="Auto"/> <!-- 6: Footer -->
         </Grid.RowDefinitions>
 
-        <!-- HEADER -->
-        <Border Grid.Row="0" Padding="24,14" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1">
+        <!-- 0: HEADER WITH TOP-RIGHT MODE CONTROL -->
+        <Border Grid.Row="0" Padding="24,12" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="txtWizardTitle" Text="🚀 Core Data Migration Wizard" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="20" FontWeight="Bold"/>
-                        <Border x:Name="badgeSpName" Background="#3B82F6" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="SP_LIS_DATA_MIGRATION" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+
+                <!-- Left: Title & Info -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="txtWizardTitle" Text="🚀 Core Data Migration Pipeline" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="19" FontWeight="Bold"/>
+                        <Border Background="#3B82F6" CornerRadius="4" Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Sequential Pipeline" Foreground="White" FontSize="11" FontWeight="Bold"/>
                         </Border>
                     </StackPanel>
-                    <TextBlock x:Name="txtDbLabel" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" Margin="0,3,0,0"
+                    <TextBlock x:Name="txtDbLabel" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,3,0,0"
                                Text="Target Server Database: [DLRSLSINF_4103PRSDB]"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                    <StackPanel x:Name="panelComCod" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
-                        <TextBlock Text="Company Code: " Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" VerticalAlignment="Center"/>
-                        <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                <!-- Right: Control Option for Auto vs Manual Execution (Top Right Corner) -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Mode Switcher Control -->
+                    <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="10,5" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Execution Mode: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <RadioButton x:Name="rbModeAuto" Content="⚡ Auto-Run (All in Sequence)" IsChecked="True" Foreground="#10B981" FontWeight="Bold" FontSize="12" Margin="6,0,10,0" Checked="Mode_Changed"/>
+                            <RadioButton x:Name="rbModeManual" Content="🖐 Manual (Step-by-Step)" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="12" Checked="Mode_Changed"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Company Code (Admin view) -->
+                    <StackPanel x:Name="panelComCod" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="Company: " Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" VerticalAlignment="Center"/>
+                        <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="4" Padding="6,3">
                             <TextBlock Text="4103" Foreground="#38BDF8" FontWeight="Bold" FontSize="12"/>
                         </Border>
                     </StackPanel>
 
                     <!-- Theme Toggle Button -->
-                    <Button x:Name="btnThemeToggle" Style="{StaticResource WizardBtn}" Padding="14,6"
+                    <Button x:Name="btnThemeToggle" Style="{StaticResource WizardBtn}" Padding="12,5"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}"
                             BorderThickness="1" Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnThemeToggle_Click">
                         <StackPanel Orientation="Horizontal">
@@ -138,54 +156,99 @@
             </Grid>
         </Border>
 
-        <!-- SOURCE DB READ-ONLY DISPLAY & RS CONFIG STRIP -->
-        <Border Grid.Row="1" Background="{DynamicResource ThemeInsetBg}" Padding="24,9" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1">
+        <!-- 1: STAGING SOURCE & GLOBAL CONFIG STRIP -->
+        <Border Grid.Row="1" Background="{DynamicResource ThemeInsetBg}" Padding="24,8" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Selected Source Database (Strictly Read-Only) -->
+                <!-- Left: Staging Source DB (Strictly Read-Only) -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0">
-                    <TextBlock Text="Source Database: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="Staging Source DB: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                     <Border Background="{DynamicResource ThemeCardBg}" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="5" Padding="10,4" Margin="6,0,0,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔒 " FontSize="11" VerticalAlignment="Center"/>
                             <TextBlock x:Name="txtSourceDbDisplay" Foreground="#38BDF8" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
-                            <TextBlock Text=" (Locked Source)" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                            <TextBlock Text=" (Locked Staging Source)" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
-                <!-- Right: Default RS / Session Number (Hidden for normal User) -->
-                <StackPanel x:Name="panelGlobalDesc02" Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="1">
-                    <TextBlock Text="RS / Session Number (@Desc02): " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                <!-- Center: Global RS Number -->
+                <StackPanel x:Name="panelGlobalDesc02" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Column="1">
+                    <TextBlock Text="Default RS / Session Number (@Desc02): " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                     <TextBox x:Name="txtGlobalDesc02" Text="201901" Width="95" Height="28" Style="{StaticResource InputBox}"
-                             TextChanged="TxtGlobalDesc02_TextChanged" ToolTip="Settlement Register Number (applied to LINFO00, LINFO01, LINFO02)"/>
+                             TextChanged="TxtGlobalDesc02_TextChanged" ToolTip="Settlement Register Number (applied to Khatian and Plot migration steps)"/>
+                </StackPanel>
+
+                <!-- Right: SP Verification Helper -->
+                <StackPanel Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
+                    <Button x:Name="btnDeploySp" Content="🛠 Verify Stored Procedures in DB"
+                            Style="{StaticResource WizardBtn}" Padding="12,5" FontSize="11"
+                            Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                            Foreground="{DynamicResource ThemeTextPrimary}"
+                            ToolTip="Checks target database [DLRSLSINF_4103PRSDB] for all stored procedures and compiles or updates them from DevResource scripts if needed."
+                            Click="BtnDeploySp_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- STEP STRIP & OVERALL PROGRESS -->
+        <!-- 2: STEP INDICATORS & OVERALL PROGRESS -->
         <Border Grid.Row="2" Background="{DynamicResource ThemeHeaderBg}" Padding="20,10" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1">
             <StackPanel>
-                <StackPanel x:Name="stepIndicatorPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="stepIndicatorPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                </ScrollViewer>
                 <!-- Overall Wizard Progress Bar -->
                 <Grid Margin="10,0,10,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <ProgressBar x:Name="pbWizardOverall" Height="4" Minimum="0" Maximum="7" Value="0"
+                    <ProgressBar x:Name="pbWizardOverall" Height="4" Minimum="0" Maximum="8" Value="0"
                                  Background="{DynamicResource ThemeInsetBg}" Foreground="#10B981" BorderThickness="0"/>
                     <TextBlock x:Name="lblWizardOverallPct" Grid.Column="1" Text="0% complete" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" Margin="10,0,0,0"/>
                 </Grid>
             </StackPanel>
         </Border>
 
-        <!-- SCROLLABLE STEP CONTENT -->
-        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Padding="24,16">
+        <!-- 3: AUTO-RUN CONTROL BAR (Visible in Auto Mode) -->
+        <Border x:Name="panelAutoRunControl" Grid.Row="3" Background="{DynamicResource ThemeCardBg}" Padding="24,10" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Visibility="Visible">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                    <Button x:Name="btnStartAuto" Content="▶ Start Auto Migration (Run All Steps)" Style="{StaticResource WizardBtn}"
+                            Background="{StaticResource GreenBrush}" Padding="18,8" FontSize="13" FontWeight="Bold" Click="BtnStartAuto_Click"/>
+
+                    <Button x:Name="btnPauseAuto" Content="⏸ Pause Auto-Run" Style="{StaticResource WizardBtn}"
+                            Background="{StaticResource AmberBrush}" Padding="14,8" FontSize="13" Margin="10,0,0,0" Visibility="Collapsed" Click="BtnPauseAuto_Click"/>
+
+                    <Button x:Name="btnStopAuto" Content="⏹ Stop" Style="{StaticResource WizardBtn}"
+                            Background="#7F1D1D" Padding="14,8" FontSize="13" Margin="8,0,0,0" Visibility="Collapsed" Click="BtnStopAuto_Click"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <TextBlock x:Name="lblAutoStatus" Text="Ready to execute all steps sequentially." Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
+                    <Border Background="{DynamicResource ThemeInsetBg}" CornerRadius="4" Padding="8,4">
+                        <TextBlock x:Name="lblOverallTimer" Text="Total Elapsed: 00:00" Foreground="#38BDF8" FontSize="12" FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 4: SCROLLABLE ACTIVE STEP CONTENT -->
+        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" Padding="24,16">
             <StackPanel>
 
                 <!-- GLOBAL COMPLETION BANNER -->
@@ -205,7 +268,7 @@
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="🎉" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Data Migration Completed Successfully!"
+                                <TextBlock Text="Sequential Data Migration Completed Successfully!"
                                            Foreground="{DynamicResource ThemeSuccessText}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
                             <TextBlock Text="Core Khatians, Plots, and Owners data have been migrated and committed to [DLRSLSINF_4103PRSDB]."
@@ -225,316 +288,144 @@
                     </Grid>
                 </Border>
 
-                <!-- STEP 1: MTO_AREAINF (Optional) -->
-                <Border x:Name="stepPanel1" Style="{StaticResource StepCard}" Visibility="Visible">
+                <!-- ACTIVE STEP CARD -->
+                <Border x:Name="activeStepCard" Style="{StaticResource StepCard}" Visibility="Visible">
                     <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="txtS1_Title" Text="Step 1 — Migrate Land Info to AREAINF" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
-                                <Border Background="#164E63" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="Optional — Can Skip" Foreground="#67E8F9" FontSize="11" FontWeight="SemiBold"/>
+                        <!-- Step Title & Badges -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtStepTitle" Text="Step 1 — Prepare Area Information" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
+                                <Border x:Name="bdStepType" Background="#164E63" CornerRadius="4" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtStepType" Text="Optional — Can Skip" Foreground="#67E8F9" FontSize="11" FontWeight="SemiBold"/>
                                 </Border>
                             </StackPanel>
+
+                            <Border Grid.Column="1" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtStepProcBadge" Text="SP_LIS_DATA_MIGRATION · @ProcID='MTO_AREAINF'" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" FontWeight="SemiBold"/>
+                            </Border>
                         </Grid>
-                        <TextBlock x:Name="txtS1_Desc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,14"
+
+                        <!-- Step Description -->
+                        <TextBlock x:Name="txtStepDesc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,16"
                                    Text="Executes: SP_LIS_DATA_MIGRATION @ComCod='4103', @ProcID='MTO_AREAINF', @Desc01='[SourceDB]'. Migrates area hierarchy from source database to AREAINF."/>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                            <TextBlock Text="Source DB:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,6">
-                                <TextBlock x:Name="txtS1_Desc01" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13"/>
-                            </Border>
-                        </StackPanel>
+                        <!-- Parameters Panel -->
+                        <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Execution Parameters:" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
 
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="btnRunS1" Content="Execute MTO_AREAINF" Style="{StaticResource WizardBtn}"
-                                    Background="{StaticResource GreenBrush}" Click="BtnRunS1_Click"/>
-                            <Button x:Name="btnSkipS1" Content="Skip This Step" Style="{StaticResource WizardBtn}" Background="#475569"
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Target Stored Proc:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtParamTargetProc" Grid.Column="1" Text="dbo.SP_LIS_DATA_MIGRATION" Foreground="#38BDF8" FontWeight="SemiBold"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Process ID (@ProcID):" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtParamProcId" Grid.Column="1" Text="MTO_AREAINF" Foreground="#A78BFA" FontWeight="Bold"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Database (@Desc01):" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtParamDesc01" Grid.Column="1" Text="DLRS_Migration_Intrm" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold"/>
+                                </Grid>
+
+                                <!-- RS Number Input (Shown if step uses @Desc02) -->
+                                <Grid x:Name="panelParamRs" Margin="0,2,0,4" Visibility="Collapsed">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="RS Number (@Desc02):" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="1">
+                                        <TextBox x:Name="txtStepRsNumber" Text="201901" Width="130" Height="28" Style="{StaticResource InputBox}"/>
+                                        <TextBlock Text="(Applied to target khatian/plot tables)" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Action Execution Buttons (Shown in Manual Mode) -->
+                        <StackPanel x:Name="panelManualActions" Orientation="Horizontal" Visibility="Collapsed">
+                            <Button x:Name="btnExecuteStep" Content="Execute MTO_AREAINF" Style="{StaticResource WizardBtn}"
+                                    Background="{StaticResource GreenBrush}" Click="BtnExecuteStep_Click"/>
+                            <Button x:Name="btnSkipCurrentStep" Content="Skip This Step" Style="{StaticResource WizardBtn}" Background="#475569"
                                     Margin="10,0,0,0" Click="BtnSkipCurrent_Click"/>
                         </StackPanel>
 
                         <!-- Live Progress & Timer -->
-                        <StackPanel x:Name="panelRunningS1" Visibility="Collapsed" Margin="0,12,0,0">
+                        <StackPanel x:Name="panelRunning" Visibility="Collapsed" Margin="0,14,0,0">
                             <ProgressBar IsIndeterminate="True" Height="4" Background="{DynamicResource ThemeInsetBg}" Foreground="#10B981" Margin="0,0,0,6"/>
-                            <TextBlock x:Name="lblTimerS1" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
+                            <TextBlock x:Name="lblTimer" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
                         </StackPanel>
 
-                        <TextBlock x:Name="lblS1Status" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,0" Visibility="Collapsed"/>
-                    </StackPanel>
-                </Border>
+                        <!-- Status Notification Alert -->
+                        <Border x:Name="bdStatusAlert" Visibility="Collapsed" Margin="0,14,0,0" CornerRadius="6" Padding="12,10"
+                                Background="{DynamicResource ThemeInsetBg}" BorderThickness="1" BorderBrush="{DynamicResource ThemeCardBorder}">
+                            <TextBlock x:Name="lblStatus" TextWrapping="Wrap" FontSize="12"/>
+                        </Border>
 
-                <!-- STEP 2: MANAGE_MISSMATCH (Optional) -->
-                <Border x:Name="stepPanel2" Style="{StaticResource StepCard}" Visibility="Collapsed">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="txtS2_Title" Text="Step 2 — Manage Mismatched Khatians" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
-                                <Border Background="#164E63" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="Optional — Can Skip" Foreground="#67E8F9" FontSize="11" FontWeight="SemiBold"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock x:Name="txtS2_Desc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,14"
-                                   Text="Executes: SP_LIS_DATA_MIGRATION @ComCod='4103', @ProcID='MANAGE_MISSMATCH', @Desc01='[SourceDB]'. Compares tblLinfo01, tblLinfo02, and tblHalsabek to detect mismatching Khatians."/>
+                        <!-- Results DataGrid Container -->
+                        <StackPanel x:Name="panelResultsGrid" Visibility="Collapsed" Margin="0,16,0,0">
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="lblResultHeader" Text="📊 Result Records" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13"/>
+                                <TextBlock x:Name="lblResultCount" Grid.Column="1" Text="0 records returned" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11"/>
+                            </Grid>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                            <TextBlock Text="Source DB:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,6">
-                                <TextBlock x:Name="txtS2_Desc01" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13"/>
-                            </Border>
+                            <DataGrid x:Name="dgResults"
+                                      AutoGenerateColumns="True"
+                                      IsReadOnly="True"
+                                      Background="Transparent"
+                                      Foreground="{DynamicResource ThemeTextPrimary}"
+                                      BorderThickness="1"
+                                      BorderBrush="{DynamicResource ThemeCardBorder}"
+                                      RowBackground="{DynamicResource ThemeCardBg}"
+                                      AlternatingRowBackground="{DynamicResource ThemeInsetBg}"
+                                      GridLinesVisibility="Horizontal"
+                                      HeadersVisibility="Column"
+                                      MaxHeight="260"
+                                      CanUserResizeRows="False"
+                                      CanUserSortColumns="True">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="{DynamicResource ThemeHeaderBg}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Padding" Value="10,6"/>
+                                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                            </DataGrid>
                         </StackPanel>
-
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="btnRunS2" Content="Execute MANAGE_MISSMATCH" Style="{StaticResource WizardBtn}"
-                                    Background="{StaticResource GreenBrush}" Click="BtnRunS2_Click"/>
-                            <Button x:Name="btnSkipS2" Content="Skip This Step" Style="{StaticResource WizardBtn}" Background="#475569"
-                                    Margin="10,0,0,0" Click="BtnSkipCurrent_Click"/>
-                        </StackPanel>
-
-                        <!-- Live Progress & Timer -->
-                        <StackPanel x:Name="panelRunningS2" Visibility="Collapsed" Margin="0,12,0,0">
-                            <ProgressBar IsIndeterminate="True" Height="4" Background="{DynamicResource ThemeInsetBg}" Foreground="#10B981" Margin="0,0,0,6"/>
-                            <TextBlock x:Name="lblTimerS2" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
-                        </StackPanel>
-
-                        <TextBlock x:Name="lblS2Status" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,0" Visibility="Collapsed"/>
-
-                        <!-- Mismatch results grid -->
-                        <DataGrid x:Name="dgMismatch"
-                                  Visibility="Collapsed"
-                                  AutoGenerateColumns="True"
-                                  IsReadOnly="True"
-                                  Background="Transparent"
-                                  Foreground="{DynamicResource ThemeTextPrimary}"
-                                  BorderThickness="1"
-                                  BorderBrush="{DynamicResource ThemeCardBorder}"
-                                  RowBackground="{DynamicResource ThemeCardBg}"
-                                  AlternatingRowBackground="{DynamicResource ThemeInsetBg}"
-                                  GridLinesVisibility="Horizontal"
-                                  HeadersVisibility="Column"
-                                  MaxHeight="200"
-                                  CanUserResizeRows="False"
-                                  Margin="0,12,0,0">
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="Background" Value="{DynamicResource ThemeHeaderBg}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
-                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                    <Setter Property="Padding" Value="8,4"/>
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                </Style>
-                            </DataGrid.ColumnHeaderStyle>
-                        </DataGrid>
-                    </StackPanel>
-                </Border>
-
-                <!-- STEP 3: MTO_LINFO00 (Required) -->
-                <Border x:Name="stepPanel3" Style="{StaticResource StepCard}" Visibility="Collapsed">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="txtS3_Title" Text="Step 3 — Migrate Land Info to LINFO00" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
-                                <Border Background="#881337" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="★ Required (Must Complete)" Foreground="#FDA4AF" FontSize="11" FontWeight="Bold"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock x:Name="txtS3_Desc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,14"
-                                   Text="Executes: SP_LIS_DATA_MIGRATION @ComCod='4103', @ProcID='MTO_LINFO00', @Desc01='[SourceDB]', @Desc02='[RS Number]'. Migrates Khatian master records into dbo_lis.linfo00, updates source convsts to 'SUCCESS', and logs any mismatched items."/>
-
-                        <StackPanel Margin="0,0,0,14">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBlock Text="Source DB:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,6">
-                                    <TextBlock x:Name="txtS3_Desc01" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13"/>
-                                </Border>
-                            </StackPanel>
-                            <StackPanel x:Name="panelS3_Desc02" Orientation="Horizontal">
-                                <TextBlock Text="RS Number:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <TextBox x:Name="txtS3_Desc02" Text="201901" Width="160" Height="32" Style="{StaticResource InputBox}"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Button x:Name="btnRunS3" Content="Execute MTO_LINFO00" Style="{StaticResource WizardBtn}"
-                                Background="{StaticResource BlueBrush}" HorizontalAlignment="Left" Click="BtnRunS3_Click"/>
-
-                        <!-- Live Progress & Timer -->
-                        <StackPanel x:Name="panelRunningS3" Visibility="Collapsed" Margin="0,12,0,0">
-                            <ProgressBar IsIndeterminate="True" Height="4" Background="{DynamicResource ThemeInsetBg}" Foreground="#3B82F6" Margin="0,0,0,6"/>
-                            <TextBlock x:Name="lblTimerS3" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
-                        </StackPanel>
-
-                        <TextBlock x:Name="lblS3Status" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,0" Visibility="Collapsed"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- STEP 4: MTO_LINFO01 (Required) -->
-                <Border x:Name="stepPanel4" Style="{StaticResource StepCard}" Visibility="Collapsed">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="txtS4_Title" Text="Step 4 — Migrate Land Info to LINFO01" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
-                                <Border Background="#881337" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="★ Required (Must Complete)" Foreground="#FDA4AF" FontSize="11" FontWeight="Bold"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock x:Name="txtS4_Desc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,14"
-                                   Text="Executes: SP_LIS_DATA_MIGRATION @ComCod='4103', @ProcID='MTO_LINFO01', @Desc01='[SourceDB]', @Desc02='[RS Number]'. Aggregates Halsabek plots, merges area and remarks from tblLinfo01, checks duplicates, inserts into dbo_lis.LINFO01, and updates convsts in source DB."/>
-
-                        <StackPanel Margin="0,0,0,14">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBlock Text="Source DB:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,6">
-                                    <TextBlock x:Name="txtS4_Desc01" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13"/>
-                                </Border>
-                            </StackPanel>
-                            <StackPanel x:Name="panelS4_Desc02" Orientation="Horizontal">
-                                <TextBlock Text="RS Number:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <TextBox x:Name="txtS4_Desc02" Text="201901" Width="160" Height="32" Style="{StaticResource InputBox}"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Button x:Name="btnRunS4" Content="Execute MTO_LINFO01" Style="{StaticResource WizardBtn}"
-                                Background="{StaticResource BlueBrush}" HorizontalAlignment="Left" Click="BtnRunS4_Click"/>
-
-                        <!-- Live Progress & Timer -->
-                        <StackPanel x:Name="panelRunningS4" Visibility="Collapsed" Margin="0,12,0,0">
-                            <ProgressBar IsIndeterminate="True" Height="4" Background="{DynamicResource ThemeInsetBg}" Foreground="#3B82F6" Margin="0,0,0,6"/>
-                            <TextBlock x:Name="lblTimerS4" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
-                        </StackPanel>
-
-                        <TextBlock x:Name="lblS4Status" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,0" Visibility="Collapsed"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- STEP 5: MTO_LINFO02 (Required) -->
-                <Border x:Name="stepPanel5" Style="{StaticResource StepCard}" Visibility="Collapsed">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="txtS5_Title" Text="Step 5 — Migrate Land Info to LINFO02" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
-                                <Border Background="#881337" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="★ Required (Must Complete)" Foreground="#FDA4AF" FontSize="11" FontWeight="Bold"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock x:Name="txtS5_Desc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,14"
-                                   Text="Executes: SP_LIS_DATA_MIGRATION @ComCod='4103', @ProcID='MTO_LINFO02', @Desc01='[SourceDB]', @Desc02='[RS Number]'. Extracts owner relations, gender, father/spouse name from address fields, deduplicates, inserts into dbo_lis.linfo02, and updates convsts to 'SUCCESS'."/>
-
-                        <StackPanel Margin="0,0,0,14">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBlock Text="Source DB:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,6">
-                                    <TextBlock x:Name="txtS5_Desc01" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13"/>
-                                </Border>
-                            </StackPanel>
-                            <StackPanel x:Name="panelS5_Desc02" Orientation="Horizontal">
-                                <TextBlock Text="RS Number:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <TextBox x:Name="txtS5_Desc02" Text="201901" Width="160" Height="32" Style="{StaticResource InputBox}"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Button x:Name="btnRunS5" Content="Execute MTO_LINFO02" Style="{StaticResource WizardBtn}"
-                                Background="{StaticResource BlueBrush}" HorizontalAlignment="Left" Click="BtnRunS5_Click"/>
-
-                        <!-- Live Progress & Timer -->
-                        <StackPanel x:Name="panelRunningS5" Visibility="Collapsed" Margin="0,12,0,0">
-                            <ProgressBar IsIndeterminate="True" Height="4" Background="{DynamicResource ThemeInsetBg}" Foreground="#3B82F6" Margin="0,0,0,6"/>
-                            <TextBlock x:Name="lblTimerS5" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
-                        </StackPanel>
-
-                        <TextBlock x:Name="lblS5Status" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,0" Visibility="Collapsed"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- STEP 6: UPDTMAPINF01 (Optional) -->
-                <Border x:Name="stepPanel6" Style="{StaticResource StepCard}" Visibility="Collapsed">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="txtS6_Title" Text="Step 6 — Update Map Information (UPDTMAPINF01)" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
-                                <Border Background="#164E63" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="Optional — Can Skip" Foreground="#67E8F9" FontSize="11" FontWeight="SemiBold"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock x:Name="txtS6_Desc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,14"
-                                   Text="Executes: SP_LIS_DATA_MIGRATION @ProcID='UPDTMAPINF01', @Desc01='[SourceDB]'. Inserts distinct unit codes from tblHalsabek into [dbo_lis].[mapinf01] for sheet '000'."/>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                            <TextBlock Text="Source DB:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,6">
-                                <TextBlock x:Name="txtS6_Desc01" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13"/>
-                            </Border>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="btnRunS6" Content="Execute UPDTMAPINF01" Style="{StaticResource WizardBtn}"
-                                    Background="{StaticResource GreenBrush}" Click="BtnRunS6_Click"/>
-                            <Button x:Name="btnSkipS6" Content="Skip This Step" Style="{StaticResource WizardBtn}" Background="#475569"
-                                    Margin="10,0,0,0" Click="BtnSkipCurrent_Click"/>
-                        </StackPanel>
-
-                        <!-- Live Progress & Timer -->
-                        <StackPanel x:Name="panelRunningS6" Visibility="Collapsed" Margin="0,12,0,0">
-                            <ProgressBar IsIndeterminate="True" Height="4" Background="{DynamicResource ThemeInsetBg}" Foreground="#10B981" Margin="0,0,0,6"/>
-                            <TextBlock x:Name="lblTimerS6" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
-                        </StackPanel>
-
-                        <TextBlock x:Name="lblS6Status" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,0" Visibility="Collapsed"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- STEP 7: MTO_PLOTINF01 (Optional) -->
-                <Border x:Name="stepPanel7" Style="{StaticResource StepCard}" Visibility="Collapsed">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="txtS7_Title" Text="Step 7 — Migrate Land Info to PLOTINF01" Foreground="#38BDF8" FontSize="16" FontWeight="Bold"/>
-                                <Border Background="#78350F" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="Optional / In Progress — Can Skip" Foreground="#FDE68A" FontSize="11" FontWeight="SemiBold"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock x:Name="txtS7_Desc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,0,0,14"
-                                   Text="Executes: SP_LIS_DATA_MIGRATION @ComCod='4103', @ProcID='MTO_PLOTINF01', @Desc01='[SourceDB]', @Desc02='[RS Number]'. Migrates plot records into dbo_lis.plotinf01."/>
-
-                        <StackPanel Margin="0,0,0,14">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBlock Text="Source DB:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,6">
-                                    <TextBlock x:Name="txtS7_Desc01" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13"/>
-                                </Border>
-                            </StackPanel>
-                            <StackPanel x:Name="panelS7_Desc02" Orientation="Horizontal">
-                                <TextBlock Text="RS Number:" Foreground="{DynamicResource ThemeTextSecondary}" VerticalAlignment="Center" Width="90"/>
-                                <TextBox x:Name="txtS7_Desc02" Text="201901" Width="160" Height="32" Style="{StaticResource InputBox}"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="btnRunS7" Content="Execute MTO_PLOTINF01" Style="{StaticResource WizardBtn}"
-                                    Background="{StaticResource GreenBrush}" Click="BtnRunS7_Click"/>
-                            <Button x:Name="btnSkipS7" Content="Skip This Step" Style="{StaticResource WizardBtn}" Background="#475569"
-                                    Margin="10,0,0,0" Click="BtnSkipCurrent_Click"/>
-                        </StackPanel>
-
-                        <!-- Live Progress & Timer -->
-                        <StackPanel x:Name="panelRunningS7" Visibility="Collapsed" Margin="0,12,0,0">
-                            <ProgressBar IsIndeterminate="True" Height="4" Background="{DynamicResource ThemeInsetBg}" Foreground="#10B981" Margin="0,0,0,6"/>
-                            <TextBlock x:Name="lblTimerS7" Text="⏳ Executing on SQL Server... Elapsed: 00:00" Foreground="#38BDF8" FontSize="12"/>
-                        </StackPanel>
-
-                        <TextBlock x:Name="lblS7Status" TextWrapping="Wrap" FontSize="12" Margin="0,12,0,0" Visibility="Collapsed"/>
                     </StackPanel>
                 </Border>
 
             </StackPanel>
         </ScrollViewer>
 
-        <!-- NAV BAR -->
-        <Border Grid.Row="4" Background="{DynamicResource ThemeHeaderBg}" Padding="24,12" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,1,0,0">
+        <!-- 5: NAV BAR -->
+        <Border Grid.Row="5" Background="{DynamicResource ThemeHeaderBg}" Padding="24,12" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -549,7 +440,7 @@
                            Foreground="{DynamicResource ThemeTextSecondary}"
                            VerticalAlignment="Center"
                            FontSize="12"
-                           Text="Step 1 of 7"/>
+                           Text="Step 1 of 8"/>
 
                 <Button x:Name="btnPrev"
                         Grid.Column="1"
@@ -600,8 +491,8 @@
             </Grid>
         </Border>
 
-        <!-- FOOTER -->
-        <Border Grid.Row="5" Background="{DynamicResource ThemeFooterBg}" Padding="16,6">
+        <!-- 6: FOOTER -->
+        <Border Grid.Row="6" Background="{DynamicResource ThemeFooterBg}" Padding="16,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

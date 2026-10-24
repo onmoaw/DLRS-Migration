@@ -8,6 +8,9 @@
         Title="{x:Static local:AppConfig.WindowTitle}" Height="940" Width="1440"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/DLRS-Migration App Icon.png"
+        FontFamily="{StaticResource AppFontPrimary}"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
         Background="{DynamicResource ThemeWindowBg}">
 
     <Window.Resources>
@@ -116,8 +119,30 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Right: Theme Toggle Button -->
+                <!-- Right: Mode Control Toggle, Log Viewer, Theme Toggle Button -->
                 <StackPanel Orientation="Horizontal" Grid.Column="1" VerticalAlignment="Center">
+                    <!-- Top-Right Corner Manual / Auto Control Button -->
+                    <Button x:Name="btnToggleControlMode" Style="{StaticResource AppBtn}" Padding="12,6" Margin="0,0,10,0"
+                            Background="{DynamicResource ThemeInsetBg}" BorderBrush="#3B82F6" BorderThickness="1.5"
+                            Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnToggleControlMode_Click"
+                            ToolTip="Click to toggle between 1-Click Automated Pipeline and Manual Step-by-Step Execution.">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtControlModeIcon" Text="⚡" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="txtControlModeText" Text="Auto Execution (Default)" FontSize="12" FontWeight="Bold" Foreground="#10B981" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- View Pipeline & Mapping Logs Button -->
+                    <Button x:Name="btnOpenPipelineLogs" Style="{StaticResource AppBtn}" Padding="10,6" Margin="0,0,10,0"
+                            Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                            Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnOpenPipelineLogs_Click"
+                            ToolTip="Open live Pipeline Execution &amp; Value Mapping Logs viewer.">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📋" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Logs" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="btnThemeToggle" Style="{StaticResource AppBtn}" Padding="12,6"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}"
                             BorderThickness="1" Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnThemeToggle_Click">
@@ -142,49 +167,49 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- STEP 1 CHIP: Copy to Intermediate DB -->
-                <Border Grid.Column="0" x:Name="chipStep1" Background="{DynamicResource ThemeCardBg}" BorderBrush="#3B82F6" BorderThickness="1.5" CornerRadius="6" Padding="10,6"
+                <Border Grid.Column="0" x:Name="chipStep1" Background="{DynamicResource ThemeCardBg}" BorderBrush="#3B82F6" BorderThickness="2" CornerRadius="8" Padding="14,8"
                         Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep1_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <Border x:Name="borderChip1Badge" Width="22" Height="22" CornerRadius="11" Background="#3B82F6" Margin="0,0,8,0">
-                            <TextBlock x:Name="txtChip1Num" Text="1" Foreground="White" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border x:Name="borderChip1Badge" Width="28" Height="28" CornerRadius="14" Background="#3B82F6" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtChip1Num" Text="1" Foreground="White" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel>
-                            <TextBlock Text="Step 1: Copy to Intermediate DB" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="12"/>
-                            <TextBlock x:Name="txtChip1Status" Text="Select DB &amp; copy data" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="10"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Step 1: Copy to Intermediate DB" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13.5"/>
+                            <TextBlock x:Name="txtChip1Status" Text="Select DB &amp; stage data" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" FontWeight="SemiBold" Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- ARROW 1 -->
-                <TextBlock Grid.Column="1" Text="➔" Foreground="{DynamicResource ThemeTextMuted}" FontSize="14" VerticalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="1" Text="➔" Foreground="#38BDF8" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0"/>
 
                 <!-- STEP 2 CHIP: Unicode Font Conversion -->
-                <Border Grid.Column="2" x:Name="chipStep2" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="10,6"
+                <Border Grid.Column="2" x:Name="chipStep2" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5" CornerRadius="8" Padding="14,8"
                         Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep2_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <Border x:Name="borderChip2Badge" Width="22" Height="22" CornerRadius="11" Background="#64748B" Margin="0,0,8,0">
-                            <TextBlock x:Name="txtChip2Num" Text="2" Foreground="White" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border x:Name="borderChip2Badge" Width="28" Height="28" CornerRadius="14" Background="#64748B" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtChip2Num" Text="2" Foreground="White" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel>
-                            <TextBlock Text="Step 2: Font Conversion" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="12"/>
-                            <TextBlock x:Name="txtChip2Status" Text="Convert to Unicode in intermediate DB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="10"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Step 2: Font Conversion" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13.5"/>
+                            <TextBlock x:Name="txtChip2Status" Text="Convert to Unicode in intermediate DB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" FontWeight="SemiBold" Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- ARROW 2 -->
-                <TextBlock Grid.Column="3" Text="➔" Foreground="{DynamicResource ThemeTextMuted}" FontSize="14" VerticalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="3" Text="➔" Foreground="#38BDF8" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0"/>
 
                 <!-- STEP 3 CHIP: Data Migration -->
-                <Border Grid.Column="4" x:Name="chipStep3" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="10,6"
+                <Border Grid.Column="4" x:Name="chipStep3" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5" CornerRadius="8" Padding="14,8"
                         Cursor="Hand" PreviewMouseLeftButtonUp="ChipStep3_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <Border x:Name="borderChip3Badge" Width="22" Height="22" CornerRadius="11" Background="#64748B" Margin="0,0,8,0">
-                            <TextBlock x:Name="txtChip3Num" Text="3" Foreground="White" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border x:Name="borderChip3Badge" Width="28" Height="28" CornerRadius="14" Background="#64748B" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtChip3Num" Text="3" Foreground="White" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel>
-                            <TextBlock Text="Step 3: Core Data Migration" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="12"/>
-                            <TextBlock x:Name="txtChip3Status" Text="Migrate to DLRSLSINF_4103PRSDB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="10"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Step 3: Core Data Migration" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13.5"/>
+                            <TextBlock x:Name="txtChip3Status" Text="Migrate to DLRSLSINF_4103PRSDB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" FontWeight="SemiBold" Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -303,7 +328,7 @@
                                     </Grid>
 
                                     <!-- Detail / Explanation / Error Message -->
-                                    <TextBlock x:Name="txtIntrmDbDetail" Visibility="Collapsed" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="10.5" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                    <TextBlock x:Name="txtIntrmDbDetail" Visibility="Collapsed" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
 
                                     <!-- Loading Progress Bar -->
                                     <ProgressBar x:Name="pbIntrmDbAction" Height="6" Minimum="0" Maximum="100" IsIndeterminate="True"
@@ -330,6 +355,22 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Active Source DB: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="txtActiveDbName" Text="(None Selected)" Foreground="#38BDF8" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Unit Code Already Migrated Pre-Check Warning Banner -->
+                            <Border x:Name="borderAlreadyMigratedNotice" Visibility="Collapsed" Background="#450A0A" BorderBrush="#EF4444" BorderThickness="1.5" CornerRadius="6" Padding="10,8" Margin="0,8,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="⛔" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="PRE-CHECK: UNIT ALREADY MIGRATED" Foreground="#FCA5A5" FontWeight="Bold" FontSize="11.5" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="txtAlreadyMigratedReason" Text="Unit code in this database is already logged as COMPLETED in tblUnitMigrationLog. Migration cannot proceed to prevent duplicate records." Foreground="#FECACA" FontSize="11" TextWrapping="Wrap"/>
+                                    <Button Content="📜 View Migration Logs" Style="{StaticResource AppBtn}" Padding="8,4" MinHeight="26" Margin="0,6,0,0" HorizontalAlignment="Left" Click="BtnViewIntrmLogs_Click">
+                                        <Button.Background>
+                                            <SolidColorBrush Color="#991B1B"/>
+                                        </Button.Background>
+                                    </Button>
                                 </StackPanel>
                             </Border>
 
@@ -478,7 +519,7 @@
                     <Border x:Name="panelStep1CopyToIntrm" Style="{StaticResource StageCard}" BorderBrush="#0284C7" BorderThickness="2">
                         <StackPanel>
                             <!-- Header -->
-                            <Grid Margin="0,0,0,8">
+                            <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -488,7 +529,7 @@
                                     <Border Background="#0284C7" CornerRadius="4" Padding="8,3" Margin="0,0,10,0" VerticalAlignment="Center">
                                         <TextBlock Text="STEP 1 OF 3" Foreground="White" FontWeight="Bold" FontSize="11"/>
                                     </Border>
-                                    <TextBlock Text="Copy &amp; Stage Data to Intermediate DB" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Data Staging &amp; Unified Migration Pipeline" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
                                 </StackPanel>
 
                                 <!-- Proceed button on top if completed -->
@@ -505,66 +546,212 @@
                                 </Button>
                             </Grid>
 
-                            <TextBlock x:Name="txtStep1Desc" Text="Copies tblHalsabek, tblLinfo01, and tblLinfo02 from the selected source database into [DLRS_Migration_Intrm]. Automatically converts columns to Unicode NVARCHAR, sets initial tracking columns, and assigns sequential RowIds. The source database is NOT modified."
-                                       Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                            <!-- ───────────────────────────────────────────────────────────────── -->
+                            <!-- 1-CLICK AUTOMATED PIPELINE HERO CARD (DEFAULT RECOMMENDED MODE)   -->
+                            <!-- ───────────────────────────────────────────────────────────────── -->
+                            <Border x:Name="cardAutoPipelineHero" Background="{DynamicResource ThemeInsetBg}" BorderBrush="#3B82F6" BorderThickness="2" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <!-- Header Badge and Title -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Background="#065F46" CornerRadius="4" Padding="8,3" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <TextBlock Text="⚡ DEFAULT MODE • 1-CLICK AUTOMATION" Foreground="#6EE7B7" FontWeight="Bold" FontSize="11"/>
+                                            </Border>
+                                            <TextBlock Text="Complete Automated Pipeline" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="Step 1 ➔ Step 2 ➔ Step 3" Foreground="#38BDF8" FontWeight="Bold" FontSize="11.5" VerticalAlignment="Center"/>
+                                    </Grid>
 
-                            <!-- Lock Banner for Step 1 (Shown when no DB selected) -->
-                            <Border x:Name="borderStep1LockBanner" Background="{DynamicResource ThemeLockBg}" BorderBrush="{DynamicResource ThemeLockBorder}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,12">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="🔒" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="STEP 1 WAITING — Select a Source Database" Foreground="{DynamicResource ThemeLockText}" FontSize="12" FontWeight="Bold"/>
-                                        <TextBlock Text="Connect to a SQL Server and select a source database from the left panel to enable data staging." Foreground="{DynamicResource ThemeLockText}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                                    </StackPanel>
+                                    <TextBlock Text="Executes the full migration hands-free: copies tables into DLRS_Migration_Intrm, batch converts Bijoy/Adarshalipi text to Unicode, updates the intermediate DB, and executes core stored procedures sequentially in DLRSLSINF_4103PRSDB."
+                                               Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                                    <!-- Visual 3-Phase Strip -->
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Phase 1 Pill -->
+                                        <Border x:Name="borderAutoPhase1" Grid.Column="0" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="8,6">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock x:Name="txtAutoPhase1Icon" Text="📥" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="txtAutoPhase1Text" Text="1. Stage Data" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <TextBlock Grid.Column="1" Text="➔" Foreground="#38BDF8" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="6,0"/>
+
+                                        <!-- Phase 2 Pill -->
+                                        <Border x:Name="borderAutoPhase2" Grid.Column="2" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="8,6">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock x:Name="txtAutoPhase2Icon" Text="🔤" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="txtAutoPhase2Text" Text="2. Font &amp; Update" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <TextBlock Grid.Column="3" Text="➔" Foreground="#38BDF8" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="6,0"/>
+
+                                        <!-- Phase 3 Pill -->
+                                        <Border x:Name="borderAutoPhase3" Grid.Column="4" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="8,6">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock x:Name="txtAutoPhase3Icon" Text="🚀" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="txtAutoPhase3Text" Text="3. Migration SPs" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Real-Time Progress Bar -->
+                                    <ProgressBar x:Name="pbFullAutoPipeline" Height="14" Minimum="0" Maximum="100" Value="0"
+                                                 Background="{DynamicResource ThemeCardBg}" Foreground="#10B981" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                                 Margin="0,0,0,8"/>
+
+                                    <!-- Status Message and Timer -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock x:Name="txtFullAutoStatus" Text="Ready — Connect server &amp; select a source database to begin" Foreground="#38BDF8" FontWeight="Bold" FontSize="12.5" TextWrapping="Wrap"/>
+                                            <TextBlock x:Name="txtFullAutoDetail" Text="Built-in failsafes: non-destructive read-only source access, auto-detects commented-out SP branches." Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" x:Name="txtFullAutoTimer" Text="⏱ 00:00" Foreground="#F59E0B" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    </Grid>
+
+                                    <!-- Action Buttons -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Primary Auto Start Button -->
+                                        <Button x:Name="btnStartFullAuto" MinHeight="48" Padding="18,10" IsEnabled="False"
+                                                Style="{StaticResource AppBtn}" Click="BtnStartFullAuto_Click">
+                                            <Button.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#2563EB" Offset="0"/>
+                                                    <GradientStop Color="#7C3AED" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Button.Background>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock Text="🚀" Margin="0,0,10,0" FontSize="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Start Complete Conversion &amp; Migration (Auto-Execute All)" FontSize="13.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- Active Controls (Pause/Stop) -->
+                                        <StackPanel Grid.Column="1" x:Name="panelAutoControls" Orientation="Horizontal" Visibility="Collapsed" Margin="8,0,0,0">
+                                            <Button x:Name="btnPauseFullAuto" Content="⏸ Pause" Width="76" MinHeight="48" Margin="0,0,6,0" Style="{StaticResource AppBtn}" Click="BtnPauseFullAuto_Click"/>
+                                            <Button x:Name="btnStopFullAuto" Content="⏹ Stop" Width="76" MinHeight="48" Style="{StaticResource AppBtn}" Click="BtnStopFullAuto_Click">
+                                                <Button.Background>
+                                                    <SolidColorBrush Color="#DC2626"/>
+                                                </Button.Background>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Completed Banner for Auto Execution -->
+                                    <Border x:Name="borderAutoCompletedBanner" Visibility="Collapsed" Background="{DynamicResource ThemeSuccessBg}" BorderBrush="{DynamicResource ThemeSuccessBorder}" BorderThickness="1.5" CornerRadius="8" Padding="14,10" Margin="0,10,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="🎉" FontSize="26" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="ENTIRE CONVERSION &amp; MIGRATION PIPELINE COMPLETED!" Foreground="{DynamicResource ThemeSuccessText}" FontWeight="Bold" FontSize="13"/>
+                                                <TextBlock x:Name="txtAutoCompletedDetail" Text="All tables staged, converted to Unicode, and migrated into DLRSLSINF_4103PRSDB." Foreground="{DynamicResource ThemeSuccessText}" FontSize="11.5" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="📜 View Logs" Style="{StaticResource AppBtn}" Padding="12,6" Margin="8,0,0,0" VerticalAlignment="Center" Click="BtnViewIntrmLogs_Click">
+                                                <Button.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#0D9488" Offset="0"/>
+                                                        <GradientStop Color="#0F766E" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Button.Background>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
                             </Border>
 
-                            <!-- Completed Banner for Step 1 -->
-                            <Border x:Name="borderStep1CompletedBanner" Visibility="Collapsed" Background="{DynamicResource ThemeSuccessBg}" BorderBrush="{DynamicResource ThemeSuccessBorder}" BorderThickness="1.5" CornerRadius="6" Padding="14,10" Margin="0,0,0,12">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="✅" FontSize="22" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="STEP 1 COMPLETED — DATA STAGED IN INTERMEDIATE DB" Foreground="{DynamicResource ThemeSuccessText}" FontWeight="Bold" FontSize="12"/>
-                                        <TextBlock x:Name="txtStep1CompletedDetail" Text="All records copied to [DLRS_Migration_Intrm] with Unicode schema and tracking columns." Foreground="{DynamicResource ThemeSuccessText}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            <!-- ───────────────────────────────────────────────────────────────── -->
+                            <!-- MANUAL SINGLE-STEP PANEL (Visible when Manual Control toggled)    -->
+                            <!-- ───────────────────────────────────────────────────────────────── -->
+                            <StackPanel x:Name="panelManualStep1">
+                                <TextBlock Text="— OR EXECUTE STEP 1 MANUALLY (SINGLE STEP) —" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" FontWeight="Bold" Margin="0,0,0,8" HorizontalAlignment="Center"/>
+
+                                <TextBlock x:Name="txtStep1Desc" Text="Copies tblHalsabek, tblLinfo01, and tblLinfo02 from the selected source database into [DLRS_Migration_Intrm]. Automatically converts columns to Unicode NVARCHAR, sets initial tracking columns, and assigns sequential RowIds. The source database is NOT modified."
+                                           Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                                <!-- Lock Banner for Step 1 (Shown when no DB selected) -->
+                                <Border x:Name="borderStep1LockBanner" Background="{DynamicResource ThemeLockBg}" BorderBrush="{DynamicResource ThemeLockBorder}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="🔒" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="STEP 1 WAITING — Select a Source Database" Foreground="{DynamicResource ThemeLockText}" FontSize="12" FontWeight="Bold"/>
+                                            <TextBlock Text="Connect to a SQL Server and select a source database from the left panel to enable data staging." Foreground="{DynamicResource ThemeLockText}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
-                                    <Button Grid.Column="2" Content="➔ Go to Step 2" Style="{StaticResource AppBtn}" Padding="14,6" Margin="10,0,0,0" VerticalAlignment="Center" Click="BtnGoToStep2_Click">
-                                        <Button.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                <GradientStop Color="#059669" Offset="0"/>
-                                                <GradientStop Color="#047857" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Button.Background>
-                                    </Button>
-                                </Grid>
-                            </Border>
+                                </Border>
 
-                            <!-- Step 1 Progress Bar -->
-                            <ProgressBar x:Name="pbStep1Copy" Height="10" Minimum="0" Maximum="100" IsIndeterminate="True"
-                                         Background="{DynamicResource ThemeCardBg}" Foreground="#0284C7" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
-                                         Margin="0,0,0,8" Visibility="Collapsed"/>
+                                <!-- Completed Banner for Step 1 -->
+                                <Border x:Name="borderStep1CompletedBanner" Visibility="Collapsed" Background="{DynamicResource ThemeSuccessBg}" BorderBrush="{DynamicResource ThemeSuccessBorder}" BorderThickness="1.5" CornerRadius="6" Padding="14,10" Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="✅" FontSize="22" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="STEP 1 COMPLETED — DATA STAGED IN INTERMEDIATE DB" Foreground="{DynamicResource ThemeSuccessText}" FontWeight="Bold" FontSize="12"/>
+                                            <TextBlock x:Name="txtStep1CompletedDetail" Text="All records copied to [DLRS_Migration_Intrm] with Unicode schema and tracking columns." Foreground="{DynamicResource ThemeSuccessText}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="➔ Go to Step 2" Style="{StaticResource AppBtn}" Padding="14,6" Margin="10,0,0,0" VerticalAlignment="Center" Click="BtnGoToStep2_Click">
+                                            <Button.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#059669" Offset="0"/>
+                                                    <GradientStop Color="#047857" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Button.Background>
+                                        </Button>
+                                    </Grid>
+                                </Border>
 
-                            <!-- Step 1 Status Text -->
-                            <TextBlock x:Name="txtStep1Status" Visibility="Collapsed" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <!-- Step 1 Progress Bar -->
+                                <ProgressBar x:Name="pbStep1Copy" Height="10" Minimum="0" Maximum="100" IsIndeterminate="True"
+                                             Background="{DynamicResource ThemeCardBg}" Foreground="#0284C7" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                             Margin="0,0,0,8" Visibility="Collapsed"/>
 
-                            <!-- Copy Button -->
-                            <Button x:Name="btnCopyToIntrmDb" MinHeight="44" Padding="18,10" IsEnabled="False"
-                                    Style="{StaticResource AppBtn}" Click="BtnCopyToIntrmDb_Click">
-                                <Button.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#0EA5E9" Offset="0"/>
-                                        <GradientStop Color="#0284C7" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Button.Background>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="📥" Margin="0,0,8,0" FontSize="14" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="txtBtnCopyToIntrm" Text="Copy Source Data to DLRS_Migration_Intrm" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
+                                <!-- Step 1 Status Text -->
+                                <TextBlock x:Name="txtStep1Status" Visibility="Collapsed" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                <!-- Copy Button -->
+                                <Button x:Name="btnCopyToIntrmDb" MinHeight="44" Padding="18,10" IsEnabled="False"
+                                        Style="{StaticResource AppBtn}" Click="BtnCopyToIntrmDb_Click">
+                                    <Button.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#0EA5E9" Offset="0"/>
+                                            <GradientStop Color="#0284C7" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Button.Background>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="📥" Margin="0,0,8,0" FontSize="14" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="txtBtnCopyToIntrm" Text="Copy Source Data to DLRS_Migration_Intrm (Single Step)" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -701,13 +888,13 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="2. Font Conversion to Unicode" Foreground="#38BDF8" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
-                                            <!-- Admin Delay Toggle Control -->
+                                            <!-- Speed & Throttle Toggle Control -->
                                             <Border x:Name="panelAdminDelayControl" Margin="14,0,0,0" VerticalAlignment="Center"
                                                     Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                                                     CornerRadius="5" Padding="8,4">
                                                 <CheckBox x:Name="chkConversionDelay" Content="Throttle Delay (2ms/row)" IsChecked="False"
                                                           Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" VerticalAlignment="Center"
-                                                          ToolTip="When enabled, adds a 2ms delay per row to throttle system CPU during conversion."/>
+                                                          ToolTip="Default is 0ms (True Real-Time). Check this to intentionally throttle CPU usage by adding a 2ms delay per row. Configurable in AppConfig.cs."/>
                                             </Border>
                                         </StackPanel>
                                         <Button x:Name="fontConverterBTN" Grid.Column="1" Width="195" MinHeight="36" Padding="16,8" Style="{StaticResource AppBtn}"
