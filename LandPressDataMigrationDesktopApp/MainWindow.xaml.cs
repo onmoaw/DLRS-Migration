@@ -2167,6 +2167,8 @@ namespace LandPressDataMigrationDesktopApp
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int processed = 0;
             DateTime lastUi = DateTime.MinValue;
+            int rowDelayMs = AppConfig.ConversionRowDelayMs;
+            int uiUpdateIntervalMs = Math.Max(20, AppConfig.ConversionUiUpdateIntervalMs);
 
             await Task.Run(() =>
             {
@@ -2184,9 +2186,14 @@ namespace LandPressDataMigrationDesktopApp
                     if (!string.IsNullOrEmpty(item.eascom5)) item.eascom5 = ConvertAndCheckMapping(item.eascom5, "tblLinfo01", "eascom5", recId);
                     if (!string.IsNullOrEmpty(item.eascom6)) item.eascom6 = ConvertAndCheckMapping(item.eascom6, "tblLinfo01", "eascom6", recId);
 
+                    if (rowDelayMs > 0)
+                    {
+                        System.Threading.Thread.Sleep(rowDelayMs);
+                    }
+
                     processed++;
 
-                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= 100 || processed == totalToConvert)
+                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= uiUpdateIntervalMs || processed == totalToConvert)
                     {
                         lastUi = DateTime.UtcNow;
                         int curr = processed;
@@ -2226,9 +2233,14 @@ namespace LandPressDataMigrationDesktopApp
                     if (!string.IsNullOrEmpty(item.addr9)) item.addr9 = ConvertAndCheckMapping(item.addr9, "tblLinfo02", "addr9", recId);
                     if (!string.IsNullOrEmpty(item.addr10)) item.addr10 = ConvertAndCheckMapping(item.addr10, "tblLinfo02", "addr10", recId);
 
+                    if (rowDelayMs > 0)
+                    {
+                        System.Threading.Thread.Sleep(rowDelayMs);
+                    }
+
                     processed++;
 
-                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= 100 || processed == totalToConvert)
+                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= uiUpdateIntervalMs || processed == totalToConvert)
                     {
                         lastUi = DateTime.UtcNow;
                         int curr = processed;

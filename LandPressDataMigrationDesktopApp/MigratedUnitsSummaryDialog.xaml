@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Data Migration Summary — Migrated Unit Codes"
-        Height="620" Width="820"
+        Height="660" Width="920"
         MinHeight="480" MinWidth="680"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
@@ -17,10 +17,10 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="MinHeight" Value="38"/>
+            <Setter Property="Padding" Value="22,10"/>
+            <Setter Property="MinHeight" Value="40"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -73,15 +73,15 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
-                    <Image Source="/Assets/DLRS-Migration App Icon.png" Width="36" Height="36" Margin="0,0,12,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Image Source="/Assets/DLRS-Migration App Icon.png" Width="40" Height="40" Margin="0,0,14,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🎉 Data Migration Completed" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="18" FontWeight="Bold"/>
-                            <Border Background="#059669" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="SUCCESS" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text="🎉 Data Migration Completed" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="21" FontWeight="Bold"/>
+                            <Border Background="#059669" CornerRadius="4" Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="SUCCESS" Foreground="White" FontSize="11" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock x:Name="txtDbInfo" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" Margin="0,3,0,0"
+                        <TextBlock x:Name="txtDbInfo" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" Margin="0,4,0,0"
                                    Text="Source Database: sylhet371  •  Core Target: [DLRSLSINF_4103PRSDB]"/>
                     </StackPanel>
                 </StackPanel>
@@ -93,7 +93,7 @@
                         Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnThemeToggle_Click">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="txtThemeIcon" Text="☀️" Margin="0,0,5,0" FontSize="12"/>
-                        <TextBlock x:Name="txtThemeLabel" Text="Light" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="txtThemeLabel" Text="Light" FontSize="12" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
             </Grid>
@@ -112,32 +112,32 @@
                 <!-- Units Count -->
                 <Border Grid.Column="0" Style="{StaticResource StatCard}" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="MIGRATED UNITS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="10" FontWeight="Bold"/>
-                        <TextBlock x:Name="txtTotalUnits" Text="0" Foreground="#38BDF8" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                        <TextBlock Text="MIGRATED UNITS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtTotalUnits" Text="0" Foreground="#38BDF8" FontSize="26" FontWeight="Bold" Margin="0,3,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Khatians Count -->
                 <Border Grid.Column="1" Style="{StaticResource StatCard}" Margin="4,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="TOTAL KHATIANS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="10" FontWeight="Bold"/>
-                        <TextBlock x:Name="txtTotalKhatians" Text="0" Foreground="#34D399" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                        <TextBlock Text="TOTAL KHATIANS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtTotalKhatians" Text="0" Foreground="#34D399" FontSize="26" FontWeight="Bold" Margin="0,3,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Plots Count -->
                 <Border Grid.Column="2" Style="{StaticResource StatCard}" Margin="4,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="TOTAL PLOTS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="10" FontWeight="Bold"/>
-                        <TextBlock x:Name="txtTotalPlots" Text="0" Foreground="#A78BFA" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                        <TextBlock Text="TOTAL PLOTS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtTotalPlots" Text="0" Foreground="#A78BFA" FontSize="26" FontWeight="Bold" Margin="0,3,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Owners Count -->
                 <Border Grid.Column="3" Style="{StaticResource StatCard}" Margin="8,0,0,0">
                     <StackPanel>
-                        <TextBlock Text="TOTAL OWNERS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="10" FontWeight="Bold"/>
-                        <TextBlock x:Name="txtTotalOwners" Text="0" Foreground="#FBBF24" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                        <TextBlock Text="TOTAL OWNERS" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtTotalOwners" Text="0" Foreground="#FBBF24" FontSize="26" FontWeight="Bold" Margin="0,3,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -159,15 +159,15 @@
                           AlternatingRowBackground="{DynamicResource ThemeInsetBg}"
                           Foreground="{DynamicResource ThemeTextPrimary}"
                           BorderThickness="0"
-                          FontSize="12"
-                          RowHeight="32">
+                          FontSize="13"
+                          RowHeight="36">
 
                     <DataGrid.ColumnHeaderStyle>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="Background" Value="{DynamicResource ThemeInsetBg}"/>
                             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondary}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="FontSize" Value="12.5"/>
                             <Setter Property="Padding" Value="12,8"/>
                             <Setter Property="BorderThickness" Value="0,0,0,1"/>
                             <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
@@ -199,8 +199,8 @@
                         <DataGridTemplateColumn Header="Status" Width="*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="#064E3B" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Status}" Foreground="#6EE7B7" FontSize="11" FontWeight="SemiBold"/>
+                                    <Border Background="#064E3B" CornerRadius="4" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Status}" Foreground="#6EE7B7" FontSize="12" FontWeight="SemiBold"/>
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -210,16 +210,16 @@
 
                 <!-- Loading / Empty Overlay -->
                 <TextBlock x:Name="txtLoading" Text="Loading migrated unit codes..." Foreground="{DynamicResource ThemeTextMuted}"
-                           FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                           FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
             </Grid>
         </Border>
 
         <!-- STATUS NOTE -->
-        <Border Grid.Row="3" Margin="18,0,18,6" Background="{DynamicResource ThemeSuccessBg}" BorderBrush="{DynamicResource ThemeSuccessBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8">
+        <Border Grid.Row="3" Margin="18,0,18,6" Background="{DynamicResource ThemeSuccessBg}" BorderBrush="{DynamicResource ThemeSuccessBorder}" BorderThickness="1" CornerRadius="6" Padding="14,10">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="ℹ" Foreground="{DynamicResource ThemeSuccessText}" FontWeight="Bold" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Text="ℹ" Foreground="{DynamicResource ThemeSuccessText}" FontWeight="Bold" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
                 <TextBlock Text="These unit codes and records have been committed to the core database [DLRSLSINF_4103PRSDB]. Click OK to proceed."
-                           Foreground="{DynamicResource ThemeSuccessText}" FontSize="11" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource ThemeSuccessText}" FontSize="12.5" VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
 
@@ -232,9 +232,9 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" Text="Click OK to return and continue with other conversions or migrations."
-                           Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" VerticalAlignment="Center"/>
 
-                <Button x:Name="btnOk" Grid.Column="1" Width="170" Style="{StaticResource DialogBtn}" IsDefault="True" Click="BtnOk_Click">
+                <Button x:Name="btnOk" Grid.Column="1" Width="180" MinHeight="42" Style="{StaticResource DialogBtn}" IsDefault="True" Click="BtnOk_Click">
                     <Button.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#10B981" Offset="0"/>
@@ -242,8 +242,8 @@
                         </LinearGradientBrush>
                     </Button.Background>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="✔" Margin="0,0,8,0" FontSize="13" VerticalAlignment="Center"/>
-                        <TextBlock Text="OK — Continue" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Text="✔" Margin="0,0,8,0" FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock Text="OK — Continue" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </Grid>

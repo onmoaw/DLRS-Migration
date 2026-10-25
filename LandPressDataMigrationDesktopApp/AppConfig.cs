@@ -31,7 +31,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v0.16";
+        public const string Version = "v0.17";
 
         /// <summary>
         /// Permanent intermediate staging database required on the connected SQL Server instance.

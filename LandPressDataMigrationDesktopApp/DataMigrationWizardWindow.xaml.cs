@@ -204,20 +204,20 @@ namespace LandPressDataMigrationDesktopApp
                     Text = i.ToString(),
                     Foreground = MediaBrushes.White,
                     FontWeight = FontWeights.Bold,
-                    FontSize = 12,
+                    FontSize = 14,
                     HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                     VerticalAlignment   = System.Windows.VerticalAlignment.Center,
                 };
 
                 var dot = new Border
                 {
-                    Width = 32,
-                    Height = 32,
-                    CornerRadius = new CornerRadius(16),
+                    Width = 36,
+                    Height = 36,
+                    CornerRadius = new CornerRadius(18),
                     Background = i == _currentStepIndex
                         ? new SolidBrush(MediaColor.FromRgb(59, 130, 246))
                         : new SolidBrush(MediaColor.FromRgb(51, 65, 85)),
-                    Margin = new Thickness(4, 0, 4, 0),
+                    Margin = new Thickness(5, 0, 5, 0),
                     Cursor = System.Windows.Input.Cursors.Hand,
                     Child = label,
                     ToolTip = $"{step.Config.Title} (Click to View)"

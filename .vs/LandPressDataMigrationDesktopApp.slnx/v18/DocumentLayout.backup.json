@@ -3,11 +3,11 @@
   "WorkspaceRootPath": "E:\\DLRS_DATA-MIGRATION\\01. WPF\\01. Main\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{BF883AF5-10AE-ED8C-9A5C-14EAE6C66B34}|LandPressDataMigrationDesktopApp\\LandPressDataMigrationDesktopApp.csproj|e:\\dlrs_data-migration\\01. wpf\\01. main\\landpressdatamigrationdesktopapp\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BF883AF5-10AE-ED8C-9A5C-14EAE6C66B34}|LandPressDataMigrationDesktopApp\\LandPressDataMigrationDesktopApp.csproj|solutionrelative:landpressdatamigrationdesktopapp\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\onmoaw\\AppData\\Local\\Temp\\.vsdbgsrc\\ca962df7f930d2e205a763779938f9e2275d4bb3e8e02921a5def225c4abc2b8\\Application.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\onmoaw\\AppData\\Local\\Temp\\.vsdbgsrc\\ca962df7f930d2e205a763779938f9e2275d4bb3e8e02921a5def225c4abc2b8\\Application.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{BF883AF5-10AE-ED8C-9A5C-14EAE6C66B34}|LandPressDataMigrationDesktopApp\\LandPressDataMigrationDesktopApp.csproj|e:\\dlrs_data-migration\\01. wpf\\01. main\\landpressdatamigrationdesktopapp\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF883AF5-10AE-ED8C-9A5C-14EAE6C66B34}|LandPressDataMigrationDesktopApp\\LandPressDataMigrationDesktopApp.csproj|solutionrelative:landpressdatamigrationdesktopapp\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\onmoaw\\AppData\\Local\\Temp\\.vsdbgsrc\\ada5e5c272723e2776b93929f7cc4d34e9c97bf736b74ffcadc7d93052d8788e\\XamlReader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
@@ -64,17 +64,18 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "Application.cs",
               "DocumentMoniker": "C:\\Users\\onmoaw\\AppData\\Local\\Temp\\.vsdbgsrc\\ca962df7f930d2e205a763779938f9e2275d4bb3e8e02921a5def225c4abc2b8\\Application.cs",
               "ToolTip": "C:\\Users\\onmoaw\\AppData\\Local\\Temp\\.vsdbgsrc\\ca962df7f930d2e205a763779938f9e2275d4bb3e8e02921a5def225c4abc2b8\\Application.cs",
               "ViewState": "AgIAANwFAAAAAAAAAAAywOUFAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-13T12:27:32.522Z"
+              "WhenOpened": "2026-10-13T12:27:32.522Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -112,13 +113,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "MainWindow.xaml.cs",
               "DocumentMoniker": "E:\\DLRS_DATA-MIGRATION\\01. WPF\\01. Main\\LandPressDataMigrationDesktopApp\\MainWindow.xaml.cs",
               "RelativeDocumentMoniker": "LandPressDataMigrationDesktopApp\\MainWindow.xaml.cs",
               "ToolTip": "E:\\DLRS_DATA-MIGRATION\\01. WPF\\01. Main\\LandPressDataMigrationDesktopApp\\MainWindow.xaml.cs",
               "RelativeToolTip": "LandPressDataMigrationDesktopApp\\MainWindow.xaml.cs",
-              "ViewState": "AgIAAGcLAAAAAAAAAAAywHkLAAAUAAAAAAAAAA==",
+              "ViewState": "AgIAAOwLAAAAAAAAAAAywP4LAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-30T08:12:06.832Z",
               "EditorCaption": ""
