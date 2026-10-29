@@ -143,6 +143,17 @@
                         </Border>
                     </StackPanel>
 
+                    <!-- View Records Button -->
+                    <Button x:Name="btnViewRecords" Style="{StaticResource WizardBtn}" Padding="12,5" Margin="0,0,10,0"
+                            Background="{DynamicResource ThemeCardBg}" BorderBrush="#0D9488" BorderThickness="1.5"
+                            Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnViewRecords_Click"
+                            ToolTip="Open Land Records Search and Viewer.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔎" Margin="0,0,4,0"/>
+                            <TextBlock Text="View Records" FontWeight="Bold" Foreground="#0D9488"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Theme Toggle Button -->
                     <Button x:Name="btnThemeToggle" Style="{StaticResource WizardBtn}" Padding="12,5"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}"

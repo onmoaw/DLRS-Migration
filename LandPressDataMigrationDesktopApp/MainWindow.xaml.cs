@@ -185,6 +185,29 @@ namespace LandPressDataMigrationDesktopApp
             PipelineLogViewerWindow.ShowLogViewer(this);
         }
 
+        // ─────────────────────────────────────────────────────────────────────────────
+        // ── LAND RECORDS SEARCH & VIEWER WINDOW (POP-UP) ──
+        // ─────────────────────────────────────────────────────────────────────────────
+        private void BtnViewRecords_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var win = new ViewRecordsWindow
+                {
+                    Owner = this
+                };
+                win.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    "Error opening View Records window:\n" + ex.Message,
+                    "View Records Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         /// <summary>
         /// Converts Adarshalipi ANSI text to Unicode and verifies value mapping integrity,
         /// logging any anomalies, unmapped character codes, or truncations into PipelineExecutionLogger.
