@@ -12,13 +12,18 @@ namespace LandPressDataMigrationDesktopApp
         public string SpName { get; set; } = "dbo.SP_LIS_DATA_MIGRATION";
         public string ProcId { get; set; } = "";
         public string Title { get; set; } = "";
+        public string UserTitle { get; set; } = "";
         public string Description { get; set; } = "";
+        public string UserDescription { get; set; } = "";
         public bool IsEnabled { get; set; } = true;
         public bool IsRequired { get; set; } = false;
         public bool RequiresRsNumber { get; set; } = false;
         public bool RequiresJsonInput { get; set; } = false;
         public string DefaultJson { get; set; } = "";
         public bool HasResultTable { get; set; } = false;
+
+        public string GetTitle(bool isAdmin) => (!isAdmin && !string.IsNullOrWhiteSpace(UserTitle)) ? UserTitle : Title;
+        public string GetDescription(bool isAdmin) => (!isAdmin && !string.IsNullOrWhiteSpace(UserDescription)) ? UserDescription : Description;
     }
 
     /// <summary>
@@ -31,7 +36,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v0.18e2";
+        public const string Version = "v0.19a";
 
         /// <summary>
         /// Permanent intermediate staging database required on the connected SQL Server instance.
@@ -133,7 +138,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK",
                 ProcId = "GETROWCOUNTS",
                 Title = "Pre-Check — Audit Staging Row Counts (GETROWCOUNTS)",
+                UserTitle = "Pre-Check — Audit Staging Records",
                 Description = "Queries total record counts from tblLinfo01 and tblLinfo02 in staging database before migration.",
+                UserDescription = "Audits and verifies the total records staged in the intermediate database before starting migration.",
                 IsEnabled = true,
                 IsRequired = false,
                 HasResultTable = true
@@ -146,7 +153,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION",
                 ProcId = "MTO_AREAINF",
                 Title = "Step 1 — Prepare Area Information (MTO_AREAINF)",
+                UserTitle = "Step 1 — Prepare Area Information",
                 Description = "Prepares and imports area and mauza boundaries from the staging database into AREAINF.",
+                UserDescription = "Prepares and registers area, mauza, and boundary records into the core database.",
                 IsEnabled = true,
                 IsRequired = false
             },
@@ -158,7 +167,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION",
                 ProcId = "MANAGE_MISSMATCH",
                 Title = "Step 2 — Verify Khatians & Check Mismatches (MANAGE_MISSMATCH)",
+                UserTitle = "Step 2 — Verify Khatians & Check Mismatches",
                 Description = "Compares tblLinfo01, tblLinfo02, and tblHalsabek to detect mismatching Khatian records.",
+                UserDescription = "Compares staged records across tables to detect and audit any mismatching Khatian numbers.",
                 IsEnabled = true,
                 IsRequired = false,
                 HasResultTable = true
@@ -171,7 +182,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION",
                 ProcId = "MTO_LINFO00",
                 Title = "Step 3 — Import Khatian Master Records (MTO_LINFO00)",
+                UserTitle = "Step 3 — Import Khatian Master Records",
                 Description = "Migrates Khatian master records into dbo_lis.linfo00 and marks convsts = 'SUCCESS'.",
+                UserDescription = "Migrates and registers all core Khatian master land records into the central database.",
                 IsEnabled = true,
                 IsRequired = true,
                 RequiresRsNumber = true
@@ -184,7 +197,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION",
                 ProcId = "MTO_LINFO01",
                 Title = "Step 4 — Import Plot Details (MTO_LINFO01)",
+                UserTitle = "Step 4 — Import Plot Details",
                 Description = "Aggregates Halsabek plots, merges areas from tblLinfo01, and inserts into dbo_lis.linfo01.",
+                UserDescription = "Aggregates and migrates plot numbers, land areas, and boundaries into the central database.",
                 IsEnabled = true,
                 IsRequired = true,
                 RequiresRsNumber = true
@@ -197,7 +212,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION",
                 ProcId = "MTO_LINFO02",
                 Title = "Step 5 — Import Land Ownership & Relations (MTO_LINFO02)",
+                UserTitle = "Step 5 — Import Land Ownership & Relations",
                 Description = "Extracts owner relations, gender, father/spouse name from address fields, and inserts into dbo_lis.linfo02.",
+                UserDescription = "Extracts and migrates land ownership, owner shares, and family relations into the central database.",
                 IsEnabled = true,
                 IsRequired = true,
                 RequiresRsNumber = true
@@ -210,7 +227,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION",
                 ProcId = "UPDTMAPINF01",
                 Title = "Step 6 — Update Map Unit Codes (UPDTMAPINF01)",
+                UserTitle = "Step 6 — Update Map Unit Codes",
                 Description = "Inserts distinct unit codes from tblHalsabek into dbo_lis.mapinf01 for sheet '000'.",
+                UserDescription = "Updates and registers map unit boundaries and sheet identifiers in the central database.",
                 IsEnabled = true,
                 IsRequired = false
             },
@@ -222,7 +241,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION",
                 ProcId = "MTO_PLOTINF01",
                 Title = "Step 7 — Import Detailed Plot Attributes (MTO_PLOTINF01)",
+                UserTitle = "Step 7 — Import Detailed Plot Attributes",
                 Description = "Migrates distinct plot records into dbo_lis.plotinf01.",
+                UserDescription = "Migrates detailed land classification, plot attributes, and spatial records into the central database.",
                 IsEnabled = true,
                 IsRequired = false,
                 RequiresRsNumber = true
@@ -235,7 +256,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION_01",
                 ProcId = "MTO_LINFUSR",
                 Title = "Step 8 — Land Info User Staging (MTO_LINFUSR)",
+                UserTitle = "Step 8 — Land Info User Staging",
                 Description = "Staging step for land info user credentials (from SP_LIS_DATA_MIGRATION_01).",
+                UserDescription = "Prepares user credentials and authorization records.",
                 IsEnabled = false, // Disabled by default, change to true to include in sequence
                 IsRequired = false
             },
@@ -247,7 +270,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION_01",
                 ProcId = "MTO_LRSINF01",
                 Title = "Step 9 — Land RS Survey Header (MTO_LRSINF01)",
+                UserTitle = "Step 9 — Land RS Survey Header",
                 Description = "RS survey staging header (from SP_LIS_DATA_MIGRATION_01).",
+                UserDescription = "Prepares survey session and settlement header records.",
                 IsEnabled = false, // Disabled by default
                 IsRequired = false
             },
@@ -259,7 +284,9 @@ namespace LandPressDataMigrationDesktopApp
                 SpName = "dbo.SP_LIS_DATA_MIGRATION_01",
                 ProcId = "MTO_LRSINF02",
                 Title = "Step 10 — Land RS Survey Details (MTO_LRSINF02)",
+                UserTitle = "Step 10 — Land RS Survey Details",
                 Description = "RS survey staging details (from SP_LIS_DATA_MIGRATION_01).",
+                UserDescription = "Prepares detailed survey settlement records.",
                 IsEnabled = false, // Disabled by default
                 IsRequired = false
             }

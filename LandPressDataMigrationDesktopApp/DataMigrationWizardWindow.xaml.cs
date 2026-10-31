@@ -220,7 +220,7 @@ namespace LandPressDataMigrationDesktopApp
                     Margin = new Thickness(5, 0, 5, 0),
                     Cursor = System.Windows.Input.Cursors.Hand,
                     Child = label,
-                    ToolTip = $"{step.Config.Title} (Click to View)"
+                    ToolTip = $"{step.Config.GetTitle(UserSession.IsAdmin)} (Click to View)"
                 };
 
                 dot.MouseLeftButtonUp += (s, e) =>
@@ -295,8 +295,10 @@ namespace LandPressDataMigrationDesktopApp
             if (_steps.Count == 0) return;
             var step = CurrentStep;
             var cfg = step.Config;
+            bool isAdmin = UserSession.IsAdmin;
 
-            txtStepTitle.Text = cfg.Title;
+            txtStepTitle.Text = cfg.GetTitle(isAdmin);
+            txtStepDesc.Text = cfg.GetDescription(isAdmin);
 
             if (cfg.IsRequired)
             {
@@ -311,12 +313,29 @@ namespace LandPressDataMigrationDesktopApp
                 txtStepType.Foreground = new SolidBrush(MediaColor.FromRgb(103, 232, 249));
             }
 
-            txtStepProcBadge.Text = $"{cfg.SpName} · @ProcID='{cfg.ProcId}'";
-            txtStepDesc.Text = cfg.Description;
+            if (borderStepProcBadge != null)
+            {
+                borderStepProcBadge.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+                txtStepProcBadge.Text = $"{cfg.SpName} · @ProcID='{cfg.ProcId}'";
+            }
 
-            txtParamTargetProc.Text = cfg.SpName;
-            txtParamProcId.Text = cfg.ProcId;
-            txtParamDesc01.Text = _sourceDbName;
+            if (txtParamTargetProc != null) txtParamTargetProc.Text = cfg.SpName;
+            if (txtParamProcId != null) txtParamProcId.Text = cfg.ProcId;
+            if (txtParamDesc01 != null) txtParamDesc01.Text = _sourceDbName;
+
+            if (rowParamTargetProc != null) rowParamTargetProc.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            if (rowParamProcId != null) rowParamProcId.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            if (rowParamDesc01 != null) rowParamDesc01.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+
+            if (borderParametersPanel != null)
+            {
+                // Only show parameters panel for standard users if this step requires input (e.g. RS number)
+                borderParametersPanel.Visibility = (isAdmin || cfg.RequiresRsNumber) ? Visibility.Visible : Visibility.Collapsed;
+                if (txtExecutionParamsHeader != null)
+                {
+                    txtExecutionParamsHeader.Text = isAdmin ? "Execution Parameters:" : "Step Configuration:";
+                }
+            }
 
             // RS Number panel
             if (cfg.RequiresRsNumber)
@@ -325,6 +344,10 @@ namespace LandPressDataMigrationDesktopApp
                 txtStepRsNumber.Text = !string.IsNullOrEmpty(step.CustomRsNumber)
                     ? step.CustomRsNumber
                     : (txtGlobalDesc02?.Text?.Trim() ?? "201901");
+                if (lblParamRs != null)
+                {
+                    lblParamRs.Text = isAdmin ? "RS Number (@Desc02):" : "RS Number:";
+                }
             }
             else
             {
@@ -340,7 +363,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             else
             {
-                btnExecuteStep.Content = $"▶ Execute {cfg.ProcId}";
+                btnExecuteStep.Content = isAdmin ? $"▶ Execute {cfg.ProcId}" : $"▶ Run Step {_currentStepIndex}";
                 btnExecuteStep.IsEnabled = true;
                 btnExecuteStep.Background = (System.Windows.Media.Brush)FindResource("GreenBrush");
             }
@@ -473,15 +496,24 @@ namespace LandPressDataMigrationDesktopApp
                     // Skip steps already completed
                     if (step.IsCompleted) continue;
 
-                    lblAutoStatus.Text = $"⚡ Executing Step {i} of {_steps.Count}: {step.Config.ProcId}...";
+                    lblAutoStatus.Text = UserSession.IsAdmin
+                        ? $"⚡ Executing Step {i} of {_steps.Count}: {step.Config.ProcId}..."
+                        : $"⚡ Executing Step {i} of {_steps.Count}: {step.Config.GetTitle(false)}...";
 
                     bool success = await ExecuteStepInternalAsync(step);
                     if (!success)
                     {
                         // Genuine SQL error occurred and was not a commented-out branch
-                        lblAutoStatus.Text = $"⚠ Error in Step {i} ({step.Config.ProcId}). Auto-run paused.";
+                        lblAutoStatus.Text = UserSession.IsAdmin
+                            ? $"⚠ Error in Step {i} ({step.Config.ProcId}). Auto-run paused."
+                            : $"⚠ Error in Step {i}. Auto-run paused.";
+
+                        string stepName = UserSession.IsAdmin
+                            ? $"Step {i} ({step.Config.Title})"
+                            : $"Step {i} ({step.Config.GetTitle(false)})";
+
                         var choice = MessageBox.Show(
-                            $"Step {i} ({step.Config.Title}) encountered an error:\n\n{step.StatusText}\n\nDo you want to skip this step and continue the rest of the migration sequence?",
+                            $"{stepName} encountered an error:\n\n{step.StatusText}\n\nDo you want to skip this step and continue the rest of the migration sequence?",
                             "Migration Step Alert",
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Warning);
@@ -589,13 +621,18 @@ namespace LandPressDataMigrationDesktopApp
             var cfg = step.Config;
             string procId = cfg.ProcId;
             string spName = cfg.SpName;
-            lblTimer.Text = $"⏳ Executing {procId} on SQL Server... Elapsed: 00:00";
+            bool isAdmin = UserSession.IsAdmin;
+            lblTimer.Text = isAdmin
+                ? $"⏳ Executing {procId} on SQL Server... Elapsed: 00:00"
+                : $"⏳ Executing Step {_currentStepIndex}... Elapsed: 00:00";
 
             var sw = Stopwatch.StartNew();
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             timer.Tick += (s, e) =>
             {
-                lblTimer.Text = $"⏳ Executing {procId} on SQL Server... Elapsed: {sw.Elapsed:mm\\:ss}";
+                lblTimer.Text = isAdmin
+                    ? $"⏳ Executing {procId} on SQL Server... Elapsed: {sw.Elapsed:mm\\:ss}"
+                    : $"⏳ Executing Step {_currentStepIndex}... Elapsed: {sw.Elapsed:mm\\:ss}";
             };
             timer.Start();
 
@@ -656,7 +693,9 @@ namespace LandPressDataMigrationDesktopApp
                         step.IsSkipped = false;
                         step.IsStatusWarning = true;
                         step.IsStatusError = false;
-                        step.StatusText = $"ℹ Notice: Bypassed — Branch '{procId}' was commented out or omitted in the database. Safely continued.";
+                        step.StatusText = isAdmin
+                            ? $"ℹ Notice: Bypassed — Branch '{procId}' was commented out or omitted in the database. Safely continued."
+                            : $"ℹ Notice: Step {_currentStepIndex} was marked as bypassed in database setup. Safely continued.";
                         PipelineExecutionLogger.LogWarning("Step 3 (Migration SP)", $"Bypassed {procId} — branch commented out in database.", recordId: procId);
                         RenderActiveStep();
                         RefreshStepDots();
@@ -664,7 +703,9 @@ namespace LandPressDataMigrationDesktopApp
                     }
 
                     step.IsStatusError = true;
-                    step.StatusText = $"⚠ Procedure Error: {errMsg} (Elapsed: {timeStr})";
+                    step.StatusText = isAdmin
+                        ? $"⚠ Procedure Error: {errMsg} (Elapsed: {timeStr})"
+                        : $"⚠ Step Error: {errMsg} (Elapsed: {timeStr})";
                     RenderActiveStep();
                     return false;
                 }
@@ -689,7 +730,9 @@ namespace LandPressDataMigrationDesktopApp
                 else
                 {
                     step.IsStatusWarning = false;
-                    step.StatusText = $"✔ Step {step.Config.Order} ({procId}) completed successfully in {timeStr}.";
+                    step.StatusText = isAdmin
+                        ? $"✔ Step {step.Config.Order} ({procId}) completed successfully in {timeStr}."
+                        : $"✔ Step {step.Config.Order} completed successfully in {timeStr}.";
                     PipelineExecutionLogger.LogInfo("Step 3 (Migration SP)", $"Step {step.Config.Order} ({procId}) completed successfully in {timeStr}.", recordId: procId);
                 }
 
@@ -719,7 +762,9 @@ namespace LandPressDataMigrationDesktopApp
                     step.IsSkipped = false;
                     step.IsStatusWarning = true;
                     step.IsStatusError = false;
-                    step.StatusText = $"ℹ Notice: Bypassed — Procedure or branch '{procId}' was commented out in the database. Safely continued.";
+                    step.StatusText = isAdmin
+                        ? $"ℹ Notice: Bypassed — Procedure or branch '{procId}' was commented out in the database. Safely continued."
+                        : $"ℹ Notice: Step {_currentStepIndex} was marked as bypassed in database setup. Safely continued.";
                     PipelineExecutionLogger.LogWarning("Step 3 (Migration SP)", $"Bypassed {procId} — branch commented out in database.", recordId: procId);
                     RenderActiveStep();
                     RefreshStepDots();
@@ -727,7 +772,9 @@ namespace LandPressDataMigrationDesktopApp
                 }
 
                 step.IsStatusError = true;
-                step.StatusText = $"⚠ SQL Error {sqlEx.Number}: {sqlEx.Message} (Elapsed: {sw.Elapsed:mm\\:ss})";
+                step.StatusText = isAdmin
+                    ? $"⚠ SQL Error {sqlEx.Number}: {sqlEx.Message} (Elapsed: {sw.Elapsed:mm\\:ss})"
+                    : $"⚠ Execution Error: {sqlEx.Message} (Elapsed: {sw.Elapsed:mm\\:ss})";
                 PipelineExecutionLogger.LogError("Step 3 (Migration SP)", $"SQL Error {sqlEx.Number} executing {procId}: {sqlEx.Message}", recordId: procId);
                 RenderActiveStep();
                 return false;
@@ -833,6 +880,13 @@ namespace LandPressDataMigrationDesktopApp
                 PipelineExecutionLogger.LogInfo("Step 3 (Migration SP)", $"All required migration steps finished successfully! {summary}");
                 if (doneBanner != null)
                     doneBanner.Visibility = Visibility.Visible;
+
+                if (txtDoneBannerDetail != null)
+                {
+                    txtDoneBannerDetail.Text = UserSession.IsAdmin
+                        ? "Core Khatians, Plots, and Owners data have been migrated and committed to [DLRSLSINF_4103PRSDB]."
+                        : "Core Khatians, plots, and owners data have been successfully migrated and committed into the core system.";
+                }
 
                 MigrationCompleted?.Invoke();
 
@@ -973,10 +1027,14 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!UserSession.IsAdmin)
             {
-                panelComCod.Visibility = Visibility.Collapsed;
-                panelGlobalDesc02.Visibility = Visibility.Collapsed;
-                txtWizardTitle.Text = "🚀 Data Migration Pipeline";
-                txtDbLabel.Text = "Target System: Ready for Migration";
+                if (panelComCod != null) panelComCod.Visibility = Visibility.Collapsed;
+                if (panelGlobalDesc02 != null) panelGlobalDesc02.Visibility = Visibility.Collapsed;
+                if (btnDeploySp != null) btnDeploySp.Visibility = Visibility.Collapsed;
+                if (txtWizardTitle != null) txtWizardTitle.Text = "🚀 Data Migration Pipeline";
+                if (txtDbLabel != null) txtDbLabel.Text = "Target System: Ready for Migration";
+                if (borderStepProcBadge != null) borderStepProcBadge.Visibility = Visibility.Collapsed;
+                if (txtDoneBannerDetail != null)
+                    txtDoneBannerDetail.Text = "Core Khatians, plots, and owners data have been successfully migrated and committed into the core system.";
             }
         }
 

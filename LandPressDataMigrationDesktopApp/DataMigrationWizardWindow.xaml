@@ -282,7 +282,7 @@
                                 <TextBlock Text="Sequential Data Migration Completed Successfully!"
                                            Foreground="{DynamicResource ThemeSuccessText}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
-                            <TextBlock Text="Core Khatians, Plots, and Owners data have been migrated and committed to [DLRSLSINF_4103PRSDB]."
+                            <TextBlock x:Name="txtDoneBannerDetail" Text="Core Khatians, Plots, and Owners data have been migrated and committed to [DLRSLSINF_4103PRSDB]."
                                        Foreground="{DynamicResource ThemeSuccessText}" FontSize="12" Margin="26,3,0,0"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -316,21 +316,21 @@
                                 </Border>
                             </StackPanel>
 
-                            <Border Grid.Column="1" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="4" Padding="10,5" VerticalAlignment="Center">
+                            <Border x:Name="borderStepProcBadge" Grid.Column="1" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="4" Padding="10,5" VerticalAlignment="Center">
                                 <TextBlock x:Name="txtStepProcBadge" Text="SP_LIS_DATA_MIGRATION · @ProcID='MTO_AREAINF'" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold"/>
                             </Border>
                         </Grid>
 
                         <!-- Step Description -->
                         <TextBlock x:Name="txtStepDesc" TextWrapping="Wrap" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13.5" LineHeight="21" Margin="0,0,0,16"
-                                   Text="Executes: SP_LIS_DATA_MIGRATION @ComCod='4103', @ProcID='MTO_AREAINF', @Desc01='[SourceDB]'. Migrates area hierarchy from source database to AREAINF."/>
+                                   Text="Prepares and imports area and boundary information into the core database."/>
 
                         <!-- Parameters Panel -->
-                        <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,16">
+                        <Border x:Name="borderParametersPanel" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,16">
                             <StackPanel>
-                                <TextBlock Text="Execution Parameters:" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="13.5" FontWeight="Bold" Margin="0,0,0,10"/>
+                                <TextBlock x:Name="txtExecutionParamsHeader" Text="Execution Parameters:" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="13.5" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                                <Grid Margin="0,0,0,8">
+                                <Grid x:Name="rowParamTargetProc" Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="170"/>
                                         <ColumnDefinition Width="*"/>
@@ -339,7 +339,7 @@
                                     <TextBlock x:Name="txtParamTargetProc" Grid.Column="1" Text="dbo.SP_LIS_DATA_MIGRATION" Foreground="#38BDF8" FontSize="13.5" FontWeight="SemiBold"/>
                                 </Grid>
 
-                                <Grid Margin="0,0,0,8">
+                                <Grid x:Name="rowParamProcId" Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="170"/>
                                         <ColumnDefinition Width="*"/>
@@ -348,7 +348,7 @@
                                     <TextBlock x:Name="txtParamProcId" Grid.Column="1" Text="MTO_AREAINF" Foreground="#A78BFA" FontSize="13.5" FontWeight="Bold"/>
                                 </Grid>
 
-                                <Grid Margin="0,0,0,8">
+                                <Grid x:Name="rowParamDesc01" Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="170"/>
                                         <ColumnDefinition Width="*"/>
@@ -363,7 +363,7 @@
                                         <ColumnDefinition Width="170"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="RS Number (@Desc02):" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="lblParamRs" Text="RS Number (@Desc02):" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" VerticalAlignment="Center"/>
                                     <StackPanel Orientation="Horizontal" Grid.Column="1">
                                         <TextBox x:Name="txtStepRsNumber" Text="201901" Width="140" Height="30" FontSize="13.5" Style="{StaticResource InputBox}"/>
                                         <TextBlock Text="(Applied to target khatian/plot tables)" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>

@@ -347,10 +347,13 @@ namespace LandPressDataMigrationDesktopApp
                     lblConversionCount.Visibility = Visibility.Collapsed;
 
                 if (txtStep1Desc != null)
-                    txtStep1Desc.Text = "Stages data from the selected source database into [DLRS_Migration_Intrm]. Source DB is never altered.";
+                    txtStep1Desc.Text = "Stages data from the selected source database into the intermediate staging database. Source DB is never altered.";
 
                 if (txtStage4Desc != null)
                     txtStage4Desc.Text = "Migrates land records, plots, owners, maps, and boundary data into the core system.";
+
+                if (txtFullAutoDetail != null)
+                    txtFullAutoDetail.Text = "Built-in failsafes: non-destructive read-only source access, fully automated sequential data migration.";
             }
         }
 
@@ -416,7 +419,7 @@ namespace LandPressDataMigrationDesktopApp
                     lstDatabases.Items.Clear();
                     lstDatabases.IsEnabled = false;
                     txtConnectError.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
-                    txtConnectError.Text       = $"⚠ Server connected. Initialize [{AppConfig.IntermediateDbName}] below to proceed.";
+                    txtConnectError.Text       = $"⚠ Initialize [{AppConfig.IntermediateDbName}] below to proceed.";
                     txtConnectError.Visibility = Visibility.Visible;
                 }
             }
@@ -513,16 +516,16 @@ namespace LandPressDataMigrationDesktopApp
                     txtIntrmDbStatus.Text = "❌ Missing / Not Found";
                     txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(239, 68, 68));
 
-                    txtBtnCreateIntrmDb.Text = $"⚡ Create {AppConfig.IntermediateDbName}";
+                    txtBtnCreateIntrmDb.Text = $"⚡ Create Log DB";
                     btnCreateOrRepairIntrmDb.Visibility = Visibility.Visible;
                     btnCreateOrRepairIntrmDb.IsEnabled = true;
                     if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Collapsed;
 
-                    txtIntrmDbDetail.Text = $"Database [{AppConfig.IntermediateDbName}] does not exist on this server. It is mandatory for staging and migration.";
+                    txtIntrmDbDetail.Text = $"Log Database does not exist on this server.";
                     txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(248, 113, 113));
                     txtIntrmDbDetail.Visibility = Visibility.Visible;
 
-                    txtIntrmBlockedReason.Text = $"Access Blocked: You must click '⚡ Create {AppConfig.IntermediateDbName}' to initialize the staging database before selecting databases or running migrations.";
+                    txtIntrmBlockedReason.Text = $"Access Blocked: Click '⚡ Create Log DB' first";
                     borderIntrmBlockedNotice.Visibility = Visibility.Visible;
 
                     lstDatabases.IsEnabled = false;
@@ -1884,9 +1887,13 @@ namespace LandPressDataMigrationDesktopApp
                 UpdateWorkflowState();
 
                 if (txtFullAutoStatus != null)
-                    txtFullAutoStatus.Text = "Phase 3/3: Executing sequential core migration stored procedures...";
+                    txtFullAutoStatus.Text = UserSession.IsAdmin
+                        ? "Phase 3/3: Executing sequential core migration stored procedures..."
+                        : "Phase 3/3: Executing core data migration...";
                 if (txtFullAutoDetail != null)
-                    txtFullAutoDetail.Text = $"Migrating data from [{AppConfig.IntermediateDbName}] into [{_BaseDbName}]...";
+                    txtFullAutoDetail.Text = UserSession.IsAdmin
+                        ? $"Migrating data from [{AppConfig.IntermediateDbName}] into [{_BaseDbName}]..."
+                        : "Migrating processed land records into the destination system...";
 
                 string targetCs = BuildConnectionString(_BaseDbName);
 

@@ -291,7 +291,7 @@
                             <Border x:Name="borderIntrmBlockedNotice" Visibility="Collapsed" Background="#450A0A" BorderBrush="#EF4444" BorderThickness="1.5" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⛔" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="txtIntrmBlockedReason" Text="Access blocked: You must create/validate DLRS_Migration_Intrm before proceeding." Foreground="#FCA5A5" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="txtIntrmBlockedReason" Text="Access blocked: Create/Validate DLRS_Migration_Intrm before proceeding." Foreground="#FCA5A5" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
 
@@ -584,7 +584,7 @@
                                         <TextBlock Grid.Column="1" Text="Step 1 ➔ Step 2 ➔ Step 3" Foreground="#38BDF8" FontWeight="Bold" FontSize="12.5" VerticalAlignment="Center"/>
                                     </Grid>
 
-                                    <TextBlock Text="Executes the full migration hands-free: copies tables into DLRS_Migration_Intrm, batch converts Bijoy/Adarshalipi text to Unicode, updates the intermediate DB, and executes core stored procedures sequentially in DLRSLSINF_4103PRSDB."
+                                    <TextBlock Text="Executes the full migration hands-free sequentially in Mother Database Database."
                                                Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,14"/>
 
                                     <!-- Visual 3-Phase Strip -->
@@ -621,7 +621,7 @@
                                         <Border x:Name="borderAutoPhase3" Grid.Column="4" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="10,7">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                                 <TextBlock x:Name="txtAutoPhase3Icon" Text="🚀" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                <TextBlock x:Name="txtAutoPhase3Text" Text="3. Migration SPs" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="txtAutoPhase3Text" Text="3. Data Migration" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Border>
                                     </Grid>
