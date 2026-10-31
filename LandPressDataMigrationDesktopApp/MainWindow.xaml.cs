@@ -43,6 +43,12 @@ namespace LandPressDataMigrationDesktopApp
         private List<tblLinfo01> tblLinfo01List = new();
         private List<tblLinfo02> tblLinfo02List = new();
 
+        [System.Runtime.InteropServices.DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
+        private static extern uint TimeBeginPeriod(uint uMilliseconds);
+
+        [System.Runtime.InteropServices.DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
+        private static extern uint TimeEndPeriod(uint uMilliseconds);
+
         private string tblInf01RowCount = string.Empty;
         private string tblInf02RowCount = string.Empty;
 
@@ -313,6 +319,8 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (panelAdminDelayControl != null)
                     panelAdminDelayControl.Visibility = Visibility.Visible;
+                if (chkConversionDelay != null)
+                    chkConversionDelay.IsEnabled = !_isOperationRunning;
 
                 // Admin view: Keep remaining time ETA, conversion speed, and record count
                 if (lblConversionEta != null)
@@ -334,6 +342,8 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (panelAdminDelayControl != null)
                     panelAdminDelayControl.Visibility = Visibility.Collapsed;
+                if (chkConversionDelay != null)
+                    chkConversionDelay.IsChecked = false;
 
                 // Standard User view: Remove remaining time (ETA), speed, and record counts.
                 // Keep strictly just the progress % and the progression bar.
@@ -1704,6 +1714,7 @@ namespace LandPressDataMigrationDesktopApp
             var ct = _currentOperationCts.Token;
 
             if (btnStartFullAuto != null) btnStartFullAuto.IsEnabled = false;
+            if (chkConversionDelay != null) chkConversionDelay.IsEnabled = false;
             if (panelAutoControls != null) panelAutoControls.Visibility = Visibility.Visible;
             if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 2;
             if (borderAutoCompletedBanner != null) borderAutoCompletedBanner.Visibility = Visibility.Collapsed;
@@ -2053,6 +2064,8 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (btnStartFullAuto != null)
                     btnStartFullAuto.IsEnabled = (!_isStage4Completed && !string.IsNullOrEmpty(_DbName));
+                if (chkConversionDelay != null)
+                    chkConversionDelay.IsEnabled = true;
                 if (panelAutoControls != null)
                     panelAutoControls.Visibility = Visibility.Collapsed;
             }
@@ -2197,10 +2210,17 @@ namespace LandPressDataMigrationDesktopApp
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int processed = 0;
             DateTime lastUi = DateTime.MinValue;
-            int rowDelayMs = AppConfig.ConversionRowDelayMs;
+            int rowDelayMs = AppConfig.GetConversionRowDelayMs(UserSession.IsAdmin, chkConversionDelay?.IsChecked == true);
             int uiUpdateIntervalMs = Math.Max(20, AppConfig.ConversionUiUpdateIntervalMs);
 
-            await Task.Run(() =>
+            if (rowDelayMs > 0)
+            {
+                try { TimeBeginPeriod(1); } catch { }
+            }
+
+            try
+            {
+                await Task.Run(() =>
             {
                 for (int i = 0; i < tblLinfo01List.Count; i++)
                 {
@@ -2292,6 +2312,14 @@ namespace LandPressDataMigrationDesktopApp
                     }
                 }
             }, ct);
+            }
+            finally
+            {
+                if (rowDelayMs > 0)
+                {
+                    try { TimeEndPeriod(1); } catch { }
+                }
+            }
 
             Dispatcher.Invoke(() =>
             {
@@ -2642,6 +2670,7 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             fontConverterBTN.IsEnabled = false;
+            if (chkConversionDelay != null) chkConversionDelay.IsEnabled = false;
             pbConversion.Value = 0;
             lblConversionPercent.Text = "0.0%";
             lblConversionCount.Text = $"0 / {totalToConvert:N0} records";
@@ -2681,10 +2710,13 @@ namespace LandPressDataMigrationDesktopApp
             // - If the user checks the Throttle checkbox, a 2ms delay per row is applied.
             // - Both the delay and UI refresh rate can be configured globally in AppConfig.cs.
             // =========================================================================
-            int rowDelayMs = (chkConversionDelay?.IsChecked == true)
-                ? (AppConfig.ConversionRowDelayMs > 0 ? AppConfig.ConversionRowDelayMs : 2)
-                : AppConfig.ConversionRowDelayMs;
+            int rowDelayMs = AppConfig.GetConversionRowDelayMs(UserSession.IsAdmin, chkConversionDelay?.IsChecked == true);
             int uiUpdateIntervalMs = Math.Max(20, AppConfig.ConversionUiUpdateIntervalMs);
+
+            if (rowDelayMs > 0)
+            {
+                try { TimeBeginPeriod(1); } catch { }
+            }
 
             try
             {
@@ -2817,9 +2849,14 @@ namespace LandPressDataMigrationDesktopApp
             }
             finally
             {
+                if (rowDelayMs > 0)
+                {
+                    try { TimeEndPeriod(1); } catch { }
+                }
                 _isOperationRunning = false;
                 _currentRunningOperationName = string.Empty;
                 fontConverterBTN.IsEnabled = true;
+                if (chkConversionDelay != null) chkConversionDelay.IsEnabled = true;
             }
         }
 

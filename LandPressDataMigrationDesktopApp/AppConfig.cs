@@ -36,7 +36,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v0.19a";
+        public const string Version = "v0.19c";
 
         /// <summary>
         /// Permanent intermediate staging database required on the connected SQL Server instance.
@@ -64,11 +64,42 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
 
         /// <summary>
-        /// Delay in milliseconds injected per record during font conversion.
-        /// Default: 0 ms (TRUE REAL-TIME maximum speed, ~10,000+ rec/sec).
-        /// Set to 1 or 2 ms if you want to intentionally throttle CPU usage.
+        /// Delay in milliseconds per record applied to Standard Users during font conversion.
+        /// Throttles standard user conversion speed to ensure controlled, stable execution and UI feedback.
+        /// Default: 2 ms per row (~500 records/sec with high-precision OS timer).
+        /// Set to 0 if standard users should also run at full raw speed.
         /// </summary>
-        public static int ConversionRowDelayMs = 2;
+        public static int StandardUserConversionRowDelayMs = 2;
+
+        /// <summary>
+        /// Delay in milliseconds per record applied to Admin Users WHEN they check the "Throttle Delay" toggle.
+        /// When the toggle is UNCHECKED (default), Admin runs in TRUE REAL-TIME (0 ms raw speed, ~10,000+ rec/sec).
+        /// Default: 2 ms per row.
+        /// </summary>
+        public static int AdminThrottleRowDelayMs = 2;
+
+        /// <summary>
+        /// Global delay setting. Maps to StandardUserConversionRowDelayMs.
+        /// </summary>
+        public static int ConversionRowDelayMs
+        {
+            get => StandardUserConversionRowDelayMs;
+            set => StandardUserConversionRowDelayMs = value;
+        }
+
+        /// <summary>
+        /// Resolves the effective font conversion delay for a given user role and Admin toggle state.
+        /// - Standard User: Always uses StandardUserConversionRowDelayMs (e.g. 2 ms).
+        /// - Admin User: 0 ms (full raw speed) by default; uses AdminThrottleRowDelayMs (e.g. 2 ms) only if toggled on.
+        /// </summary>
+        public static int GetConversionRowDelayMs(bool isAdmin, bool isThrottleChecked)
+        {
+            if (!isAdmin)
+            {
+                return StandardUserConversionRowDelayMs;
+            }
+            return isThrottleChecked ? AdminThrottleRowDelayMs : 0;
+        }
 
         /// <summary>
         /// Real-time progress refresh interval in milliseconds for the conversion progress bar,

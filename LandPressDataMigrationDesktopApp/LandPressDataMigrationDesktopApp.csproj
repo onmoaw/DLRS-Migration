@@ -16,10 +16,12 @@
     <Resource Include="Assets\app.ico" />
   </ItemGroup>
 
+  <!-- Exclude DevResource folder completely from build, compilation, and output packaging -->
   <ItemGroup>
-    <EmbeddedResource Include="..\DevResource\SP_LIS_DATA_MIGRATION v2.txt" Link="Scripts\SP_LIS_DATA_MIGRATION.sql" />
-    <EmbeddedResource Include="..\DevResource\SP_LIS_DATA_MIGRATION_01 v1.txt" Link="Scripts\SP_LIS_DATA_MIGRATION_01.sql" />
-    <EmbeddedResource Include="..\DevResource\SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK v1.txt" Link="Scripts\SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK.sql" />
+    <Compile Remove="..\DevResource\**" />
+    <EmbeddedResource Remove="..\DevResource\**" />
+    <None Remove="..\DevResource\**" />
+    <Content Remove="..\DevResource\**" />
   </ItemGroup>
 
   <ItemGroup>

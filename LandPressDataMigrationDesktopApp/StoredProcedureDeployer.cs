@@ -1,15 +1,14 @@
 using Microsoft.Data.SqlClient;
 using System;
-using System.IO;
-using System.Reflection;
-using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace LandPressDataMigrationDesktopApp
 {
     /// <summary>
-    /// Helper to verify and deploy Stored Procedures from DevResource / Embedded Resources
-    /// into the target database [DLRSLSINF_4103PRSDB].
+    /// Helper to verify presence of required Stored Procedures in the target database [DLRSLSINF_4103PRSDB].
+    /// Note: Stored procedures are managed directly on the database server.
+    /// Source SQL scripts are excluded from application binaries to prevent reverse-engineering.
     /// </summary>
     public static class StoredProcedureDeployer
     {
@@ -18,7 +17,7 @@ namespace LandPressDataMigrationDesktopApp
         public const string SpNameReport = "SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK";
 
         /// <summary>
-        /// Checks whether the 3 migration stored procedures exist in the target database.
+        /// Checks whether the migration stored procedures exist in the target database.
         /// </summary>
         public static async Task<(bool HasV2, bool Has01, bool HasReport)> CheckProceduresAsync(string targetConnectionString)
         {
@@ -52,151 +51,45 @@ namespace LandPressDataMigrationDesktopApp
         }
 
         /// <summary>
-        /// Reads script content from embedded resources or fallback file system paths.
+        /// Verifies whether all three stored procedures exist in the target database and generates a report.
         /// </summary>
-        public static string? LoadScriptContent(string spKey)
+        public static async Task<(bool AllPresent, string Summary)> VerifyProceduresAsync(string targetConnectionString)
         {
-            string resourceName = spKey switch
+            var (hasV2, has01, hasReport) = await CheckProceduresAsync(targetConnectionString);
+
+            var lines = new List<string>
             {
-                SpNameV2 => "LandPressDataMigrationDesktopApp.Scripts.SP_LIS_DATA_MIGRATION.sql",
-                SpName01 => "LandPressDataMigrationDesktopApp.Scripts.SP_LIS_DATA_MIGRATION_01.sql",
-                SpNameReport => "LandPressDataMigrationDesktopApp.Scripts.SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK.sql",
-                _ => ""
+                (hasV2 ? "✔ " : "❌ ") + $"dbo.{SpNameV2}: " + (hasV2 ? "Verified Present" : "Missing in DB"),
+                (has01 ? "✔ " : "❌ ") + $"dbo.{SpName01}: " + (has01 ? "Verified Present" : "Missing in DB"),
+                (hasReport ? "✔ " : "❌ ") + $"dbo.{SpNameReport}: " + (hasReport ? "Verified Present" : "Missing in DB")
             };
 
-            // 1. Try reading from embedded resource
-            try
+            bool allOk = hasV2 && has01 && hasReport;
+            string summary = (allOk ? "All required stored procedures are verified in the target database:\n\n" : "One or more stored procedures are missing in the target database:\n\n")
+                           + string.Join("\n", lines);
+
+            if (!allOk)
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                using var stream = assembly.GetManifestResourceStream(resourceName);
-                if (stream != null)
-                {
-                    using var reader = new StreamReader(stream);
-                    return reader.ReadToEnd();
-                }
-            }
-            catch
-            {
-                // Fall back to file system
+                summary += "\n\nPlease ensure your database administrator has deployed the required stored procedures on SQL Server.";
             }
 
-            // 2. Try file system search
-            string[] possiblePaths = spKey switch
-            {
-                SpNameV2 => new[]
-                {
-                    @"DevResource\SP_LIS_DATA_MIGRATION v2.txt",
-                    @"..\DevResource\SP_LIS_DATA_MIGRATION v2.txt",
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"DevResource\SP_LIS_DATA_MIGRATION v2.txt")
-                },
-                SpName01 => new[]
-                {
-                    @"DevResource\SP_LIS_DATA_MIGRATION_01 v1.txt",
-                    @"..\DevResource\SP_LIS_DATA_MIGRATION_01 v1.txt",
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"DevResource\SP_LIS_DATA_MIGRATION_01 v1.txt")
-                },
-                SpNameReport => new[]
-                {
-                    @"DevResource\SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK v1.txt",
-                    @"..\DevResource\SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK v1.txt",
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"DevResource\SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK v1.txt")
-                },
-                _ => Array.Empty<string>()
-            };
-
-            foreach (var p in possiblePaths)
-            {
-                if (File.Exists(p))
-                {
-                    return File.ReadAllText(p);
-                }
-            }
-
-            return null;
+            return (allOk, summary);
         }
 
         /// <summary>
-        /// Deploys or updates the specified stored procedure in the target database.
+        /// Compatibility alias for pipeline pre-checks.
         /// </summary>
-        public static async Task<(bool Success, string Message)> DeployStoredProcedureAsync(string targetConnectionString, string spKey)
+        public static async Task<(bool AllPresent, string Summary)> DeployAllProceduresAsync(string targetConnectionString)
         {
-            string? script = LoadScriptContent(spKey);
-            if (string.IsNullOrWhiteSpace(script))
-            {
-                return (false, $"SQL script definition for [{spKey}] could not be found in resources or DevResource folder.");
-            }
-
-            try
-            {
-                using var conn = new SqlConnection(targetConnectionString);
-                await conn.OpenAsync();
-
-                // 1. Ensure stub exists so ALTER PROCEDURE succeeds
-                string stubSql = $"IF OBJECT_ID('dbo.{spKey}', 'P') IS NULL EXEC('CREATE PROCEDURE dbo.{spKey} AS RETURN;');";
-                using (var stubCmd = new SqlCommand(stubSql, conn))
-                {
-                    await stubCmd.ExecuteNonQueryAsync();
-                }
-
-                // 2. Split script into batches by 'GO'
-                var batches = Regex.Split(script, @"^\s*GO\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
-
-                foreach (var rawBatch in batches)
-                {
-                    string batch = rawBatch.Trim();
-                    if (string.IsNullOrWhiteSpace(batch)) continue;
-
-                    // Skip USE statements as we are already connected to the target DB
-                    if (Regex.IsMatch(batch, @"^\s*USE\s+\[?[\w]+\]?\s*$", RegexOptions.IgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    using var cmd = new SqlCommand(batch, conn)
-                    {
-                        CommandTimeout = 180
-                    };
-                    await cmd.ExecuteNonQueryAsync();
-                }
-
-                return (true, $"Stored Procedure [dbo].[{spKey}] compiled and deployed successfully.");
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Error deploying [{spKey}]: {ex.Message}");
-            }
+            return await VerifyProceduresAsync(targetConnectionString);
         }
 
         /// <summary>
-        /// Deploys or updates all three stored procedures in sequence.
-        /// </summary>
-        public static async Task<(bool AllSucceeded, string Summary)> DeployAllProceduresAsync(string targetConnectionString)
-        {
-            var results = new System.Collections.Generic.List<string>();
-            bool allOk = true;
-
-            string[] procs = { SpNameV2, SpName01, SpNameReport };
-            foreach (var p in procs)
-            {
-                var (ok, msg) = await DeployStoredProcedureAsync(targetConnectionString, p);
-                if (!ok) allOk = false;
-                results.Add((ok ? "✔ " : "❌ ") + msg);
-            }
-
-            return (allOk, string.Join("\n", results));
-        }
-
-        /// <summary>
-        /// Checks if procedures exist in the target database, and automatically deploys any that are missing.
+        /// Checks if procedures exist in the target database and returns verification status.
         /// </summary>
         public static async Task<(bool AllPresent, string Summary)> EnsureProceduresDeployedAsync(string targetConnectionString)
         {
-            var (hasV2, has01, hasReport) = await CheckProceduresAsync(targetConnectionString);
-            if (!hasV2 || !has01 || !hasReport)
-            {
-                return await DeployAllProceduresAsync(targetConnectionString);
-            }
-            return (true, "All stored procedures are present in target database.");
+            return await VerifyProceduresAsync(targetConnectionString);
         }
     }
 }

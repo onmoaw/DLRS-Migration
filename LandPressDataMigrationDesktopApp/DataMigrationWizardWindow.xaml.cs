@@ -952,11 +952,11 @@ namespace LandPressDataMigrationDesktopApp
         private async void BtnDeploySp_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show(
-                "This will verify that all stored procedures used in this pipeline exist in the target database [DLRSLSINF_4103PRSDB] and compile or update them if needed:\n\n" +
+                "This will verify that all stored procedures used in this pipeline exist in the target database [DLRSLSINF_4103PRSDB]:\n\n" +
                 "• dbo.SP_LIS_DATA_MIGRATION\n" +
                 "• dbo.SP_LIS_DATA_MIGRATION_01\n" +
                 "• dbo.SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK\n\n" +
-                "Do you want to proceed?",
+                "Do you want to proceed with verification?",
                 "Verify Stored Procedures",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);

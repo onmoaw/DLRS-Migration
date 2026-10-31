@@ -201,7 +201,7 @@
                             Style="{StaticResource WizardBtn}" Padding="12,5" FontSize="11"
                             Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                             Foreground="{DynamicResource ThemeTextPrimary}"
-                            ToolTip="Checks target database [DLRSLSINF_4103PRSDB] for all stored procedures and compiles or updates them from DevResource scripts if needed."
+                            ToolTip="Checks target database [DLRSLSINF_4103PRSDB] to verify that all required stored procedures exist."
                             Click="BtnDeploySp_Click"/>
                 </StackPanel>
             </Grid>

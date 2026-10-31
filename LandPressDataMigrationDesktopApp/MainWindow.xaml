@@ -912,7 +912,7 @@
                                                     CornerRadius="5" Padding="8,4">
                                                 <CheckBox x:Name="chkConversionDelay" Content="Throttle Delay (2ms/row)" IsChecked="False"
                                                           Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"
-                                                          ToolTip="Default is 0ms (True Real-Time). Check this to intentionally throttle CPU usage by adding a 2ms delay per row. Configurable in AppConfig.cs."/>
+                                                          ToolTip="Default is 0ms (True Real-Time). Select this BEFORE converting to intentionally throttle CPU usage by adding a 2ms delay per row. Automatically disabled while conversion is running."/>
                                             </Border>
                                         </StackPanel>
                                         <Button x:Name="fontConverterBTN" Grid.Column="1" Width="210" MinHeight="38" Padding="16,8" Style="{StaticResource AppBtn}"
