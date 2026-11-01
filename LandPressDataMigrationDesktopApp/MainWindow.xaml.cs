@@ -95,6 +95,7 @@ namespace LandPressDataMigrationDesktopApp
         public MainWindow()
         {
             InitializeComponent();
+            WindowState = WindowState.Maximized;
             cmbAuth.SelectedIndex = 0;
             cmbAuth.SelectionChanged += Auth_SelectionChanged;
 
@@ -440,12 +441,23 @@ namespace LandPressDataMigrationDesktopApp
                 else
                 {
                     if (borderAlreadyMigratedNotice != null) borderAlreadyMigratedNotice.Visibility = Visibility.Collapsed;
+                    if (!_isOperationRunning && _isIntermediateDbReady && !string.IsNullOrEmpty(_DbName))
+                    {
+                        if (btnStartFullAuto != null && !_isStage4Completed) btnStartFullAuto.IsEnabled = true;
+                        if (btnCopyToIntrmDb != null) btnCopyToIntrmDb.IsEnabled = true;
+                    }
                     return false;
                 }
             }
             catch (Exception ex)
             {
                 PipelineExecutionLogger.LogWarning("Pre-Check", $"Pre-check warning: {ex.Message}");
+                if (borderAlreadyMigratedNotice != null) borderAlreadyMigratedNotice.Visibility = Visibility.Collapsed;
+                if (!_isOperationRunning && _isIntermediateDbReady && !string.IsNullOrEmpty(_DbName))
+                {
+                    if (btnStartFullAuto != null && !_isStage4Completed) btnStartFullAuto.IsEnabled = true;
+                    if (btnCopyToIntrmDb != null) btnCopyToIntrmDb.IsEnabled = true;
+                }
                 return false;
             }
         }
@@ -702,7 +714,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 // Core DB is present and inside workspace folder
                 _isCoreDbReady = true;
-                txtCoreDbStatus.Text = "✔ Active in Dedicated Folder";
+                txtCoreDbStatus.Text = "✔ Active";
                 txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
 
                 if (btnRestoreCoreDb != null) btnRestoreCoreDb.Visibility = Visibility.Collapsed;
@@ -1116,14 +1128,14 @@ namespace LandPressDataMigrationDesktopApp
 
                 // 3. Valid and Ready
                 _isIntermediateDbReady = true;
-                txtIntrmDbStatus.Text = $"✔ Ready in Folder (Compat: {(compatLevel > 0 ? compatLevel.ToString() : "130+")})";
+                txtIntrmDbStatus.Text = $"✔ Ready (Compat: {(compatLevel > 0 ? compatLevel.ToString() : "130+")})";
                 txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
 
                 btnCreateOrRepairIntrmDb.Visibility = Visibility.Collapsed;
                 if (btnRelocateIntrmDb != null) btnRelocateIntrmDb.Visibility = Visibility.Collapsed;
                 if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Visible;
 
-                txtIntrmDbDetail.Text = $"Location: {physPath}\nVerified all required tables (tblHalsabek, tblLinfo01, tblLinfo02, tblUnitMigrationLog) and Unicode data types.";
+                txtIntrmDbDetail.Text = $"Location: {physPath}\nVerified all required structure.";
                 txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(148, 163, 184));
                 txtIntrmDbDetail.Visibility = Visibility.Visible;
 
@@ -1375,6 +1387,7 @@ namespace LandPressDataMigrationDesktopApp
             _currentRunningOperationName = isRestore ? $"Restoring backup [{txtBakPath.Text}] as database [{dbName}]" : $"Attaching data file [{txtMdfPath.Text}] as database [{dbName}]";
             _currentOperationCts = new CancellationTokenSource();
 
+            bool operationSucceeded = false;
             try
             {
                 if (isRestore)
@@ -1382,17 +1395,9 @@ namespace LandPressDataMigrationDesktopApp
                 else
                     await RunAttachAsync(txtMdfPath.Text, txtLdfPath.Text.Trim(), dbName);
 
-                // ── Success: refresh list and auto-select the new DB ──
+                operationSucceeded = true;
                 ShowPreStepStatus($"✔ Database \"{dbName}\" is ready. Refreshing database list…", isError: false);
                 pbPreStep.Value = 100;
-
-                using var refreshConn = new SqlConnection(_baseConnectionString);
-                await refreshConn.OpenAsync();
-                LoadDatabases(refreshConn);
-
-                // Allow the ListBox to render before we try to select
-                await Task.Delay(150);
-                lstDatabases.SelectedItem = dbName;
             }
             catch (Exception ex)
             {
@@ -1413,6 +1418,55 @@ namespace LandPressDataMigrationDesktopApp
                 _isOperationRunning = false;
                 _currentRunningOperationName = string.Empty;
                 btnRunPreStep.IsEnabled = true;
+                pbPreStep.Visibility = Visibility.Collapsed;
+            }
+
+            if (operationSucceeded)
+            {
+                try
+                {
+                    using var refreshConn = new SqlConnection(_baseConnectionString);
+                    await refreshConn.OpenAsync();
+                    LoadDatabases(refreshConn);
+
+                    // Allow the ListBox to render before selecting
+                    await Task.Delay(100);
+
+                    // Clear previous selection first so setting SelectedItem always triggers SelectionChanged even if previously pointing to same name
+                    lstDatabases.SelectedItem = null;
+
+                    object? itemToSelect = null;
+                    foreach (var item in lstDatabases.Items)
+                    {
+                        string name = (item is ListBoxItem lbi)
+                            ? (lbi.Tag?.ToString() ?? lbi.Content?.ToString() ?? string.Empty)
+                            : item.ToString() ?? string.Empty;
+                        if (string.Equals(name, dbName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            itemToSelect = item;
+                            break;
+                        }
+                    }
+
+                    if (itemToSelect != null)
+                    {
+                        lstDatabases.SelectedItem = itemToSelect;
+                        lstDatabases.ScrollIntoView(itemToSelect);
+                    }
+                    else
+                    {
+                        UpdateWorkflowState();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    PipelineExecutionLogger.LogWarning("Pre-Step", $"Could not refresh database list after pre-step: {ex.Message}");
+                    UpdateWorkflowState();
+                }
+            }
+            else
+            {
+                UpdateWorkflowState();
             }
         }
 
@@ -3331,6 +3385,29 @@ namespace LandPressDataMigrationDesktopApp
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show(ex.Message, "Error");
+            }
+        }
+
+        private void LstDatabases_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (sender is System.Windows.Controls.ListBox lb && lb.SelectedItem != null)
+            {
+                var dep = e.OriginalSource as DependencyObject;
+                while (dep != null && dep != lb && !(dep is System.Windows.Controls.ListBoxItem))
+                {
+                    dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+                }
+
+                if (dep is System.Windows.Controls.ListBoxItem lbi && lbi.IsSelected)
+                {
+                    // User clicked on the ALREADY-SELECTED item.
+                    // WPF will not fire SelectionChanged. Force re-evaluation of workflow state and migration check.
+                    Dispatcher.BeginInvoke(new Action(async () =>
+                    {
+                        UpdateWorkflowState();
+                        await CheckSelectedDatabaseMigrationStatusAsync();
+                    }));
+                }
             }
         }
 

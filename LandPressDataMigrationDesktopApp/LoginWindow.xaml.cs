@@ -164,6 +164,7 @@ namespace LandPressDataMigrationDesktopApp
 
             var mainWindow = new MainWindow();
             System.Windows.Application.Current.MainWindow = mainWindow;
+            mainWindow.WindowState = WindowState.Maximized;
             mainWindow.Show();
             this.Close();
         }

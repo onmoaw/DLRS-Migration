@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:LandPressDataMigrationDesktopApp"
         mc:Ignorable="d"
         Title="{x:Static local:AppConfig.WindowTitle}" Height="940" Width="1440"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/DLRS-Migration App Icon.png"
         FontFamily="{StaticResource AppFontPrimary}"
@@ -184,12 +185,12 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                 <Border Background="#6D28D9" CornerRadius="4" Padding="7,3" Margin="0,0,8,0">
-                                    <TextBlock Text="FOLDER LOCK" Foreground="White" FontWeight="Bold" FontSize="11"/>
+                                    <TextBlock Text="PARENT FOLDER" Foreground="White" FontWeight="Bold" FontSize="11"/>
                                 </Border>
                                 <TextBlock Text="Dedicated Database Folder" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="15"/>
                             </StackPanel>
 
-                            <TextBlock Text="All database files (Core 4103, Staging, and Source DBs) must reside in this directory."
+                            <TextBlock Text="All database files must reside in this directory."
                                        Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
                             <!-- Folder Picker Bar -->
@@ -286,7 +287,7 @@
                                             <Border Background="#BE185D" CornerRadius="4" Padding="5,2" Margin="0,0,6,0">
                                                 <TextBlock Text="CORE" Foreground="White" FontWeight="Bold" FontSize="10"/>
                                             </Border>
-                                            <TextBlock Text="Core DB (4103): " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Mother DB: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                             <TextBlock x:Name="txtCoreDbStatus" Text="⚪ Waiting for Server Connection" Foreground="#F59E0B" FontWeight="Bold" FontSize="12.5" VerticalAlignment="Center"/>
                                         </StackPanel>
 
@@ -400,7 +401,8 @@
                             <!-- Databases List -->
                             <TextBlock x:Name="txtFolderFilterCaption" Text="Available Source Databases in dedicated folder:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <ListBox x:Name="lstDatabases" Height="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}" FontSize="13"
-                                     SelectionChanged="Databases_SelectionChanged"/>
+                                     SelectionChanged="Databases_SelectionChanged"
+                                     PreviewMouseLeftButtonDown="LstDatabases_PreviewMouseLeftButtonDown"/>
 
                             <!-- Migrated Databases Hidden Info & Admin Toggle -->
                             <Grid Margin="0,4,0,0">
