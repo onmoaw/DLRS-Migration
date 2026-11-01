@@ -153,7 +153,7 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Visible"/>
 
                 <!-- Empty state notice -->
-                <TextBlock x:Name="txtEmpty" Text="No migration runs have been logged yet in dbo.tblUnitMigrationLog."
+                <TextBlock x:Name="txtEmpty" Text="No migration runs have been logged yet."
                            Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13"
                            HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
 
