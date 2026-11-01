@@ -88,6 +88,10 @@ namespace LandPressDataMigrationDesktopApp
         private readonly System.Diagnostics.Stopwatch _autoPipelineStopwatch = new();
         private System.Windows.Threading.DispatcherTimer? _autoPipelineTimer = null;
 
+        // Dedicated Database Workspace Folder & Core DB state
+        private string? _selectedWorkspaceFolder = null;
+        private bool _isCoreDbReady = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -106,6 +110,14 @@ namespace LandPressDataMigrationDesktopApp
                 ThemeManager.ThemeChanged -= OnThemeChanged;
                 _opController.StateChanged -= OnOperationStateChanged;
             };
+
+            // Initialize and restore saved dedicated workspace folder
+            _selectedWorkspaceFolder = WorkspaceDirectoryManager.LoadSavedWorkspaceFolder();
+            if (!string.IsNullOrEmpty(_selectedWorkspaceFolder))
+            {
+                txtWorkspaceFolder.Text = _selectedWorkspaceFolder;
+            }
+            UpdateWorkspaceStatusUI();
 
             UpdateWorkflowState();
         }
@@ -553,6 +565,321 @@ namespace LandPressDataMigrationDesktopApp
             txtPassword.Visibility = isSqlAuth ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        // ─────────────────────────────────────────────────────────────────────────────
+        // STEP 0: DEDICATED DATABASE WORKSPACE FOLDER MANAGEMENT
+        // ─────────────────────────────────────────────────────────────────────────────
+        private void BtnBrowseWorkspaceFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "Select Dedicated Database Storage Folder",
+                Multiselect = false
+            };
+            if (!string.IsNullOrEmpty(_selectedWorkspaceFolder) && System.IO.Directory.Exists(_selectedWorkspaceFolder))
+            {
+                dialog.InitialDirectory = _selectedWorkspaceFolder;
+            }
+
+            if (dialog.ShowDialog() == true)
+            {
+                SetWorkspaceFolder(dialog.FolderName);
+            }
+        }
+
+        private void BtnNewWorkspaceFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "Create or Select Dedicated Database Storage Folder",
+                Multiselect = false
+            };
+            if (!string.IsNullOrEmpty(_selectedWorkspaceFolder) && System.IO.Directory.Exists(_selectedWorkspaceFolder))
+            {
+                dialog.InitialDirectory = _selectedWorkspaceFolder;
+            }
+
+            if (dialog.ShowDialog() == true)
+            {
+                SetWorkspaceFolder(dialog.FolderName);
+            }
+        }
+
+        private async void SetWorkspaceFolder(string folderPath)
+        {
+            string norm = WorkspaceDirectoryManager.NormalizePath(folderPath);
+            if (!WorkspaceDirectoryManager.EnsureFolderAndCheckAccess(norm, out string? errMsg))
+            {
+                System.Windows.MessageBox.Show($"Unable to use folder:\n{errMsg}\n\nPlease choose a folder where you have read and write permissions.", "Invalid Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _selectedWorkspaceFolder = norm;
+            WorkspaceDirectoryManager.SaveWorkspaceFolder(_selectedWorkspaceFolder);
+            txtWorkspaceFolder.Text = _selectedWorkspaceFolder;
+            UpdateWorkspaceStatusUI();
+
+            // If already connected to SQL Server, re-evaluate Core DB, Staging DB, and list
+            if (!string.IsNullOrEmpty(_baseConnectionString))
+            {
+                await CheckAndValidateCoreDbAsync();
+                await CheckAndValidateIntermediateDbAsync();
+
+                using var conn = new SqlConnection(_baseConnectionString);
+                await conn.OpenAsync();
+                LoadDatabases(conn);
+            }
+        }
+
+        private void UpdateWorkspaceStatusUI()
+        {
+            if (string.IsNullOrEmpty(_selectedWorkspaceFolder))
+            {
+                txtWorkspaceStatusText.Text = "⚪ Please select or create a dedicated folder";
+                txtWorkspaceStatusText.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                return;
+            }
+
+            var (mdfs, baks) = WorkspaceDirectoryManager.GetWorkspaceFileCounts(_selectedWorkspaceFolder);
+            txtWorkspaceStatusText.Text = $"🟢 Folder active • {mdfs} .mdf, {baks} .bak found";
+            txtWorkspaceStatusText.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // STEP 2: CORE DESTINATION DATABASE (DLRSLSINF_4103PRSDB) MANAGEMENT
+        // ─────────────────────────────────────────────────────────────────────────────
+        private async Task CheckAndValidateCoreDbAsync()
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString))
+            {
+                _isCoreDbReady = false;
+                if (txtCoreDbStatus != null)
+                {
+                    txtCoreDbStatus.Text = "⚪ Waiting for Server Connection";
+                    txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(148, 163, 184));
+                }
+                if (btnRestoreCoreDb != null) btnRestoreCoreDb.Visibility = Visibility.Collapsed;
+                if (btnRelocateCoreDb != null) btnRelocateCoreDb.Visibility = Visibility.Collapsed;
+                if (btnBackupCoreDb != null) btnBackupCoreDb.Visibility = Visibility.Collapsed;
+                if (txtCoreDbDetail != null) txtCoreDbDetail.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            try
+            {
+                string? physPath = await IntermediateDbService.GetDatabasePhysicalPathAsync(_baseConnectionString, _BaseDbName);
+
+                if (string.IsNullOrEmpty(physPath))
+                {
+                    _isCoreDbReady = false;
+                    txtCoreDbStatus.Text = "❌ Missing on Server";
+                    txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(239, 68, 68));
+
+                    if (btnRestoreCoreDb != null) btnRestoreCoreDb.Visibility = Visibility.Visible;
+                    if (btnRelocateCoreDb != null) btnRelocateCoreDb.Visibility = Visibility.Collapsed;
+                    if (btnBackupCoreDb != null) btnBackupCoreDb.Visibility = Visibility.Collapsed;
+
+                    txtCoreDbDetail.Text = $"Core DB [{_BaseDbName}] is missing on this instance. Click 'Restore to Folder' to restore from backup.";
+                    txtCoreDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(248, 113, 113));
+                    txtCoreDbDetail.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                if (!WorkspaceDirectoryManager.IsPathInWorkspace(physPath, _selectedWorkspaceFolder))
+                {
+                    _isCoreDbReady = false;
+                    txtCoreDbStatus.Text = "⚠️ Outside Dedicated Folder";
+                    txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+
+                    if (btnRestoreCoreDb != null) btnRestoreCoreDb.Visibility = Visibility.Collapsed;
+                    if (btnRelocateCoreDb != null) btnRelocateCoreDb.Visibility = Visibility.Visible;
+                    if (btnBackupCoreDb != null) btnBackupCoreDb.Visibility = Visibility.Collapsed;
+
+                    txtCoreDbDetail.Text = $"Core DB is currently located outside dedicated folder:\n{physPath}\nClick 'Move to Folder' to detach and re-attach or restore into folder.";
+                    txtCoreDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(251, 191, 36));
+                    txtCoreDbDetail.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                // Core DB is present and inside workspace folder
+                _isCoreDbReady = true;
+                txtCoreDbStatus.Text = "✔ Active in Dedicated Folder";
+                txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
+
+                if (btnRestoreCoreDb != null) btnRestoreCoreDb.Visibility = Visibility.Collapsed;
+                if (btnRelocateCoreDb != null) btnRelocateCoreDb.Visibility = Visibility.Collapsed;
+                if (btnBackupCoreDb != null) btnBackupCoreDb.Visibility = Visibility.Visible;
+
+                txtCoreDbDetail.Text = $"Location: {physPath}";
+                txtCoreDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(148, 163, 184));
+                txtCoreDbDetail.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex)
+            {
+                _isCoreDbReady = false;
+                txtCoreDbStatus.Text = "❌ Check Error";
+                txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(239, 68, 68));
+                txtCoreDbDetail.Text = ex.Message;
+                txtCoreDbDetail.Visibility = Visibility.Visible;
+            }
+        }
+
+        private async void BtnRestoreCoreDb_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
+            {
+                System.Windows.MessageBox.Show("Please ensure server is connected and dedicated folder is selected.", "Missing Configuration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var ofd = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Select Core Database Backup (.bak)",
+                Filter = "SQL Server Backup (*.bak)|*.bak|All Files (*.*)|*.*"
+            };
+
+            if (System.IO.Directory.Exists(_selectedWorkspaceFolder))
+                ofd.InitialDirectory = _selectedWorkspaceFolder;
+
+            if (ofd.ShowDialog() != true)
+                return;
+
+            try
+            {
+                txtCoreDbStatus.Text = "⏳ Restoring Core DB into folder...";
+                txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(59, 130, 246));
+                if (btnRestoreCoreDb != null) btnRestoreCoreDb.IsEnabled = false;
+
+                await RunRestoreAsync(ofd.FileName, _BaseDbName);
+
+                await CheckAndValidateCoreDbAsync();
+
+                using var conn = new SqlConnection(_baseConnectionString);
+                await conn.OpenAsync();
+                LoadDatabases(conn);
+
+                System.Windows.MessageBox.Show($"Core Database [{_BaseDbName}] restored successfully into your dedicated folder.", "Core DB Ready", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to restore Core Database:\n\n{ex.Message}", "Restore Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await CheckAndValidateCoreDbAsync();
+            }
+            finally
+            {
+                if (btnRestoreCoreDb != null) btnRestoreCoreDb.IsEnabled = true;
+            }
+        }
+
+        private async void BtnRelocateCoreDb_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
+                return;
+
+            var res = System.Windows.MessageBox.Show(
+                $"Core database [{_BaseDbName}] will be detached from its current external location and placed into your dedicated folder:\n\n{_selectedWorkspaceFolder}\n\nProceed?",
+                "Relocate Core Database", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (res != MessageBoxResult.Yes) return;
+
+            try
+            {
+                txtCoreDbStatus.Text = "⏳ Detaching Core DB...";
+                txtCoreDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                if (btnRelocateCoreDb != null) btnRelocateCoreDb.IsEnabled = false;
+
+                await IntermediateDbService.DetachDatabaseAsync(_baseConnectionString, _BaseDbName);
+
+                string targetMdf = System.IO.Path.Combine(_selectedWorkspaceFolder, $"{_BaseDbName}.mdf");
+                if (System.IO.File.Exists(targetMdf))
+                {
+                    await IntermediateDbService.AttachDatabaseAsync(_baseConnectionString, _BaseDbName, targetMdf);
+                    await CheckAndValidateCoreDbAsync();
+                    System.Windows.MessageBox.Show($"Core Database [{_BaseDbName}] re-attached from dedicated folder.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show($"Core database [{_BaseDbName}] has been detached from external location.\n\nPlease select the backup file (.bak) to restore it into your dedicated folder.", "Select Backup File", MessageBoxButton.OK, MessageBoxImage.Information);
+                    BtnRestoreCoreDb_Click(sender, e);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to relocate core database: {ex.Message}", "Relocation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await CheckAndValidateCoreDbAsync();
+            }
+            finally
+            {
+                if (btnRelocateCoreDb != null) btnRelocateCoreDb.IsEnabled = true;
+            }
+        }
+
+        private async void BtnBackupCoreDb_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
+                return;
+
+            try
+            {
+                string targetBak = System.IO.Path.Combine(_selectedWorkspaceFolder, $"{_BaseDbName}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
+                string sql = $"BACKUP DATABASE [{_BaseDbName}] TO DISK = N'{targetBak.Replace("'", "''")}' WITH STATS = 10, INIT, FORMAT;";
+
+                using var conn = new SqlConnection(_baseConnectionString);
+                await conn.OpenAsync();
+                using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 600 };
+                await cmd.ExecuteNonQueryAsync();
+
+                System.Windows.MessageBox.Show($"Core database [{_BaseDbName}] backed up successfully to:\n\n{targetBak}", "Backup Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+                UpdateWorkspaceStatusUI();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Core database backup failed:\n\n{ex.Message}", "Backup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void BtnRelocateIntrmDb_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
+                return;
+
+            var res = System.Windows.MessageBox.Show(
+                $"Staging database [{AppConfig.IntermediateDbName}] will be detached from its external location and moved/recreated inside your dedicated folder:\n\n{_selectedWorkspaceFolder}\n\nProceed?",
+                "Relocate Staging Database", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (res != MessageBoxResult.Yes) return;
+
+            if (btnRelocateIntrmDb != null) btnRelocateIntrmDb.IsEnabled = false;
+            pbIntrmDbAction.Visibility = Visibility.Visible;
+
+            try
+            {
+                await IntermediateDbService.DetachDatabaseAsync(_baseConnectionString, AppConfig.IntermediateDbName);
+
+                string targetMdf = System.IO.Path.Combine(_selectedWorkspaceFolder, $"{AppConfig.IntermediateDbName}.mdf");
+                if (System.IO.File.Exists(targetMdf))
+                {
+                    await IntermediateDbService.AttachDatabaseAsync(_baseConnectionString, AppConfig.IntermediateDbName, targetMdf);
+                }
+                else
+                {
+                    await IntermediateDbService.CreateOrRepairDatabaseAsync(_baseConnectionString, _selectedWorkspaceFolder);
+                }
+
+                await CheckAndValidateIntermediateDbAsync();
+
+                using var conn = new SqlConnection(_baseConnectionString);
+                await conn.OpenAsync();
+                LoadDatabases(conn);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to relocate staging database: {ex.Message}", "Relocation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                if (btnRelocateIntrmDb != null) btnRelocateIntrmDb.IsEnabled = true;
+                pbIntrmDbAction.Visibility = Visibility.Collapsed;
+            }
+        }
+
         // ------------------------------
         // CONNECT TO SERVER
         // ------------------------------
@@ -561,6 +888,12 @@ namespace LandPressDataMigrationDesktopApp
             // Reset inline status
             txtConnectError.Visibility = Visibility.Collapsed;
             txtConnectError.Text       = string.Empty;
+
+            if (string.IsNullOrEmpty(_selectedWorkspaceFolder) || !System.IO.Directory.Exists(_selectedWorkspaceFolder))
+            {
+                ShowConnectError("⚠ Please select or create a dedicated database folder above before connecting.");
+                return;
+            }
 
             _ServerName = txtServer.Text.Trim();
             if (string.IsNullOrEmpty(_ServerName))
@@ -590,10 +923,13 @@ namespace LandPressDataMigrationDesktopApp
                 if (btnRunPreStep != null)
                 {
                     btnRunPreStep.IsEnabled = true;
-                    btnRunPreStep.ToolTip = $"Restore or attach database directly to {_ServerName}";
+                    btnRunPreStep.ToolTip = $"Restore or attach database directly into dedicated folder on {_ServerName}";
                 }
 
-                // Check and validate Intermediate Database (DLRS_Migration_Intrm)
+                // Step 2: Check Core Database (4103)
+                await CheckAndValidateCoreDbAsync();
+
+                // Step 3: Check and validate Intermediate Database (DLRS_Migration_Intrm)
                 await CheckAndValidateIntermediateDbAsync();
 
                 if (_isIntermediateDbReady)
@@ -608,7 +944,7 @@ namespace LandPressDataMigrationDesktopApp
                     lstDatabases.Items.Clear();
                     lstDatabases.IsEnabled = false;
                     txtConnectError.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
-                    txtConnectError.Text       = $"⚠ Initialize [{AppConfig.IntermediateDbName}] below to proceed.";
+                    txtConnectError.Text       = $"⚠ Initialize [{AppConfig.IntermediateDbName}] in folder to proceed.";
                     txtConnectError.Visibility = Visibility.Visible;
                 }
             }
@@ -705,21 +1041,50 @@ namespace LandPressDataMigrationDesktopApp
                     txtIntrmDbStatus.Text = "❌ Missing / Not Found";
                     txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(239, 68, 68));
 
-                    txtBtnCreateIntrmDb.Text = $"⚡ Create Log DB";
+                    txtBtnCreateIntrmDb.Text = $"⚡ Create Staging DB";
                     btnCreateOrRepairIntrmDb.Visibility = Visibility.Visible;
                     btnCreateOrRepairIntrmDb.IsEnabled = true;
+                    if (btnRelocateIntrmDb != null) btnRelocateIntrmDb.Visibility = Visibility.Collapsed;
                     if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Collapsed;
 
-                    txtIntrmDbDetail.Text = $"Log Database does not exist on this server.";
+                    txtIntrmDbDetail.Text = $"Staging Database does not exist on this server. Click 'Create Staging DB' to initialize it in your dedicated folder.";
                     txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(248, 113, 113));
                     txtIntrmDbDetail.Visibility = Visibility.Visible;
 
-                    txtIntrmBlockedReason.Text = $"Access Blocked: Click '⚡ Create Log DB' first";
+                    txtIntrmBlockedReason.Text = $"Access Blocked: Click '⚡ Create Staging DB' to create in dedicated folder.";
                     borderIntrmBlockedNotice.Visibility = Visibility.Visible;
 
                     lstDatabases.IsEnabled = false;
                     UpdateWorkflowState();
                     return;
+                }
+
+                // 1B. Check physical location of Intermediate DB
+                string? physPath = await IntermediateDbService.GetDatabasePhysicalPathAsync(_baseConnectionString, AppConfig.IntermediateDbName);
+                if (physPath != null && !WorkspaceDirectoryManager.IsPathInWorkspace(physPath, _selectedWorkspaceFolder))
+                {
+                    _isIntermediateDbReady = false;
+                    txtIntrmDbStatus.Text = "⚠️ Outside Dedicated Folder";
+                    txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+
+                    if (btnRelocateIntrmDb != null) btnRelocateIntrmDb.Visibility = Visibility.Visible;
+                    btnCreateOrRepairIntrmDb.Visibility = Visibility.Collapsed;
+                    if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Collapsed;
+
+                    txtIntrmDbDetail.Text = $"Staging DB is at an external location:\n{physPath}\nClick 'Move to Folder' to detach and re-attach or recreate inside your dedicated folder.";
+                    txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(251, 191, 36));
+                    txtIntrmDbDetail.Visibility = Visibility.Visible;
+
+                    txtIntrmBlockedReason.Text = $"Access Blocked: [{AppConfig.IntermediateDbName}] is outside your dedicated folder. Relocate it to proceed.";
+                    borderIntrmBlockedNotice.Visibility = Visibility.Visible;
+
+                    lstDatabases.IsEnabled = false;
+                    UpdateWorkflowState();
+                    return;
+                }
+                else
+                {
+                    if (btnRelocateIntrmDb != null) btnRelocateIntrmDb.Visibility = Visibility.Collapsed;
                 }
 
                 // 2. Database exists -> Validate schema
@@ -751,13 +1116,14 @@ namespace LandPressDataMigrationDesktopApp
 
                 // 3. Valid and Ready
                 _isIntermediateDbReady = true;
-                txtIntrmDbStatus.Text = $"✔ Ready & Verified (Compat: {(compatLevel > 0 ? compatLevel.ToString() : "130+")})";
+                txtIntrmDbStatus.Text = $"✔ Ready in Folder (Compat: {(compatLevel > 0 ? compatLevel.ToString() : "130+")})";
                 txtIntrmDbStatus.Foreground = new SolidBrush(MediaColor.FromRgb(52, 211, 153));
 
                 btnCreateOrRepairIntrmDb.Visibility = Visibility.Collapsed;
+                if (btnRelocateIntrmDb != null) btnRelocateIntrmDb.Visibility = Visibility.Collapsed;
                 if (btnViewIntrmLogs != null) btnViewIntrmLogs.Visibility = Visibility.Visible;
 
-                txtIntrmDbDetail.Text = "Verified all required tables (tblHalsabek, tblLinfo01, tblLinfo02, tblUnitMigrationLog) and Unicode data types.";
+                txtIntrmDbDetail.Text = $"Location: {physPath}\nVerified all required tables (tblHalsabek, tblLinfo01, tblLinfo02, tblUnitMigrationLog) and Unicode data types.";
                 txtIntrmDbDetail.Foreground = new SolidBrush(MediaColor.FromRgb(148, 163, 184));
                 txtIntrmDbDetail.Visibility = Visibility.Visible;
 
@@ -796,7 +1162,7 @@ namespace LandPressDataMigrationDesktopApp
 
             try
             {
-                await IntermediateDbService.CreateOrRepairDatabaseAsync(_baseConnectionString);
+                await IntermediateDbService.CreateOrRepairDatabaseAsync(_baseConnectionString, _selectedWorkspaceFolder);
 
                 // Re-validate after creation
                 await CheckAndValidateIntermediateDbAsync();
@@ -875,6 +1241,9 @@ namespace LandPressDataMigrationDesktopApp
                 Filter = "SQL Server Backup (*.bak)|*.bak|All files (*.*)|*.*",
                 Title  = "Select SQL Server Backup File"
             };
+            if (!string.IsNullOrEmpty(_selectedWorkspaceFolder) && System.IO.Directory.Exists(_selectedWorkspaceFolder))
+                dlg.InitialDirectory = _selectedWorkspaceFolder;
+
             if (dlg.ShowDialog() == true)
             {
                 txtBakPath.Text = dlg.FileName;
@@ -892,6 +1261,9 @@ namespace LandPressDataMigrationDesktopApp
                 Filter = "SQL Server Data File (*.mdf)|*.mdf|All files (*.*)|*.*",
                 Title  = "Select SQL Server Data File (.mdf)"
             };
+            if (!string.IsNullOrEmpty(_selectedWorkspaceFolder) && System.IO.Directory.Exists(_selectedWorkspaceFolder))
+                dlg.InitialDirectory = _selectedWorkspaceFolder;
+
             if (dlg.ShowDialog() == true)
             {
                 txtMdfPath.Text = dlg.FileName;
@@ -909,6 +1281,9 @@ namespace LandPressDataMigrationDesktopApp
                 Filter = "SQL Server Log File (*.ldf)|*.ldf|All files (*.*)|*.*",
                 Title  = "Select SQL Server Log File (.ldf) — Optional"
             };
+            if (!string.IsNullOrEmpty(_selectedWorkspaceFolder) && System.IO.Directory.Exists(_selectedWorkspaceFolder))
+                dlg.InitialDirectory = _selectedWorkspaceFolder;
+
             if (dlg.ShowDialog() == true)
                 txtLdfPath.Text = dlg.FileName;
         }
@@ -924,6 +1299,12 @@ namespace LandPressDataMigrationDesktopApp
             if (string.IsNullOrEmpty(_ServerName) || string.IsNullOrEmpty(_baseConnectionString))
             {
                 ShowPreStepStatus("⚠ Please connect to a SQL Server first (use the Server field in Stage 1 above).", isError: true);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_selectedWorkspaceFolder) || !System.IO.Directory.Exists(_selectedWorkspaceFolder))
+            {
+                ShowPreStepStatus("⚠ Please select or create a dedicated database folder above before restoring or attaching.", isError: true);
                 return;
             }
 
@@ -1141,7 +1522,9 @@ namespace LandPressDataMigrationDesktopApp
                     ext = dataIndex == 0 ? ".mdf" : $"_{dataIndex}.ndf";
                     dataIndex++;
                 }
-                string folder = isLog ? logPath : dataPath;
+                string folder = !string.IsNullOrEmpty(_selectedWorkspaceFolder) && System.IO.Directory.Exists(_selectedWorkspaceFolder)
+                    ? _selectedWorkspaceFolder
+                    : (isLog ? logPath : dataPath);
                 string dest   = System.IO.Path.Combine(folder, $"{dbName}{ext}");
                 sb.Append($"MOVE N'{logName.Replace("'", "''")}' TO N'{dest.Replace("'", "''")}', ");
             }
@@ -1174,15 +1557,42 @@ namespace LandPressDataMigrationDesktopApp
                 using var cmd = new SqlCommand(sb.ToString(), conn) { CommandTimeout = 7200 };
                 cmd.ExecuteNonQuery();
             });
+
+            UpdateWorkspaceStatusUI();
         }
 
         /// <summary>
         /// Attaches a .mdf (and optionally .ldf) file as a new database.
-        /// If no .ldf is provided (or the file doesn't exist), uses FOR ATTACH_REBUILD_LOG
-        /// so SQL Server creates a fresh log file rather than failing.
+        /// If the file is outside the dedicated workspace folder, it is copied into the folder first
+        /// so that all database files remain locked inside the dedicated directory.
         /// </summary>
         private async Task RunAttachAsync(string mdfPath, string ldfPath, string dbName)
         {
+            if (!string.IsNullOrEmpty(_selectedWorkspaceFolder) && System.IO.Directory.Exists(_selectedWorkspaceFolder))
+            {
+                if (!WorkspaceDirectoryManager.IsPathInWorkspace(mdfPath, _selectedWorkspaceFolder))
+                {
+                    string targetMdf = System.IO.Path.Combine(_selectedWorkspaceFolder, System.IO.Path.GetFileName(mdfPath));
+                    if (!System.IO.File.Exists(targetMdf))
+                    {
+                        Dispatcher.Invoke(() => ShowPreStepStatus("⏳ Copying MDF to dedicated folder…", isError: false));
+                        await Task.Run(() => System.IO.File.Copy(mdfPath, targetMdf, overwrite: true));
+                    }
+                    mdfPath = targetMdf;
+
+                    if (!string.IsNullOrWhiteSpace(ldfPath) && System.IO.File.Exists(ldfPath))
+                    {
+                        string targetLdf = System.IO.Path.Combine(_selectedWorkspaceFolder, System.IO.Path.GetFileName(ldfPath));
+                        if (!System.IO.File.Exists(targetLdf))
+                        {
+                            Dispatcher.Invoke(() => ShowPreStepStatus("⏳ Copying LDF to dedicated folder…", isError: false));
+                            await Task.Run(() => System.IO.File.Copy(ldfPath, targetLdf, overwrite: true));
+                        }
+                        ldfPath = targetLdf;
+                    }
+                }
+            }
+
             string escapedDb = dbName.Replace("]", "]]");
             string sql;
             if (!string.IsNullOrWhiteSpace(ldfPath) && System.IO.File.Exists(ldfPath))
@@ -1210,6 +1620,8 @@ namespace LandPressDataMigrationDesktopApp
                 using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 600 };
                 cmd.ExecuteNonQuery();
             });
+
+            UpdateWorkspaceStatusUI();
         }
 
         /// <summary>
@@ -1274,17 +1686,35 @@ namespace LandPressDataMigrationDesktopApp
 
             var allDbs = new List<string>();
             string sql = @"
-                SELECT name
-                FROM sys.databases
-                WHERE state_desc = 'ONLINE'
-                  AND name NOT IN ('master', 'tempdb', 'model', 'msdb', 'DLRS_Migration_Intrm')
-                ORDER BY name";
+                SELECT d.name, mf.physical_name
+                FROM sys.databases d
+                JOIN sys.master_files mf ON d.database_id = mf.database_id AND mf.file_id = 1
+                WHERE d.state_desc = 'ONLINE'
+                  AND d.name NOT IN ('master', 'tempdb', 'model', 'msdb', 'DLRS_Migration_Intrm', 'DLRSLSINF_4103PRSDB')
+                ORDER BY d.name";
 
             using (var cmd = new SqlCommand(sql, conn))
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
-                    allDbs.Add(reader.GetString(0));
+                {
+                    string db = reader.GetString(0);
+                    string phys = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+
+                    // Filter: only databases physically residing in the dedicated folder
+                    if (string.IsNullOrEmpty(_selectedWorkspaceFolder) ||
+                        WorkspaceDirectoryManager.IsPathInWorkspace(phys, _selectedWorkspaceFolder))
+                    {
+                        allDbs.Add(db);
+                    }
+                }
+            }
+
+            if (txtFolderFilterCaption != null)
+            {
+                txtFolderFilterCaption.Text = !string.IsNullOrEmpty(_selectedWorkspaceFolder)
+                    ? $"Available Source Databases in dedicated folder:"
+                    : "Available Source Databases (click to select):";
             }
 
             // Feature B: Single round-trip query to fetch databases marked COMPLETED in tblUnitMigrationLog

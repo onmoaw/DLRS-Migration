@@ -169,20 +169,106 @@ namespace LandPressDataMigrationDesktopApp
         }
 
         /// <summary>
+        /// Retrieves the physical file path of a database's primary data file (.mdf).
+        /// </summary>
+        public static async Task<string?> GetDatabasePhysicalPathAsync(string masterConnectionString, string dbName)
+        {
+            try
+            {
+                using var conn = new SqlConnection(masterConnectionString);
+                await conn.OpenAsync();
+                using var cmd = new SqlCommand(@"
+                    SELECT TOP 1 mf.physical_name
+                    FROM sys.master_files mf
+                    JOIN sys.databases d ON mf.database_id = d.database_id
+                    WHERE d.name = @db AND mf.file_id = 1;", conn);
+                cmd.Parameters.AddWithValue("@db", dbName);
+                var result = await cmd.ExecuteScalarAsync();
+                return result != null && result != DBNull.Value ? result.ToString() : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Detaches a database cleanly after setting SINGLE_USER with immediate rollback.
+        /// </summary>
+        public static async Task DetachDatabaseAsync(string masterConnectionString, string dbName)
+        {
+            using var conn = new SqlConnection(masterConnectionString);
+            await conn.OpenAsync();
+            string sql = $@"
+                IF DB_ID('{dbName.Replace("'", "''")}') IS NOT NULL
+                BEGIN
+                    ALTER DATABASE [{dbName.Replace("]", "]]")}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                    EXEC sp_detach_db @dbname = N'{dbName.Replace("'", "''")}';
+                END;";
+            using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 120 };
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// Attaches an existing database using its MDF (and optional LDF) file.
+        /// </summary>
+        public static async Task AttachDatabaseAsync(string masterConnectionString, string dbName, string mdfPath, string? ldfPath = null)
+        {
+            using var conn = new SqlConnection(masterConnectionString);
+            await conn.OpenAsync();
+            string escapedDb = dbName.Replace("]", "]]");
+            string sql;
+            if (!string.IsNullOrWhiteSpace(ldfPath) && File.Exists(ldfPath))
+            {
+                sql = $"CREATE DATABASE [{escapedDb}] ON (FILENAME = N'{mdfPath.Replace("'", "''")}'), (FILENAME = N'{ldfPath.Replace("'", "''")}') FOR ATTACH;";
+            }
+            else
+            {
+                sql = $"CREATE DATABASE [{escapedDb}] ON (FILENAME = N'{mdfPath.Replace("'", "''")}') FOR ATTACH_REBUILD_LOG;";
+            }
+            using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 300 };
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
         /// Executes the complete DDL creation and repair script to ensure [DLRS_Migration_Intrm]
         /// exists with all pre-prepared tables and columns.
+        /// If targetFolder is specified and the DB does not exist, files are created inside that folder.
         /// </summary>
-        public static async Task CreateOrRepairDatabaseAsync(string masterConnectionString)
+        public static async Task CreateOrRepairDatabaseAsync(string masterConnectionString, string? targetFolder = null)
         {
             using var conn = new SqlConnection(masterConnectionString);
             await conn.OpenAsync();
 
             // 1. Create database if missing
-            string createDbSql = $@"
-                IF DB_ID('{DbName}') IS NULL
-                BEGIN
-                    CREATE DATABASE [{DbName}];
-                END;";
+            string createDbSql;
+            if (!string.IsNullOrWhiteSpace(targetFolder) && Directory.Exists(targetFolder))
+            {
+                string mdfPath = Path.Combine(targetFolder, $"{DbName}.mdf");
+                string ldfPath = Path.Combine(targetFolder, $"{DbName}_log.ldf");
+                createDbSql = $@"
+                    IF DB_ID('{DbName}') IS NULL
+                    BEGIN
+                        CREATE DATABASE [{DbName}]
+                        ON PRIMARY (
+                            NAME = N'{DbName}',
+                            FILENAME = N'{mdfPath.Replace("'", "''")}'
+                        )
+                        LOG ON (
+                            NAME = N'{DbName}_log',
+                            FILENAME = N'{ldfPath.Replace("'", "''")}'
+                        );
+                    END;";
+            }
+            else
+            {
+                createDbSql = $@"
+                    IF DB_ID('{DbName}') IS NULL
+                    BEGIN
+                        CREATE DATABASE [{DbName}];
+                    END;";
+            }
+
             using (var cmd = new SqlCommand(createDbSql, conn))
             {
                 cmd.CommandTimeout = 120;

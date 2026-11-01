@@ -7,14 +7,14 @@
 | Item | Value |
 |---|---|
 | Product name | `DLRS Data Migration Tool` (`AppConfig.AppName`) |
-| Application version | `v0.19a` (`AppConfig.Version`) |
+| Application version | `v0.20a` (`AppConfig.Version`) |
 | Solution file | `LandPressDataMigrationDesktopApp.slnx` |
 | Projects | 3 (`DBAccess`, `FontConverter`, `LandPressDataMigrationDesktopApp`) |
 | Target frameworks | `net10.0-windows` (WPF app, WinExe), `net10.0` (two class libraries) |
-| UI technology | WPF (XAML) + WinForms interop (`UseWindowsForms=true`, used for `OpenFileDialog`/`SaveFileDialog`) |
+| UI technology | WPF (XAML) + WinForms interop (`UseWindowsForms=true`, used for `OpenFileDialog`/`SaveFileDialog`/`FolderBrowserDialog`) |
 | Data access | `Microsoft.Data.SqlClient` 6.1.4 (ADO.NET, raw SQL + stored procedures) |
 | Serialization | `Newtonsoft.Json` 13.0.4 |
-| Build status (verified) | `dotnet build LandPressDataMigrationDesktopApp.slnx` → **Build succeeded, 0 errors, 8 warnings** |
+| Build status (verified) | `dotnet build LandPressDataMigrationDesktopApp.slnx` → **Build succeeded, 0 errors, 18 warnings** |
 
 ---
 
@@ -102,9 +102,12 @@ Design invariants (verified in code):
     ├── MigratedUnitsSummaryDialog.xaml(.cs)  ← migrated unit/khatian/plot/owner report
     ├── PipelineLogViewerWindow.xaml(.cs)     ← structured log viewer (filter/search/export CSV)
     ├── PipelineAlertWindow.xaml(.cs)         ← blocking error dialog with Retry/Abort
+    ├── PipelineConfirmStopWindow.xaml(.cs)   ← themed stop / abort confirmation dialog
     ├── ViewRecordsWindow.xaml(.cs)           ← land-record search prototype (dummy data)
     ├── AppConfig.cs                          ← central configuration + pipeline definition
-    ├── IntermediateDbService.cs              ← staging DB lifecycle, DDL, staging, audit log
+    ├── IntermediateDbService.cs              ← staging DB lifecycle, DDL, staging, audit log, physical file management
+    ├── WorkspaceDirectoryManager.cs          ← dedicated database directory persistence & verification
+    ├── OperationController.cs                ← pause/resume/stop state machine & checkpoints
     ├── StoredProcedureDeployer.cs            ← deploys the 3 SP scripts from embedded resources
     ├── PipelineExecutionLogger.cs            ← in-memory + file + CSV logging
     ├── ThemeManager.cs                       ← Light/Dark theme token manager
@@ -167,10 +170,11 @@ flowchart TB
         OC[OperationController - Pause / Resume / Stop state machine]
         US[UserSession - Admin / StandardUser]
         TM[ThemeManager - Light / Dark tokens]
+        WDM[WorkspaceDirectoryManager - Dedicated DB directory persistence]
     end
 
     subgraph SVC["Services (static)"]
-        IDS[IntermediateDbService]
+        IDS[IntermediateDbService - DDL, staging, detach/attach]
         SPD[StoredProcedureDeployer]
         PEL[PipelineExecutionLogger]
     end
@@ -246,14 +250,19 @@ SQL auth     : Server=<server>;Database=<db>;User Id=<user>;Password=<pwd>;Encry
 │ brand • role badge • [⚡ Auto/Manual mode] • [📋 Logs] • [🔎 View Records] │
 │ • [☀️/🌙 Theme]                                                          │
 ├ LEFT COLUMN (450 px) ─────────────┬ RIGHT COLUMN (3 sequential panels) ───┤
-│ PREPARATION card                  │ [Step Preview Header]                │
-│  • Server + auth + Connect        │   [State Badge] [⏸/▶] [⏹ Stop]     │
-│  • Intermediate DB guard card     │ panelStep1CopyToIntrm   (blue)        │
-│    (Create/Repair, View Logs)     │ panelStep2FontConvert   (green)       │
-│  • Source DB list                 │ panelStep3Migration     (purple)      │
-│    (Auto-hides migrated DBs;      │                                       │
-│     Admin "Show migrated" toggle) │ Only the *current* step panel is      │
-│  • Pre-Step: Restore / Attach .bak│ visible (`UpdateWorkflowState()`).    │
+│ PREPARATION cards                 │ [Step Preview Header]                │
+│  • Step 0: Dedicated DB Folder    │   [State Badge] [⏸/▶] [⏹ Stop]     │
+│    (Folder select/create, persist)│ panelStep1CopyToIntrm   (blue)        │
+│  • Step 1: Server + auth + Connect│ panelStep2FontConvert   (green)       │
+│  • Step 2: Core DB (4103) card    │ panelStep3Migration     (purple)      │
+│    (Verify, restore/relocate/bak) │                                       │
+│  • Step 3: Intermediate DB card   │ Only the *current* step panel is      │
+│    (Create/Repair/Relocate/Logs)  │ visible (`UpdateWorkflowState()`).    │
+│  • Step 4: Source DB list         │                                       │
+│    (Folder-locked DBs only,       │                                       │
+│     auto-hides migrated DBs)      │                                       │
+│  • Step 5: Restore / Attach .bak  │                                       │
+│    (Forces files into DB folder)  │                                       │
 │  • Prepared-DB actions            │                                       │
 ├ FOOTER ──────────────────────────────────────────────────────────────────┤
 ```
@@ -262,7 +271,9 @@ Key state fields in `MainWindow`:
 
 | Field | Meaning |
 |---|---|
-| `_isIntermediateDbReady` | Staging DB exists **and** passed deep schema validation |
+| `_selectedWorkspaceFolder` | Absolute path to the user-selected dedicated database folder on disk |
+| `_isCoreDbReady` | Core DB `DLRSLSINF_4103PRSDB` exists **and** physically resides in the dedicated folder |
+| `_isIntermediateDbReady` | Staging DB exists in folder **and** passed deep schema validation |
 | `_isStage2Completed` | Step 1 (copy & stage) done |
 | `_isStage3Completed` | Step 2 (Unicode conversion + write-back) done |
 | `_isStage4Completed` | Step 3 (core migration) done |
@@ -271,15 +282,18 @@ Key state fields in `MainWindow`:
 | `_opController` | `OperationController` instance managing execution state (Idle, Running, PauseRequested, Paused, StopRequested, Stopped) |
 | `_isOperationRunning`, `_currentOperationCts` | Failsafe re-entrancy guard + operation token |
 
-### 5.3 Stage 0 — Connection, staging-DB guard and pre-flight
+### 5.3 Stage 0 — Dedicated folder, connection, core DB, staging guard, and pre-flight
 
 | Action | Code | Behaviour |
 |---|---|---|
-| Connect | `BtnConnect_Click` → `LoadDatabases` | Opens `master`, lists `sys.databases` with `state_desc='ONLINE'` excluding `master/tempdb/model/msdb/DLRS_Migration_Intrm` |
-| Filter migrated DBs | `IntermediateDbService.GetCompletedSourceDatabasesAsync` | Queries `tblUnitMigrationLog` once for databases with `Status = 'COMPLETED'`. Excludes completed DBs from selection list. INCOMPLETE / CANCELLED / FAILED do NOT hide DBs. Shows caption `"N migrated database(s) hidden"`. Admin-only checkbox (`chkShowMigratedDbs`) reveals them as disabled items with `✔ Migrated` badge. Fail-open if staging DB missing. Refreshes after migration completion, restore, or attach |
-| Staging DB guard | `CheckAndValidateIntermediateDbAsync` | 1) DB exists? 2) `IntermediateDbService.ValidateSchemaAsync` (compat ≥ 130, 4 tables, `NVARCHAR` types, `RowId`, `convsts`, `KRemark` = `NVARCHAR`) 3) Ready → enables the DB list |
-| Missing / invalid staging DB | `BtnCreateOrRepairIntrmDb_Click` | `CreateOrRepairDatabaseAsync` (CREATE DATABASE → compat 150/130 → `CREATE TABLE IF NOT EXISTS` DDL for `tblHalsabek`, `tblLinfo01`, `tblLinfo02`, `tblUnitMigrationLog` + index), then re-validate |
-| Restore / Attach | `RunPreStep` → `RunRestoreAsync` / `RunAttachAsync` | Discovers default data/log folders via `SERVERPROPERTY`, registry (`xp_instance_regread`) or `sys.master_files`; builds `RESTORE DATABASE … WITH MOVE … STATS = 10, REPLACE`; progress via `InfoMessage`. Attach supports `FOR ATTACH` / `FOR ATTACH_REBUILD_LOG`. Both use a 600 s timeout; refreshes database list upon completion |
+| Dedicated DB folder | `WorkspaceDirectoryManager` | Persists user-selected folder in `%LOCALAPPDATA%\LandPressDataMigration\workspace_settings.json`. Validates directory readability/writeability and scans `.mdf`/`.bak` files. Default initial directory for all file dialogs |
+| Connect | `BtnConnect_Click` → `LoadDatabases` | Requires workspace folder; opens `master`, runs Core DB and Intermediate DB checks, then enumerates databases |
+| Core DB (4103) verification | `CheckAndValidateCoreDbAsync` | Checks if `DLRSLSINF_4103PRSDB` exists. If missing, prompts to restore from `.bak` into dedicated folder via `RESTORE ... WITH MOVE`. If located outside folder, prompts to force-detach and relocate (copy `.mdf`/`.ldf`) and re-attach inside folder |
+| Staging DB guard & relocation | `CheckAndValidateIntermediateDbAsync` | 1) DB exists? 2) Located in dedicated folder? If external, offers to detach and recreate/relocate 3) `IntermediateDbService.ValidateSchemaAsync` (compat ≥ 130, 4 tables, `NVARCHAR` types, `RowId`, `convsts`, `KRemark` = `NVARCHAR`) |
+| Missing / invalid staging DB | `BtnCreateOrRepairIntrmDb_Click` | `CreateOrRepairDatabaseAsync` with `ON PRIMARY (FILENAME = ...)` targeting the dedicated folder, sets compat 150/130, creates 4 tables + indexes, re-validates |
+| Filter databases by folder | `LoadDatabases` (joined with `sys.master_files`) | Filters `sys.databases` joined with `sys.master_files` (`file_id = 1`) to display **ONLY** databases whose primary data file (`.mdf`) physically resides inside `_selectedWorkspaceFolder`. Shows `txtFolderFilterCaption` |
+| Filter migrated DBs | `IntermediateDbService.GetCompletedSourceDatabasesAsync` | Excludes databases having `tblUnitMigrationLog` rows with `Status = 'COMPLETED'`. Shows caption `"N migrated database(s) hidden"`. Admin checkbox (`chkShowMigratedDbs`) reveals them greyed with `✔ Migrated` badge. Refreshes after migration completion, restore, or attach |
+| Restore / Attach into folder | `RunPreStep` → `RunRestoreAsync` / `RunAttachAsync` | All data files (`.mdf`, `.ndf`) and log files (`.ldf`) are strictly written into `_selectedWorkspaceFolder` using `RESTORE ... WITH MOVE`. For Attach, external `.mdf`/`.ldf` files are copied into the folder prior to `CREATE DATABASE ... FOR ATTACH`. Database list refreshes upon completion |
 | Source DB readiness | `CheckDatabasePreparedAsync` | Verifies compat ≥ 130, `tblLinfo02.RowId`, `convsts` on all three tables, `tblLinfo01.KRemark` is `NVARCHAR` (`system_type_id = 231`) |
 | DB preparation wizard | `DbPrepWizardWindow` (6 steps) | 1) inspect all DB compatibility levels 2) `ALTER DATABASE … SET COMPATIBILITY_LEVEL` 3) add + populate `tblLinfo02.RowId` 4) `tblLinfo01.KRemark → NVARCHAR(MAX)` 5) `tblLinfo02.OwnName/addr1..addr10 → NVARCHAR(150)` 6) add `convsts` to the three tables. Each step locks after success (`IsPreparationCompleted` = step 6 done) |
 
@@ -367,7 +381,8 @@ The "⚡ Auto" button chains all three stages with progress 2 → 30 → 35/45 �
 | `AppConfig.cs` | `static class AppConfig`, `class MigrationStepConfig` | Version constant, staging DB name, delay/batch tuning, failsafe predicate `IsCommentedOutOrNotFoundInDb`, master pipeline `GetPipelineSteps()`; role-aware `GetTitle(isAdmin)` / `GetDescription(isAdmin)` |
 | `UserSession.cs` | `enum UserRole`, `static class UserSession` | `CurrentUsername`, `CurrentRole`, `IsAdmin`, `SetUser`, `Clear` |
 | `ThemeManager.cs` | `enum AppTheme`, `static class ThemeManager` | `DarkColors` / `LightColors` token sets, `ApplyTheme` (rewrites all `Theme*` brushes), `ToggleTheme`, `ThemeChanged` event |
-| `IntermediateDbService.cs` | `static class` | `CheckDatabaseExistsAsync`, `ValidateSchemaAsync`, `CreateOrRepairDatabaseAsync`, `StageDataFromSourceAsync`, `LogCompletedUnitsAsync`, log reading, `CheckSelectedDatabaseMigrationStatusAsync`, helpers `ColumnExistsAsync` / `TableExistsAsync` |
+| `IntermediateDbService.cs` | `static class` | `CheckDatabaseExistsAsync`, `ValidateSchemaAsync`, `CreateOrRepairDatabaseAsync`, `StageDataFromSourceAsync`, `LogCompletedUnitsAsync`, log reading, `CheckSelectedDatabaseMigrationStatusAsync`, `GetDatabasePhysicalPathAsync`, `DetachDatabaseAsync`, `AttachDatabaseAsync`, helpers `ColumnExistsAsync` / `TableExistsAsync` |
+| `WorkspaceDirectoryManager.cs` | `static class WorkspaceDirectoryManager` | Manages persistent dedicated database folder path in `%LOCALAPPDATA%\LandPressDataMigration\workspace_settings.json`, path normalization, directory validation, `.mdf`/`.bak` file counts, and containment verification |
 | `StoredProcedureDeployer.cs` | `static class` | SP name constants, `CheckProceduresAsync`, `LoadScriptContent` (embedded resource → `DevResource` fallback), `DeployStoredProcedureAsync`, `DeployAllProceduresAsync`, `EnsureProceduresDeployedAsync` |
 | `PipelineExecutionLogger.cs` | `enum PipelineLogSeverity`, `PipelineLogEntry`, `static class PipelineExecutionLogger` | `Entries` (`ObservableCollection`), `LogInfo/LogWarning/LogError`, `CheckAndLogMappingAnomaly`, `ExportToCsv`, `LogsDirectory`, `TodayLogFilePath`, counters (`ErrorCount`, `WarningCount`, `TotalCount`) |
 | `LoginWindow.xaml(.cs)` | `LoginWindow : Window` | Salted SHA-256 credential authentication, theme toggle, Enter-to-login, opens `MainWindow` |
@@ -569,6 +584,7 @@ Every window subscribes to `ThemeManager.ThemeChanged`, calls `UpdateThemeButton
 | Read-only legacy data (pipeline) | The staging service only writes to `DLRS_Migration_Intrm`; source tables are only read |
 | Explicit preparation opt-in | Source-DB schema changes are possible only through `DbPrepWizardWindow`, one step at a time, each locking after success |
 | Staging-DB gate | Source-DB list stays disabled until `DLRS_Migration_Intrm` exists **and** passes deep schema validation; a blocking red banner explains what to fix |
+| Dedicated folder locking | All data files (`.mdf`) and log files (`.ldf`) are strictly bound to the user-selected folder; database selection strictly shows only databases whose primary data file resides in the folder; restore/attach operations force target files into this folder; intermediate and core DBs are checked and relocated into the folder |
 | Re-migration block | `tblUnitMigrationLog` rows with `COMPLETED` for the same unit codes block staging and the auto pipeline (`PipelineAlertWindow`, no skip) |
 | Migrated DB auto-hiding | `LoadDatabases` excludes DBs with `Status = 'COMPLETED'` from selection; Admin toggle reveals them as disabled with badge |
 | Transactional staging rollback | Step 1 `TRUNCATE` + `INSERT` wrapped in single atomic `SqlTransaction`; stop/cancel rolls back to prior staging state |
@@ -675,9 +691,10 @@ Findings from reading the code (recorded for maintainers; nothing was changed):
 
 **Version / documentation drift**
 
-14. `DLRS_DATA_MIGRATION_SYSTEM_OPERATION_MANUAL.md` documents app **v0.14**, while `AppConfig.Version` is now **v0.19a**, and it states `ConversionRowDelayMs` default `0` while the code uses `2`. Prefer `AppConfig.cs` as the source of truth.
+14. `DLRS_DATA_MIGRATION_SYSTEM_OPERATION_MANUAL.md` documents app **v0.14**, while `AppConfig.Version` is now **v0.20a**, and it states `ConversionRowDelayMs` default `0` while the code uses `2`. Prefer `AppConfig.cs` as the source of truth.
 15. `README.md` is only a snippet of the `AREAINF` migration query, not a project readme.
 16. **Pause/Stop & Database Filtering (v0.19a):** Added cooperative `OperationController` managing Pause/Resume/Stop with atomic SQL transaction rollback for staging, batch-boundary checkpoints for conversion, and ProcID-boundary checkpoints for migration. Added automatic exclusion of migrated databases (`tblUnitMigrationLog` where `Status = 'COMPLETED'`) with caption and Admin reveal toggle.
+17. **Dedicated Database Folder Locking & Pre-Flight Flow (v0.20a):** Added persistent folder lock (`WorkspaceDirectoryManager`), Step 0 folder selection/creation, Step 2 Core DB (`DLRSLSINF_4103PRSDB`) presence & physical location verification with automatic detach/relocation/restore into the folder, Step 3 Intermediate DB location validation & relocation, strict folder-bound filtering for database selection (`sys.master_files`), and forced folder routing for all Restore / Attach operations.
 
 ---
 
@@ -685,7 +702,7 @@ Findings from reading the code (recorded for maintainers; nothing was changed):
 
 | File | Content | Notes |
 |---|---|---|
-| `PROJECT_DOCUMENTATION.md` | **This document** — code-level architecture, modules, DB objects, config, build/deploy | Generated 2026-10-31 from source |
+| `PROJECT_DOCUMENTATION.md` | **This document** — code-level architecture, modules, DB objects, config, build/deploy | Generated 2026-10-31 from source, updated for v0.20a |
 | `DLRS_DATA_MIGRATION_SYSTEM_OPERATION_MANUAL.md` | Operator + technical manual: executive summary, data topology, Step 0–4 explanations, config reference, troubleshooting scenarios (A–D) | Written for app v0.14; concept-level and still accurate for workflow, but version/default drift (§15.14) |
 | `DevResource/DLRS_Full_System_Walkthrough.md` | 1,190-line narrative walkthrough of the whole system | Reference material |
 | `DevResource/DBdetails v1.sql`, `DBdetails v2.sql` | Legacy + core database schema dumps | Large (274 KB / 950 KB) |
@@ -703,6 +720,7 @@ Findings from reading the code (recorded for maintainers; nothing was changed):
 | App version / branding | `AppConfig.cs` |
 | Pipeline definition | `AppConfig.GetPipelineSteps()` |
 | Login / roles | `LoginWindow.xaml.cs`, `UserSession.cs` |
+| Dedicated database folder | `WorkspaceDirectoryManager.cs` |
 | Main 3-step workflow | `MainWindow.xaml(.cs)` |
 | Staging DB DDL / staging / audit | `IntermediateDbService.cs` |
 | Source DB preparation (compat, RowId, NVARCHAR, convsts) | `DbPrepWizardWindow.xaml(.cs)` |

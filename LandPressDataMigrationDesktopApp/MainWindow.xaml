@@ -179,6 +179,46 @@
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,8,0">
                 <StackPanel>
 
+                    <!-- ================= STEP 0: DEDICATED DATABASE FOLDER CARD ================= -->
+                    <Border Style="{StaticResource StageCard}" BorderBrush="#8B5CF6" BorderThickness="1.5" Margin="0,0,0,10">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Border Background="#6D28D9" CornerRadius="4" Padding="7,3" Margin="0,0,8,0">
+                                    <TextBlock Text="FOLDER LOCK" Foreground="White" FontWeight="Bold" FontSize="11"/>
+                                </Border>
+                                <TextBlock Text="Dedicated Database Folder" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="15"/>
+                            </StackPanel>
+
+                            <TextBlock Text="All database files (Core 4103, Staging, and Source DBs) must reside in this directory."
+                                       Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                            <!-- Folder Picker Bar -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="txtWorkspaceFolder" Style="{StaticResource InputBox}" Height="30" FontSize="12.5"
+                                         IsReadOnly="True" ToolTip="Selected dedicated folder path"/>
+                                <Button Grid.Column="1" x:Name="btnBrowseWorkspace" Content="📂 Browse" Width="78" Height="30"
+                                        Margin="6,0,0,0" Style="{StaticResource AppBtn}" FontSize="12" FontWeight="SemiBold"
+                                        Click="BtnBrowseWorkspaceFolder_Click"/>
+                                <Button Grid.Column="2" x:Name="btnNewWorkspaceFolder" Content="➕ New" Width="65" Height="30"
+                                        Margin="6,0,0,0" Style="{StaticResource AppBtn}" FontSize="12" FontWeight="SemiBold"
+                                        Click="BtnNewWorkspaceFolder_Click"/>
+                            </Grid>
+
+                            <!-- Folder Status & Scan Badge -->
+                            <Border x:Name="borderWorkspaceStatus" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="9,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Folder Status: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtWorkspaceStatusText" Text="⚪ Please select or create a dedicated folder" Foreground="#F59E0B" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
                     <!-- ================= SERVER & DATABASE SELECTION CARD ================= -->
                     <Border Style="{StaticResource StageCard}" BorderBrush="#3B82F6" BorderThickness="1.5">
                         <StackPanel>
@@ -234,6 +274,55 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- ================= STEP 2: CORE DATABASE (4103) CARD ================= -->
+                            <Border x:Name="borderCoreDbCard" Background="{DynamicResource ThemeInsetBg}" BorderBrush="#EC4899" BorderThickness="1.5" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Background="#BE185D" CornerRadius="4" Padding="5,2" Margin="0,0,6,0">
+                                                <TextBlock Text="CORE" Foreground="White" FontWeight="Bold" FontSize="10"/>
+                                            </Border>
+                                            <TextBlock Text="Core DB (4103): " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="txtCoreDbStatus" Text="⚪ Waiting for Server Connection" Foreground="#F59E0B" FontWeight="Bold" FontSize="12.5" VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <!-- Core DB Action Buttons -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <Button x:Name="btnRestoreCoreDb" Content="📥 Restore to Folder" Visibility="Collapsed"
+                                                    Style="{StaticResource AppBtn}" Padding="10,4" MinHeight="26" FontSize="11.5" FontWeight="Bold"
+                                                    Margin="0,0,6,0" Click="BtnRestoreCoreDb_Click">
+                                                <Button.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#EC4899" Offset="0"/>
+                                                        <GradientStop Color="#BE185D" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Button.Background>
+                                            </Button>
+                                            <Button x:Name="btnRelocateCoreDb" Content="🔄 Move to Folder" Visibility="Collapsed"
+                                                    Style="{StaticResource AppBtn}" Padding="10,4" MinHeight="26" FontSize="11.5" FontWeight="Bold"
+                                                    Margin="0,0,6,0" Click="BtnRelocateCoreDb_Click">
+                                                <Button.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#F59E0B" Offset="0"/>
+                                                        <GradientStop Color="#D97706" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Button.Background>
+                                            </Button>
+                                            <Button x:Name="btnBackupCoreDb" Content="💾 Backup" Visibility="Collapsed"
+                                                    Style="{StaticResource AppBtn}" Padding="8,4" MinHeight="26" FontSize="11.5" FontWeight="SemiBold"
+                                                    Click="BtnBackupCoreDb_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Core DB Detail Text -->
+                                    <TextBlock x:Name="txtCoreDbDetail" Visibility="Collapsed" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Permanent Intermediate Database Guard Banner -->
                             <Border x:Name="borderIntrmDbCard" Background="{DynamicResource ThemeInsetBg}" BorderBrush="#0D9488" BorderThickness="1.5" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
                                 <StackPanel>
@@ -260,6 +349,19 @@
                                                     </LinearGradientBrush>
                                                 </Button.Background>
                                                 <TextBlock Text="📜 Logs" VerticalAlignment="Center"/>
+                                            </Button>
+
+                                            <!-- Move Staging DB to Folder Button -->
+                                            <Button x:Name="btnRelocateIntrmDb" Visibility="Collapsed"
+                                                    Style="{StaticResource AppBtn}" Padding="10,5" MinHeight="28" FontSize="12" FontWeight="Bold"
+                                                    Margin="0,0,6,0" Click="BtnRelocateIntrmDb_Click">
+                                                <Button.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#F59E0B" Offset="0"/>
+                                                        <GradientStop Color="#D97706" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Button.Background>
+                                                <TextBlock Text="🔄 Move to Folder" VerticalAlignment="Center"/>
                                             </Button>
 
                                             <!-- Create or Repair Button -->
@@ -296,7 +398,7 @@
                             </Border>
 
                             <!-- Databases List -->
-                            <TextBlock Text="Available Source Databases (click to select):" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="txtFolderFilterCaption" Text="Available Source Databases in dedicated folder:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <ListBox x:Name="lstDatabases" Height="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}" FontSize="13"
                                      SelectionChanged="Databases_SelectionChanged"/>
 
@@ -362,7 +464,7 @@
                             </Border>
 
                             <!-- Description -->
-                            <TextBlock Text="Restore a .bak backup or attach a .mdf database file directly into the connected SQL Server before proceeding with migration."
+                            <TextBlock Text="Restore a .bak backup or attach a .mdf database file. Restored and attached database files will be stored inside your dedicated folder."
                                        Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Mode Selector -->
