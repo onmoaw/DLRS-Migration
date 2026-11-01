@@ -53,6 +53,12 @@ namespace LandPressDataMigrationDesktopApp
 
         private readonly Stopwatch _overallStopwatch = new();
         private DispatcherTimer? _overallTimer;
+        private readonly OperationController? _controller;
+
+        /// <summary>
+        /// Last procedure ID that completed successfully in this wizard session.
+        /// </summary>
+        public string? LastCompletedProcId { get; private set; }
 
         /// <summary>
         /// Fires immediately when all required migration steps in the sequential pipeline complete.
@@ -83,13 +89,18 @@ namespace LandPressDataMigrationDesktopApp
             return summary.Length > 490 ? summary.Substring(0, 490) : summary;
         }
 
-        public DataMigrationWizardWindow(string targetConnectionString, string sourceDbName, bool autoStart = false)
+        public DataMigrationWizardWindow(
+            string targetConnectionString, 
+            string sourceDbName, 
+            bool autoStart = false,
+            OperationController? controller = null)
         {
             InitializeComponent();
 
             _targetConnectionString = targetConnectionString;
             _sourceDbName = string.IsNullOrWhiteSpace(sourceDbName) ? AppConfig.IntermediateDbName : sourceDbName;
             _autoStartOnLoad = autoStart;
+            _controller = controller;
 
             txtSourceDbDisplay.Text = _sourceDbName;
             txtParamDesc01.Text = _sourceDbName;
@@ -101,6 +112,36 @@ namespace LandPressDataMigrationDesktopApp
 
             UpdateThemeButton();
             ApplyRoleView();
+
+            if (_controller != null)
+            {
+                _controller.StateChanged += (s, e) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (e.NewState == OperationState.Paused)
+                        {
+                            _isAutoPaused = true;
+                            btnPauseAuto.Content = "▶ Resume Auto-Run";
+                            lblAutoStatus.Text = "⏸ Auto-Run Paused. Click 'Resume Auto-Run' to continue.";
+                        }
+                        else if (e.NewState == OperationState.Running)
+                        {
+                            _isAutoPaused = false;
+                            btnPauseAuto.Content = "⏸ Pause Auto-Run";
+                        }
+                        else if (e.NewState is OperationState.StopRequested or OperationState.Stopped)
+                        {
+                            _isAutoRunning = false;
+                            _isAutoPaused = false;
+                            lblAutoStatus.Text = "⏹ Auto-Run Stopped by user.";
+                            btnStartAuto.Visibility = Visibility.Visible;
+                            btnPauseAuto.Visibility = Visibility.Collapsed;
+                            btnStopAuto.Visibility = Visibility.Collapsed;
+                        }
+                    });
+                };
+            }
 
             ThemeManager.ThemeChanged += OnThemeChanged;
             Closing += DataMigrationWizardWindow_Closing;
@@ -490,6 +531,20 @@ namespace LandPressDataMigrationDesktopApp
                     }
                     if (!_isAutoRunning) break;
 
+                    if (_controller != null)
+                    {
+                        try
+                        {
+                            await _controller.CheckpointAsync();
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            _isAutoRunning = false;
+                            lblAutoStatus.Text = "⏹ Auto-Run Stopped by user.";
+                            break;
+                        }
+                    }
+
                     var step = _steps[i - 1];
                     GoToStep(i);
 
@@ -501,7 +556,11 @@ namespace LandPressDataMigrationDesktopApp
                         : $"⚡ Executing Step {i} of {_steps.Count}: {step.Config.GetTitle(false)}...";
 
                     bool success = await ExecuteStepInternalAsync(step);
-                    if (!success)
+                    if (success)
+                    {
+                        LastCompletedProcId = step.Config.ProcId;
+                    }
+                    else
                     {
                         // Genuine SQL error occurred and was not a commented-out branch
                         lblAutoStatus.Text = UserSession.IsAdmin
@@ -553,6 +612,19 @@ namespace LandPressDataMigrationDesktopApp
 
         private void BtnPauseAuto_Click(object sender, RoutedEventArgs e)
         {
+            if (_controller != null)
+            {
+                if (_controller.IsPaused)
+                {
+                    _controller.Resume();
+                }
+                else
+                {
+                    _controller.RequestPause();
+                }
+                return;
+            }
+
             if (!_isAutoPaused)
             {
                 _isAutoPaused = true;
@@ -567,13 +639,20 @@ namespace LandPressDataMigrationDesktopApp
 
         private void BtnStopAuto_Click(object sender, RoutedEventArgs e)
         {
-            var res = MessageBox.Show(
-                "Are you sure you want to stop the automated migration sequence?\n\nCurrently active procedure execution will complete, but subsequent migration steps will be halted.",
-                "Confirm Stop Auto-Run",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+            string phaseDesc = $"Migration will halt after ProcID {LastCompletedProcId ?? "active step"}. Core DB contains partial data from completed steps.";
+            string techDetail = $"Last Completed ProcID: {LastCompletedProcId ?? "(none)"}, Target CS: {_targetConnectionString}";
+            bool confirmed = PipelineConfirmStopWindow.ConfirmStop(
+                this,
+                "Step 3: Core Migration",
+                phaseDesc,
+                techDetail);
 
-            if (res != MessageBoxResult.Yes) return;
+            if (!confirmed) return;
+
+            if (_controller != null)
+            {
+                _controller.RequestStop();
+            }
 
             _isAutoRunning = false;
             _isAutoPaused  = false;
@@ -1042,18 +1121,21 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (_isExecutingStep || _isAutoRunning)
             {
-                var result = MessageBox.Show(
-                    "⚠️ The data migration pipeline is currently executing on SQL Server!\n\n" +
-                    "Closing the wizard now will interrupt active migration operations and may leave the core database in an inconsistent state.\n\n" +
-                    "Are you sure you want to abort the migration and exit?",
-                    "Warning: Migration in Progress",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+                bool confirmed = PipelineConfirmStopWindow.ConfirmStop(
+                    this,
+                    "Step 3: Core Migration",
+                    "Closing the wizard now will interrupt active migration operations and may leave the core database in an inconsistent state.",
+                    $"Last Completed ProcID: {LastCompletedProcId ?? "(none)"}",
+                    isAppClosing: true);
 
-                if (result != MessageBoxResult.Yes)
+                if (!confirmed)
                 {
                     e.Cancel = true;
+                    return;
                 }
+
+                _controller?.RequestStop();
+                _isAutoRunning = false;
             }
         }
 

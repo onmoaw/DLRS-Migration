@@ -388,131 +388,145 @@ namespace LandPressDataMigrationDesktopApp
         /// <summary>
         /// Stages (copies) records from the legacy source database into [DLRS_Migration_Intrm].
         /// Applies NVARCHAR conversions, sets initial convsts, and computes sequential RowId for tblLinfo02.
+        /// Wrapped in a single SQL transaction to guarantee atomic rollback if cancelled or failed.
         /// </summary>
         public static async Task<(int HalsabekCount, int Linfo01Count, int Linfo02Count)> StageDataFromSourceAsync(
             string masterConnectionString, 
             string sourceDbName, 
-            string? unitCod = null)
+            string? unitCod = null,
+            CancellationToken ct = default)
         {
             using var conn = new SqlConnection(masterConnectionString);
-            await conn.OpenAsync();
+            await conn.OpenAsync(ct);
 
             int hsbCount = 0, l01Count = 0, l02Count = 0;
 
-            // 1. Copy tblHalsabek
-            string sqlHsb = $@"
-                TRUNCATE TABLE [{DbName}].dbo.tblHalsabek;
-
-                INSERT INTO [{DbName}].dbo.tblHalsabek (
-                    UnitCod, KhtNum, PltNum, tacrdes, sacrdes, HSPltNum, hsbdec, entdt, enttm, kpaco, actdata, UsrId, TermID, convsts
-                )
-                SELECT 
-                    UnitCod, KhtNum, PltNum, tacrdes, sacrdes, HSPltNum, hsbdec, entdt, enttm, kpaco, actdata, UsrId, 
-                    ISNULL(TermID, N''), 
-                    " + (await ColumnExistsAsync(conn, sourceDbName, "tblHalsabek", "convsts") ? "ISNULL(convsts, N'')" : "N''") + $@"
-                FROM [{sourceDbName}].dbo.tblHalsabek
-                WHERE (@u IS NULL OR LTRIM(RTRIM(UnitCod)) = @u);
-
-                SELECT COUNT(*) FROM [{DbName}].dbo.tblHalsabek;";
-
-            using (var cmd = new SqlCommand(sqlHsb, conn))
-            {
-                cmd.CommandTimeout = 300;
-                cmd.Parameters.AddWithValue("@u", string.IsNullOrWhiteSpace(unitCod) ? (object)DBNull.Value : unitCod.Trim());
-                hsbCount = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0);
-            }
-
-            // 2. Copy tblLinfo01 (with KRemark converted to NVARCHAR(MAX))
+            // Check column existence before transaction begins
+            bool hasSrcConvstsHsb = await ColumnExistsAsync(conn, sourceDbName, "tblHalsabek", "convsts");
             bool hasSrcRowId = await ColumnExistsAsync(conn, sourceDbName, "tblLinfo01", "ROWID");
             bool hasSrcConvsts01 = await ColumnExistsAsync(conn, sourceDbName, "tblLinfo01", "convsts");
-
-            string sql01 = $@"
-                TRUNCATE TABLE [{DbName}].dbo.tblLinfo01;
-
-                INSERT INTO [{DbName}].dbo.tblLinfo01 (
-                    UnitCod, KhtNum, PltNum, LndTyp, Tax, KriUse, NKriUse, TPltArea, KhtShare, 
-                    kshare, kshare1, kshare2, kshare3, kshare4, kshare5, KPltArea, KRemark, 
-                    hsbplot, hsbbata, hsbdec, Easmnt, EasArea, eascom1, eascom2, eascom3, eascom4, eascom5, eascom6, 
-                    tacrdesx, sacrdesx, pltsharex, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, kpaco, 
-                    ROWID, UsrId, TermID, convsts
-                )
-                SELECT 
-                    UnitCod, KhtNum, PltNum, LndTyp, Tax, KriUse, NKriUse, TPltArea, KhtShare, 
-                    kshare, kshare1, kshare2, kshare3, kshare4, kshare5, KPltArea, 
-                    CAST(KRemark AS NVARCHAR(MAX)), 
-                    hsbplot, hsbbata, hsbdec, Easmnt, EasArea, eascom1, eascom2, eascom3, eascom4, eascom5, eascom6, 
-                    tacrdesx, sacrdesx, pltsharex, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, kpaco, 
-                    " + (hasSrcRowId ? "ISNULL(NULLIF(ROWID, 0), ROW_NUMBER() OVER (ORDER BY UnitCod, KhtNum, PltNum))" : "ROW_NUMBER() OVER (ORDER BY UnitCod, KhtNum, PltNum)") + $@",
-                    UsrId, 
-                    ISNULL(TermID, N''), 
-                    " + (hasSrcConvsts01 ? "ISNULL(convsts, N'')" : "N''") + $@"
-                FROM [{sourceDbName}].dbo.tblLinfo01
-                WHERE (@u IS NULL OR LTRIM(RTRIM(UnitCod)) = @u);
-
-                SELECT COUNT(*) FROM [{DbName}].dbo.tblLinfo01;";
-
-            using (var cmd = new SqlCommand(sql01, conn))
-            {
-                cmd.CommandTimeout = 300;
-                cmd.Parameters.AddWithValue("@u", string.IsNullOrWhiteSpace(unitCod) ? (object)DBNull.Value : unitCod.Trim());
-                l01Count = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0);
-            }
-
-            // 3. Copy tblLinfo02 (expanding fields & generating sequential RowId)
             bool hasCaseNo = await ColumnExistsAsync(conn, sourceDbName, "tblLinfo02", "case_no");
             bool hasSrcConvsts02 = await ColumnExistsAsync(conn, sourceDbName, "tblLinfo02", "convsts");
 
-            string sql02 = $@"
-                TRUNCATE TABLE [{DbName}].dbo.tblLinfo02;
+            // Execute TRUNCATE + INSERT for all three tables atomically inside a single transaction
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                // 1. Copy tblHalsabek
+                string sqlHsb = $@"
+                    TRUNCATE TABLE [{DbName}].dbo.tblHalsabek;
 
-                WITH RankedSource AS (
+                    INSERT INTO [{DbName}].dbo.tblHalsabek (
+                        UnitCod, KhtNum, PltNum, tacrdes, sacrdes, HSPltNum, hsbdec, entdt, enttm, kpaco, actdata, UsrId, TermID, convsts
+                    )
                     SELECT 
-                        UnitCod, KhtNum, OwnrGrp, OwnrNum, 
-                        CAST(OwnName AS NVARCHAR(150)) AS OwnName, 
-                        CAST(addr1 AS NVARCHAR(150)) AS addr1, 
-                        CAST(addr2 AS NVARCHAR(150)) AS addr2, 
-                        CAST(addr3 AS NVARCHAR(150)) AS addr3, 
-                        CAST(addr4 AS NVARCHAR(150)) AS addr4, 
-                        CAST(addr5 AS NVARCHAR(150)) AS addr5, 
-                        CAST(addr6 AS NVARCHAR(150)) AS addr6, 
-                        CAST(addr7 AS NVARCHAR(150)) AS addr7, 
-                        CAST(addr8 AS NVARCHAR(150)) AS addr8, 
-                        CAST(addr9 AS NVARCHAR(150)) AS addr9, 
-                        CAST(addr10 AS NVARCHAR(150)) AS addr10, 
+                        UnitCod, KhtNum, PltNum, tacrdes, sacrdes, HSPltNum, hsbdec, entdt, enttm, kpaco, actdata, UsrId, 
+                        ISNULL(TermID, N''), 
+                        " + (hasSrcConvstsHsb ? "ISNULL(convsts, N'')" : "N''") + $@"
+                    FROM [{sourceDbName}].dbo.tblHalsabek
+                    WHERE (@u IS NULL OR LTRIM(RTRIM(UnitCod)) = @u);
+
+                    SELECT COUNT(*) FROM [{DbName}].dbo.tblHalsabek;";
+
+                using (var cmd = new SqlCommand(sqlHsb, conn, tx))
+                {
+                    cmd.CommandTimeout = 300;
+                    cmd.Parameters.AddWithValue("@u", string.IsNullOrWhiteSpace(unitCod) ? (object)DBNull.Value : unitCod.Trim());
+                    hsbCount = Convert.ToInt32(await cmd.ExecuteScalarAsync(ct) ?? 0);
+                }
+
+                // 2. Copy tblLinfo01 (with KRemark converted to NVARCHAR(MAX))
+                string sql01 = $@"
+                    TRUNCATE TABLE [{DbName}].dbo.tblLinfo01;
+
+                    INSERT INTO [{DbName}].dbo.tblLinfo01 (
+                        UnitCod, KhtNum, PltNum, LndTyp, Tax, KriUse, NKriUse, TPltArea, KhtShare, 
+                        kshare, kshare1, kshare2, kshare3, kshare4, kshare5, KPltArea, KRemark, 
+                        hsbplot, hsbbata, hsbdec, Easmnt, EasArea, eascom1, eascom2, eascom3, eascom4, eascom5, eascom6, 
+                        tacrdesx, sacrdesx, pltsharex, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, kpaco, 
+                        ROWID, UsrId, TermID, convsts
+                    )
+                    SELECT 
+                        UnitCod, KhtNum, PltNum, LndTyp, Tax, KriUse, NKriUse, TPltArea, KhtShare, 
+                        kshare, kshare1, kshare2, kshare3, kshare4, kshare5, KPltArea, 
+                        CAST(KRemark AS NVARCHAR(MAX)), 
+                        hsbplot, hsbbata, hsbdec, Easmnt, EasArea, eascom1, eascom2, eascom3, eascom4, eascom5, eascom6, 
+                        tacrdesx, sacrdesx, pltsharex, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, kpaco, 
+                        " + (hasSrcRowId ? "ISNULL(NULLIF(ROWID, 0), ROW_NUMBER() OVER (ORDER BY UnitCod, KhtNum, PltNum))" : "ROW_NUMBER() OVER (ORDER BY UnitCod, KhtNum, PltNum)") + $@",
+                        UsrId, 
+                        ISNULL(TermID, N''), 
+                        " + (hasSrcConvsts01 ? "ISNULL(convsts, N'')" : "N''") + $@"
+                    FROM [{sourceDbName}].dbo.tblLinfo01
+                    WHERE (@u IS NULL OR LTRIM(RTRIM(UnitCod)) = @u);
+
+                    SELECT COUNT(*) FROM [{DbName}].dbo.tblLinfo01;";
+
+                using (var cmd = new SqlCommand(sql01, conn, tx))
+                {
+                    cmd.CommandTimeout = 300;
+                    cmd.Parameters.AddWithValue("@u", string.IsNullOrWhiteSpace(unitCod) ? (object)DBNull.Value : unitCod.Trim());
+                    l01Count = Convert.ToInt32(await cmd.ExecuteScalarAsync(ct) ?? 0);
+                }
+
+                // 3. Copy tblLinfo02 (expanding fields & generating sequential RowId)
+                string sql02 = $@"
+                    TRUNCATE TABLE [{DbName}].dbo.tblLinfo02;
+
+                    WITH RankedSource AS (
+                        SELECT 
+                            UnitCod, KhtNum, OwnrGrp, OwnrNum, 
+                            CAST(OwnName AS NVARCHAR(150)) AS OwnName, 
+                            CAST(addr1 AS NVARCHAR(150)) AS addr1, 
+                            CAST(addr2 AS NVARCHAR(150)) AS addr2, 
+                            CAST(addr3 AS NVARCHAR(150)) AS addr3, 
+                            CAST(addr4 AS NVARCHAR(150)) AS addr4, 
+                            CAST(addr5 AS NVARCHAR(150)) AS addr5, 
+                            CAST(addr6 AS NVARCHAR(150)) AS addr6, 
+                            CAST(addr7 AS NVARCHAR(150)) AS addr7, 
+                            CAST(addr8 AS NVARCHAR(150)) AS addr8, 
+                            CAST(addr9 AS NVARCHAR(150)) AS addr9, 
+                            CAST(addr10 AS NVARCHAR(150)) AS addr10, 
+                            OwnrArea, hdec, lshare, lshare1, lshare2, lshare3, lshare4, lshare5, 
+                            hdecx, losdecx, oinf, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, lpaco, UsrId, 
+                            ISNULL(TermID, N'') AS TermID, 
+                            " + (hasCaseNo ? "ISNULL(case_no, N'') AS case_no" : "N'' AS case_no") + $@",
+                            ROW_NUMBER() OVER (ORDER BY UnitCod, KhtNum, OwnrGrp, OwnrNum) AS CalculatedRowId,
+                            " + (hasSrcConvsts02 ? "ISNULL(convsts, N'') AS convsts" : "N'' AS convsts") + $@"
+                        FROM [{sourceDbName}].dbo.tblLinfo02
+                        WHERE (@u IS NULL OR LTRIM(RTRIM(UnitCod)) = @u)
+                    )
+                    INSERT INTO [{DbName}].dbo.tblLinfo02 (
+                        UnitCod, KhtNum, OwnrGrp, OwnrNum, OwnName, 
+                        addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, addr10, 
                         OwnrArea, hdec, lshare, lshare1, lshare2, lshare3, lshare4, lshare5, 
                         hdecx, losdecx, oinf, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, lpaco, UsrId, 
-                        ISNULL(TermID, N'') AS TermID, 
-                        " + (hasCaseNo ? "ISNULL(case_no, N'') AS case_no" : "N'' AS case_no") + $@",
-                        ROW_NUMBER() OVER (ORDER BY UnitCod, KhtNum, OwnrGrp, OwnrNum) AS CalculatedRowId,
-                        " + (hasSrcConvsts02 ? "ISNULL(convsts, N'') AS convsts" : "N'' AS convsts") + $@"
-                    FROM [{sourceDbName}].dbo.tblLinfo02
-                    WHERE (@u IS NULL OR LTRIM(RTRIM(UnitCod)) = @u)
-                )
-                INSERT INTO [{DbName}].dbo.tblLinfo02 (
-                    UnitCod, KhtNum, OwnrGrp, OwnrNum, OwnName, 
-                    addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, addr10, 
-                    OwnrArea, hdec, lshare, lshare1, lshare2, lshare3, lshare4, lshare5, 
-                    hdecx, losdecx, oinf, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, lpaco, UsrId, 
-                    TermID, case_no, RowId, convsts
-                )
-                SELECT 
-                    UnitCod, KhtNum, OwnrGrp, OwnrNum, OwnName, 
-                    addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, addr10, 
-                    OwnrArea, hdec, lshare, lshare1, lshare2, lshare3, lshare4, lshare5, 
-                    hdecx, losdecx, oinf, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, lpaco, UsrId, 
-                    TermID, case_no, CalculatedRowId, convsts
-                FROM RankedSource;
+                        TermID, case_no, RowId, convsts
+                    )
+                    SELECT 
+                        UnitCod, KhtNum, OwnrGrp, OwnrNum, OwnName, 
+                        addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, addr10, 
+                        OwnrArea, hdec, lshare, lshare1, lshare2, lshare3, lshare4, lshare5, 
+                        hdecx, losdecx, oinf, EntDate, EntTime, LUpDate, LUpTime, LUpNumb, lpaco, UsrId, 
+                        TermID, case_no, CalculatedRowId, convsts
+                    FROM RankedSource;
 
-                SELECT COUNT(*) FROM [{DbName}].dbo.tblLinfo02;";
+                    SELECT COUNT(*) FROM [{DbName}].dbo.tblLinfo02;";
 
-            using (var cmd = new SqlCommand(sql02, conn))
-            {
-                cmd.CommandTimeout = 300;
-                cmd.Parameters.AddWithValue("@u", string.IsNullOrWhiteSpace(unitCod) ? (object)DBNull.Value : unitCod.Trim());
-                l02Count = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0);
+                using (var cmd = new SqlCommand(sql02, conn, tx))
+                {
+                    cmd.CommandTimeout = 300;
+                    cmd.Parameters.AddWithValue("@u", string.IsNullOrWhiteSpace(unitCod) ? (object)DBNull.Value : unitCod.Trim());
+                    l02Count = Convert.ToInt32(await cmd.ExecuteScalarAsync(ct) ?? 0);
+                }
+
+                tx.Commit();
+                return (hsbCount, l01Count, l02Count);
             }
-
-            return (hsbCount, l01Count, l02Count);
+            catch
+            {
+                try { tx.Rollback(); } catch { }
+                throw;
+            }
         }
 
         /// <summary>
@@ -693,6 +707,47 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             return (false, migratedUnits, string.Empty);
+        }
+
+        /// <summary>
+        /// Feature B: Returns a set of source database names that are logged as 'COMPLETED' in tblUnitMigrationLog.
+        /// Performs a single round-trip query. Fails open (returns empty set) if the table does not exist or query fails.
+        /// </summary>
+        public static async Task<HashSet<string>> GetCompletedSourceDatabasesAsync(string masterConnectionString)
+        {
+            var completedDbs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using var conn = new SqlConnection(masterConnectionString);
+                await conn.OpenAsync();
+
+                string sql = $@"
+                    IF OBJECT_ID('{DbName}.dbo.tblUnitMigrationLog') IS NOT NULL
+                    BEGIN
+                        SELECT DISTINCT LTRIM(RTRIM(SourceDbName))
+                        FROM [{DbName}].dbo.tblUnitMigrationLog
+                        WHERE UPPER(Status) = 'COMPLETED'
+                          AND SourceDbName IS NOT NULL
+                          AND LEN(LTRIM(RTRIM(SourceDbName))) > 0;
+                    END";
+
+                using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 30 };
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    if (!reader.IsDBNull(0))
+                    {
+                        string dbName = reader.GetString(0).Trim();
+                        if (!string.IsNullOrEmpty(dbName))
+                            completedDbs.Add(dbName);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                PipelineExecutionLogger.LogWarning("LoadDatabases", $"Feature B: Could not query completed databases from tblUnitMigrationLog (fail-open): {ex.Message}");
+            }
+            return completedDbs;
         }
 
         private static async Task<bool> ColumnExistsAsync(SqlConnection conn, string db, string table, string column)

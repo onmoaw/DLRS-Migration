@@ -159,11 +159,12 @@ flowchart TB
         M[MainWindow - 3-step shell]
         P[DbPrepWizardWindow - 6 steps]
         D[DataMigrationWizardWindow - N pipeline steps]
-        V[IntermediateDbLogsDialog / MigratedUnitsSummaryDialog /<br/>PipelineLogViewerWindow / PipelineAlertWindow / ViewRecordsWindow]
+        V[IntermediateDbLogsDialog / MigratedUnitsSummaryDialog /<br/>PipelineLogViewerWindow / PipelineAlertWindow / PipelineConfirmStopWindow / ViewRecordsWindow]
     end
 
-    subgraph CFG["Configuration & Session"]
+    subgraph CFG["Configuration & Execution Control"]
         AC[AppConfig - version, delays, pipeline]
+        OC[OperationController - Pause / Resume / Stop state machine]
         US[UserSession - Admin / StandardUser]
         TM[ThemeManager - Light / Dark tokens]
     end
@@ -190,10 +191,12 @@ flowchart TB
     M --> D
     M --> V
     M --> AC
+    M --> OC
     M --> IDS
     M --> FC
     M --> PEL
     D --> AC
+    D --> OC
     D --> PEL
     P --> IDS
     IDS --> INT
@@ -204,12 +207,13 @@ flowchart TB
     DBX -. optional / currently unused path .-> CORE
 ```
 
-**Composition style:** no DI container. All services are `static` classes; windows receive connection strings through constructors (e.g. `new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName, autoStart: true)`), while `UserSession`, `ThemeManager` and `PipelineExecutionLogger` are global statics.
+**Composition style:** no DI container. All services are `static` classes; windows receive connection strings through constructors (e.g. `new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName, autoStart: true, controller)`), while `UserSession`, `ThemeManager` and `PipelineExecutionLogger` are global statics.
 
-**Concurrency model**
+**Concurrency & execution control model**
 
 * Database work runs inside `Task.Run` / `async` methods; UI updates are marshalled with `Dispatcher.Invoke`.
-* A single `CancellationTokenSource` (`MainWindow._currentOperationCts`) is created per long operation and drives Pause/Stop buttons.
+* **`OperationController` (single source of truth):** Manages cooperative operation state transitions (`Idle`, `Running`, `PauseRequested`, `Paused`, `StopRequested`, `Stopped`). Hosts a `CancellationTokenSource` and an awaitable pause gate (`TaskCompletionSource<bool>`).
+* Non-blocking checkpoints (`await _opController.CheckpointAsync(ct)`): Worker threads await the gate without CPU spinning; calling `RequestStop()` cancels the CTS and immediately releases the pause gate so paused workers wake up and throw `OperationCanceledException` cooperatively.
 * Progress UI is throttled: `AppConfig.ConversionUiUpdateIntervalMs` (50 ms) for conversion progress, `DispatcherTimer` (1 s) for elapsed-time labels.
 * `PipelineExecutionLogger` is thread-safe (`lock`) and appends each entry to `Logs\Pipeline_yyyyMMdd.log`.
 
@@ -231,7 +235,7 @@ SQL auth     : Server=<server>;Database=<db>;User Id=<user>;Password=<pwd>;Encry
 | Step | Implementation |
 |---|---|
 | App boot | `App.OnStartup` → `ThemeManager.ApplyTheme(AppTheme.Light)`, then `StartupUri="LoginWindow.xaml"` |
-| Credentials | Hard-coded in `LoginWindow`: `Admin / Admin#321` → `UserRole.Admin`; `User / 1234` → `UserRole.StandardUser` |
+| Credentials | Salted SHA-256 byte hashes in `LoginWindow` (Admin / User roles; verified in constant time via `CryptographicOperations.FixedTimeEquals`; plaintext passwords never stored in binary metadata) |
 | Session | `UserSession.SetUser(name, role)`; `UserSession.IsAdmin` drives UI wording and privilege checks |
 | Transition | `new MainWindow()` replaces `Application.Current.MainWindow`, then `LoginWindow` closes |
 
@@ -242,11 +246,13 @@ SQL auth     : Server=<server>;Database=<db>;User Id=<user>;Password=<pwd>;Encry
 │ brand • role badge • [⚡ Auto/Manual mode] • [📋 Logs] • [🔎 View Records] │
 │ • [☀️/🌙 Theme]                                                          │
 ├ LEFT COLUMN (450 px) ─────────────┬ RIGHT COLUMN (3 sequential panels) ───┤
-│ PREPARATION card                  │ panelStep1CopyToIntrm   (blue)        │
-│  • Server + auth + Connect        │ panelStep2FontConvert   (green)       │
-│  • Intermediate DB guard card     │ panelStep3Migration     (purple)      │
-│    (Create/Repair, View Logs)     │                                       │
-│  • Source DB list                 │ Only the *current* step panel is      │
+│ PREPARATION card                  │ [Step Preview Header]                │
+│  • Server + auth + Connect        │   [State Badge] [⏸/▶] [⏹ Stop]     │
+│  • Intermediate DB guard card     │ panelStep1CopyToIntrm   (blue)        │
+│    (Create/Repair, View Logs)     │ panelStep2FontConvert   (green)       │
+│  • Source DB list                 │ panelStep3Migration     (purple)      │
+│    (Auto-hides migrated DBs;      │                                       │
+│     Admin "Show migrated" toggle) │ Only the *current* step panel is      │
 │  • Pre-Step: Restore / Attach .bak│ visible (`UpdateWorkflowState()`).    │
 │  • Prepared-DB actions            │                                       │
 ├ FOOTER ──────────────────────────────────────────────────────────────────┤
@@ -261,39 +267,45 @@ Key state fields in `MainWindow`:
 | `_isStage3Completed` | Step 2 (Unicode conversion + write-back) done |
 | `_isStage4Completed` | Step 3 (core migration) done |
 | `_currentActiveStep` | `1..3` — which right-hand panel is visible |
-| `_isManualModeEnabled`, `_isAutoPipelinePaused` | Auto (1-click) vs manual mode, pause state |
-| `_isOperationRunning`, `_currentOperationCts` | Failsafe re-entrancy guard + cancellation |
+| `_isManualModeEnabled` | Auto (1-click) vs manual step-by-step mode |
+| `_opController` | `OperationController` instance managing execution state (Idle, Running, PauseRequested, Paused, StopRequested, Stopped) |
+| `_isOperationRunning`, `_currentOperationCts` | Failsafe re-entrancy guard + operation token |
 
 ### 5.3 Stage 0 — Connection, staging-DB guard and pre-flight
 
 | Action | Code | Behaviour |
 |---|---|---|
 | Connect | `BtnConnect_Click` → `LoadDatabases` | Opens `master`, lists `sys.databases` with `state_desc='ONLINE'` excluding `master/tempdb/model/msdb/DLRS_Migration_Intrm` |
+| Filter migrated DBs | `IntermediateDbService.GetCompletedSourceDatabasesAsync` | Queries `tblUnitMigrationLog` once for databases with `Status = 'COMPLETED'`. Excludes completed DBs from selection list. INCOMPLETE / CANCELLED / FAILED do NOT hide DBs. Shows caption `"N migrated database(s) hidden"`. Admin-only checkbox (`chkShowMigratedDbs`) reveals them as disabled items with `✔ Migrated` badge. Fail-open if staging DB missing. Refreshes after migration completion, restore, or attach |
 | Staging DB guard | `CheckAndValidateIntermediateDbAsync` | 1) DB exists? 2) `IntermediateDbService.ValidateSchemaAsync` (compat ≥ 130, 4 tables, `NVARCHAR` types, `RowId`, `convsts`, `KRemark` = `NVARCHAR`) 3) Ready → enables the DB list |
 | Missing / invalid staging DB | `BtnCreateOrRepairIntrmDb_Click` | `CreateOrRepairDatabaseAsync` (CREATE DATABASE → compat 150/130 → `CREATE TABLE IF NOT EXISTS` DDL for `tblHalsabek`, `tblLinfo01`, `tblLinfo02`, `tblUnitMigrationLog` + index), then re-validate |
-| Restore / Attach | `RunPreStep` → `RunRestoreAsync` / `RunAttachAsync` | Discovers default data/log folders via `SERVERPROPERTY`, registry (`xp_instance_regread`) or `sys.master_files`; builds `RESTORE DATABASE … WITH MOVE … STATS = 10, REPLACE`; progress via `InfoMessage`. Attach supports `FOR ATTACH` / `FOR ATTACH_REBUILD_LOG`. Both use a 600 s timeout |
+| Restore / Attach | `RunPreStep` → `RunRestoreAsync` / `RunAttachAsync` | Discovers default data/log folders via `SERVERPROPERTY`, registry (`xp_instance_regread`) or `sys.master_files`; builds `RESTORE DATABASE … WITH MOVE … STATS = 10, REPLACE`; progress via `InfoMessage`. Attach supports `FOR ATTACH` / `FOR ATTACH_REBUILD_LOG`. Both use a 600 s timeout; refreshes database list upon completion |
 | Source DB readiness | `CheckDatabasePreparedAsync` | Verifies compat ≥ 130, `tblLinfo02.RowId`, `convsts` on all three tables, `tblLinfo01.KRemark` is `NVARCHAR` (`system_type_id = 231`) |
 | DB preparation wizard | `DbPrepWizardWindow` (6 steps) | 1) inspect all DB compatibility levels 2) `ALTER DATABASE … SET COMPATIBILITY_LEVEL` 3) add + populate `tblLinfo02.RowId` 4) `tblLinfo01.KRemark → NVARCHAR(MAX)` 5) `tblLinfo02.OwnName/addr1..addr10 → NVARCHAR(150)` 6) add `convsts` to the three tables. Each step locks after success (`IsPreparationCompleted` = step 6 done) |
 
 ### 5.4 Step 1 — Copy & stage (`IntermediateDbService.StageDataFromSourceAsync`)
 
-Server-side `INSERT … SELECT` (no client row streaming):
+Server-side `INSERT … SELECT` with **atomic transaction protection**:
 
-1. `TRUNCATE` staging tables (`tblHalsabek`, `tblLinfo01`, `tblLinfo02`) — staging always holds exactly one source DB.
-2. Copy the three tables from `[<sourceDb>].[dbo]` with `CAST`/`CONVERT` to `NVARCHAR`, initialising `convsts = ''`.
-3. Compute deterministic `RowId` for `tblLinfo02` (`ROW_NUMBER() OVER (ORDER BY …)`), matching the surrogate used by batch updates.
-4. Returns `(HalsabekCount, Linfo01Count, Linfo02Count)`; the UI shows row counts and unlocks Step 2.
+1. `TRUNCATE` staging tables (`tblHalsabek`, `tblLinfo01`, `tblLinfo02`) and bulk insert from source DB inside a single `SqlTransaction`.
+2. Staging is server-side and cannot be paused; Pause button is disabled with tooltip `"Pause unavailable during staging"`.
+3. If stopped or an error occurs, the `SqlCommand` is cancelled and the entire transaction rolls back to the previous staging state.
+4. Copy the three tables from `[<sourceDb>].[dbo]` with `CAST`/`CONVERT` to `NVARCHAR`, initialising `convsts = ''`.
+5. Compute deterministic `RowId` for `tblLinfo02` (`ROW_NUMBER() OVER (ORDER BY …)`), matching the surrogate used by batch updates.
+6. Returns `(HalsabekCount, Linfo01Count, Linfo02Count)`; the UI shows row counts and unlocks Step 2.
 
 ### 5.5 Step 2 — Unicode conversion & write-back
 
 Manual mode (`fontConverterBTN_On_Click`) and auto mode (`ConvertFontForAutoAsync`) share the same logic:
 
 1. Guard rails: Step 1 complete; Step 2 not already complete (**failsafe lock**); records loaded.
-2. **Mojibake guard** — if loaded records (`KRemark`, `OwnName`, `addr1`) already contain Bengali Unicode (U+0980–U+09FF via `ContainsBengaliUnicode`), Standard users are blocked; Admin gets a confirmation prompt ("DANGER — ALREADY CONVERTED DATA DETECTED").
+2. **Resumable Mojibake guard** — if loaded records contain Bengali Unicode (U+0980–U+09FF) AND all rows already have `convsts = 'SUCCESS'`, Standard users are blocked; Admin gets confirmation. If partially converted from a stopped run, it treats the dataset as **resumable**, converting ONLY rows with `convsts != 'SUCCESS'` and skipping already converted records (avoiding double conversion).
 3. `tblLinfo01.KRemark` and `tblLinfo02.OwnName + addr1..addr10` are converted per record through `FontConverter.Converter.ConvertToAdarshalipi`, with per-field anomaly logging (`ConvertAndCheckMapping` → `PipelineExecutionLogger.CheckAndLogMappingAnomaly`).
-4. Progress: percentage, record count, records/second, ETA — refreshed every `ConversionUiUpdateIntervalMs`.
-5. Write-back in JSON chunks: `UpdateTblLinfo01InBatchesAsync` / `UpdateTblLinfo02InBatchesAsync` serialise `AppConfig.BatchChunkSize` records with `UtilityFunction.ListToJsonString(list, "tbl_tblLinfo01")` and call `SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK` with `@ProcID = UPDTTBLINF01` / `UPDTTBLINF02`, `@Desc01 = DLRS_Migration_Intrm`, `@Djson1 = <json>`.
-6. On completion `_isStage3Completed = true` and the "Update database" button is enabled/locked accordingly.
+4. **Safe checkpoints**: Checkpointed every record / UI update interval in memory; immediate stop without database side-effects since nothing is written yet.
+5. Progress: percentage, record count, records/second, ETA — refreshed every `ConversionUiUpdateIntervalMs`.
+6. Write-back in JSON chunks: `UpdateTblLinfo01InBatchesAsync` / `UpdateTblLinfo02InBatchesAsync` serialise `AppConfig.BatchChunkSize` records with `UtilityFunction.ListToJsonString(list, "tbl_tblLinfo01")` and call `SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK` with `@ProcID = UPDTTBLINF01` / `UPDTTBLINF02`, `@Desc01 = DLRS_Migration_Intrm`, `@Djson1 = <json>`.
+7. **Safe batch checkpoints**: Checkpointed strictly **BETWEEN batches**, never inside an executing batch/SP call. If stopped, active batch finishes and progress is recorded.
+8. On completion `_isStage3Completed = true` and the "Update database" button is enabled/locked accordingly.
 
 ### 5.6 Step 3 — Sequential core migration (`DataMigrationWizardWindow`)
 
@@ -309,26 +321,30 @@ if (cfg.RequiresRsNumber)
 ```
 
 * Execution mode: **Auto-Run** (`BtnStartAuto_Click`, with pause/resume/stop) or **manual** step-by-step (`BtnExecuteStep_Click`).
+* **Safe SP checkpoints**: Checkpointed strictly **BETWEEN ProcID steps only**. Active SP finishes before stopping. Tracks `_lastCompletedProcId` and displays stopped banner on premature stop.
 * The SP result is filled into a `DataSet` through `SqlDataAdapter`. If the first table contains an `ErrMsg` column, the message is classified:
   * matches `AppConfig.IsCommentedOutOrNotFoundInDb` → the step is marked **Bypassed** (warning) and the pipeline continues — the "commented-out branch" failsafe;
   * otherwise → error state; `PipelineAlertWindow` offers Retry/Abort.
 * Steps with `HasResultTable = true` render the returned `DataTable` in the results grid.
-* On completion: `IsMigrationCompleted = true`, the `MigrationCompleted` event fires, and `GetExecutionSummary()` (Executed/Bypassed/Skipped ProcIDs, ≤ 490 chars) is written to the audit log.
+* On completion: `IsMigrationCompleted = true`, the `MigrationCompleted` event fires, and `GetExecutionSummary()` (Executed/Bypassed/Skipped ProcIDs, ≤ 490 chars) is written to the audit log. Database selection list refreshes automatically to hide the completed database.
 * Procedures are auto-deployed first: `StoredProcedureDeployer.EnsureProceduresDeployedAsync` checks `OBJECT_ID(...)` for the 3 SPs and runs the embedded scripts (`GO` split by `Regex`, `USE` batches skipped, 180 s timeout).
 
 ### 5.7 One-click auto pipeline (`MainWindow.RunCompleteAutoPipelineAsync`)
 
 The "⚡ Auto" button chains all three stages with progress 2 → 30 → 35/45 → 60 → 75 → 80 → 100:
 
-| Phase | Work | Progress |
-|---|---|---|
-| Pre-checks | server, source DB, staging DB ready, unit not already migrated | 2 % |
-| 1/3 Staging | `StageDataFromSourceAsync`, `LoadIntermediateTablesAsync` | 30 % |
-| 2/3 Convert | fetch staged rows → convert → commit JSON batches | 35–60 % |
-| 3/3 Migrate | `EnsureProceduresDeployedAsync`, then modal `DataMigrationWizardWindow(autoStart: true)` | 80–100 % |
-| Outcome | `LogCompletedUnitsAsync(..., "COMPLETED")` or `INCOMPLETE` / `CANCELLED` / `FAILED` | — |
+| Phase | Work | Progress | Safe Checkpoint Rule |
+|---|---|---|---|
+| Pre-checks | server, source DB, staging DB ready, unit not already migrated | 2 % | Immediate cancel, no side effects |
+| 1/3 Staging | `StageDataFromSourceAsync`, `LoadIntermediateTablesAsync` | 30 % | Pause disabled. Stop rolls back `SqlTransaction` |
+| 2/3 Convert | fetch staged rows → convert → commit JSON batches | 35–60 % | Checkpoint per row in-memory; checkpoint between JSON batches |
+| 3/3 Migrate | `EnsureProceduresDeployedAsync`, then modal `DataMigrationWizardWindow(autoStart: true, controller)` | 80–100 % | Checkpoint strictly between ProcID steps |
+| Outcome | `LogCompletedUnitsAsync(..., "COMPLETED")` or `INCOMPLETE` / `CANCELLED` / `FAILED` | — | Refreshes DB list on completion; logs `CANCELLED` on stop |
 
-Phase 1/2 failures raise `PipelineAlertWindow` with **Retry / Abort** (`allowSkip: false`) inside retry loops; cancelling records `Status = 'CANCELLED'`.
+* **Cooperative Pause & Stop Controls:** Right header group exposes `[State Badge: Running/Pausing…/Paused/Stopping…/Stopped] [⏸ Pause / ▶ Resume] [⏹ Stop]`. Buttons debounce during transitions.
+* **Stop Confirmations:** Stopping or closing window during operation opens `PipelineConfirmStopWindow` with phase-specific consequences. Standard users receive clean guidance; Admin users receive technical details (row counts, committed batches, active ProcID). Default focus is on `[Continue Running]`.
+* Stop audit row is written to `tblUnitMigrationLog` with `Status = 'CANCELLED'`.
+* Phase 1/2 failures raise `PipelineAlertWindow` with **Retry / Abort** (`allowSkip: false`) inside retry loops.
 
 ### 5.8 Step 4 — Audit and reporting
 
@@ -354,7 +370,7 @@ Phase 1/2 failures raise `PipelineAlertWindow` with **Retry / Abort** (`allowSki
 | `IntermediateDbService.cs` | `static class` | `CheckDatabaseExistsAsync`, `ValidateSchemaAsync`, `CreateOrRepairDatabaseAsync`, `StageDataFromSourceAsync`, `LogCompletedUnitsAsync`, log reading, `CheckSelectedDatabaseMigrationStatusAsync`, helpers `ColumnExistsAsync` / `TableExistsAsync` |
 | `StoredProcedureDeployer.cs` | `static class` | SP name constants, `CheckProceduresAsync`, `LoadScriptContent` (embedded resource → `DevResource` fallback), `DeployStoredProcedureAsync`, `DeployAllProceduresAsync`, `EnsureProceduresDeployedAsync` |
 | `PipelineExecutionLogger.cs` | `enum PipelineLogSeverity`, `PipelineLogEntry`, `static class PipelineExecutionLogger` | `Entries` (`ObservableCollection`), `LogInfo/LogWarning/LogError`, `CheckAndLogMappingAnomaly`, `ExportToCsv`, `LogsDirectory`, `TodayLogFilePath`, counters (`ErrorCount`, `WarningCount`, `TotalCount`) |
-| `LoginWindow.xaml(.cs)` | `LoginWindow : Window` | Hard-coded credential check, theme toggle, Enter-to-login, opens `MainWindow` |
+| `LoginWindow.xaml(.cs)` | `LoginWindow : Window` | Salted SHA-256 credential authentication, theme toggle, Enter-to-login, opens `MainWindow` |
 | `MainWindow.xaml(.cs)` | `MainWindow : Window` | Orchestration: connect, staging-DB guard, restore/attach, data fetch, font conversion, batch updates, auto pipeline, step navigation, role/mode views; also hosts `TableItem` and `EnumerableExtensions.Batch<T>` |
 | `DbPrepWizardWindow.xaml(.cs)` | `DbPrepWizardWindow`, `CompatRow` | 6-step source-DB preparation with per-step completion flags and `IsPreparationCompleted` |
 | `DataMigrationWizardWindow.xaml(.cs)` | `DataMigrationWizardWindow`, `StepState` | Pipeline runner, Auto-Run/Pause/Stop, ProcID execution, commented-out failsafe, `MigrationCompleted`, `IsMigrationCompleted`, `GetExecutionSummary` |
@@ -362,6 +378,8 @@ Phase 1/2 failures raise `PipelineAlertWindow` with **Retry / Abort** (`allowSki
 | `MigratedUnitsSummaryDialog.xaml(.cs)` | Dialog, `MigratedUnitSummaryItem` | Per-unit Khatian/Plot/Owner aggregation + totals |
 | `PipelineLogViewerWindow.xaml(.cs)` | `Window`, `static ShowLogViewer(Window?)` | Severity/phase/text filtering, CSV export, open daily log file, clear |
 | `PipelineAlertWindow.xaml(.cs)` | `enum PipelineAlertAction {Retry, Skip, Abort}`, `static ShowAlert(...)` | Modal error dialog showing title, phase, message and technical detail |
+| `PipelineConfirmStopWindow.xaml(.cs)` | `Window`, `static ShowConfirmation(...)` | Themed stop / abort confirmation dialog; displays phase consequences and Admin technical details box; defaults focus to Continue |
+| `OperationController.cs` | `enum OperationState`, `class OperationController` | Single source of truth for operation flow control (Idle, Running, PauseRequested, Paused, StopRequested, Stopped); non-blocking `CheckpointAsync`, thread-safe state events |
 | `ViewRecordsWindow.xaml(.cs)` | `Window`, `LandRecordDummyModel` | Search/report prototype populated by `SeedDummyRecords()` (no DB binding) |
 
 ### 6.2 `DBAccess` (net10.0 class library)
@@ -517,7 +535,12 @@ Guarantees / guard rails around it:
 | Blocking alerts | `PipelineAlertWindow.ShowAlert(owner, title, phase, message, details, allowSkip)` | modal dialog with Retry / Skip / Abort |
 | Debug output | `System.Diagnostics.Debug.WriteLine` (e.g. SP deploy notices) | VS Output window |
 
-`PipelineLogEntry` shape: `Id`, `Timestamp` (+`TimeFormatted`), `Phase`, `Severity`, `Table`, `Column`, `RecordId`, `Message`, `RawValue`, `ConvertedValue`, `SeverityIcon`, `SeverityColor`. Phases currently emitted: `Pre-Check`, `Step 1 (Staging)`, `Step 2 (Font Conversion)`, `Step 2 (DB Update)`, `Step 3 (Migration SP)`, `Automated Pipeline`. Severity counters (`ErrorCount`, `WarningCount`, `TotalCount`) drive the top-bar badge and post-run summaries.
+`PipelineLogEntry` shape: `Id`, `Timestamp` (+`TimeFormatted`), `Phase`, `Severity`, `Table`, `Column`, `RecordId`, `Message`, `RawValue`, `ConvertedValue`, `SeverityIcon`, `SeverityColor`. Phases currently emitted: `Pre-Check`, `Step 1 (Staging)`, `Step 2 (Font Conversion)`, `Step 2 (DB Update)`, `Step 3 (Migration SP)`, `Automated Pipeline`.
+
+**Execution flow & audit events:**
+- Every `OperationController` state change (`PauseRequested`, `Paused`, `Resumed`, `StopRequested`, `Stopped`) is logged via `PipelineExecutionLogger` with current phase, record counts, and committed batch numbers.
+- Upon premature cancellation, an audit row is written to `tblUnitMigrationLog` with `Status = 'CANCELLED'` and phase progress stored in `Remarks`.
+- Severity counters (`ErrorCount`, `WarningCount`, `TotalCount`) drive the top-bar badge and post-run summaries.
 
 ---
 
@@ -547,16 +570,20 @@ Every window subscribes to `ThemeManager.ThemeChanged`, calls `UpdateThemeButton
 | Explicit preparation opt-in | Source-DB schema changes are possible only through `DbPrepWizardWindow`, one step at a time, each locking after success |
 | Staging-DB gate | Source-DB list stays disabled until `DLRS_Migration_Intrm` exists **and** passes deep schema validation; a blocking red banner explains what to fix |
 | Re-migration block | `tblUnitMigrationLog` rows with `COMPLETED` for the same unit codes block staging and the auto pipeline (`PipelineAlertWindow`, no skip) |
-| Double-conversion (Mojibake) guard | Unicode detection in DB and in memory; Standard users blocked, Admin must confirm explicitly |
+| Migrated DB auto-hiding | `LoadDatabases` excludes DBs with `Status = 'COMPLETED'` from selection; Admin toggle reveals them as disabled with badge |
+| Transactional staging rollback | Step 1 `TRUNCATE` + `INSERT` wrapped in single atomic `SqlTransaction`; stop/cancel rolls back to prior staging state |
+| Cooperative Pause/Stop checkpoints | Step 1 disables pause (server-side batch); Step 2 checkpoints per record and between JSON chunks; Step 3 checkpoints between ProcIDs |
+| Resumable Mojibake guard | Unicode detection in DB and in memory; allows resuming stopped runs for rows with `convsts != 'SUCCESS'` while preventing double conversion |
 | Failsafe locks | Step 2 cannot re-run once `_isStage3Completed`; `DbPrepWizardWindow` steps cannot re-run; backward navigation blocked after completion |
+| Window close safeguard | Closing `MainWindow` or `DataMigrationWizardWindow` while running or paused triggers `PipelineConfirmStopWindow` confirmation |
 | Commented-out SP branch tolerance | `AppConfig.IsCommentedOutOrNotFoundInDb` + `ContinueIfStepCommentedOutInDb` → step marked "Bypassed", pipeline continues |
-| Re-entrancy guard | `_isOperationRunning` prevents concurrent long operations; only one `CancellationTokenSource` active |
+| Re-entrancy guard | `_isOperationRunning` and `_opController` prevent concurrent operations; thread-safe state transitions |
 | Escaped dynamic SQL | SP calls use `SqlParameter`; file paths in `RESTORE`/`ATTACH` are escaped (`'` → `''`, `]` → `]]`) |
-| Audit trail | Every run logs status, row counts, user, machine and remarks |
+| Audit trail | Every run logs status (`COMPLETED`, `CANCELLED`, `FAILED`), row counts, user, machine and remarks |
 
 ⚠️ **Security caveats found in code (documented, not modified)**
 
-1. `LoginWindow` contains **hard-coded credentials** (`Admin/Admin#321`, `User/1234`) with no hashing, lockout or user store. `UserSession.CurrentUsername` defaults to `"Admin"`.
+1. `LoginWindow` credentials use **salted SHA-256 byte hashes** verified in constant time. Plaintext password strings do not exist in binary metadata or IL code. (There is no remote identity server or lockout mechanism; authentication is local to the workstation). `UserSession.CurrentUsername` defaults to `"Admin"`.
 2. Connection strings are built from UI input with `Encrypt=True;TrustServerCertificate=True`; nothing is persisted (good), but there is no secret store.
 3. `Geninfo` / `WebProcAccess` implement a JWT flow against a local HTTP API (`http://localhost:8099/api/`) with static test credentials. This path is **unused** by the desktop app but still compiled in.
 4. `DevResource/*.sql` and the SP scripts contain real production object names — treat the repository as sensitive material.
@@ -650,6 +677,7 @@ Findings from reading the code (recorded for maintainers; nothing was changed):
 
 14. `DLRS_DATA_MIGRATION_SYSTEM_OPERATION_MANUAL.md` documents app **v0.14**, while `AppConfig.Version` is now **v0.19a**, and it states `ConversionRowDelayMs` default `0` while the code uses `2`. Prefer `AppConfig.cs` as the source of truth.
 15. `README.md` is only a snippet of the `AREAINF` migration query, not a project readme.
+16. **Pause/Stop & Database Filtering (v0.19a):** Added cooperative `OperationController` managing Pause/Resume/Stop with atomic SQL transaction rollback for staging, batch-boundary checkpoints for conversion, and ProcID-boundary checkpoints for migration. Added automatic exclusion of migrated databases (`tblUnitMigrationLog` where `Status = 'COMPLETED'`) with caption and Admin reveal toggle.
 
 ---
 

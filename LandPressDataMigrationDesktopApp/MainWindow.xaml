@@ -300,6 +300,18 @@
                             <ListBox x:Name="lstDatabases" Height="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}" FontSize="13"
                                      SelectionChanged="Databases_SelectionChanged"/>
 
+                            <!-- Migrated Databases Hidden Info & Admin Toggle -->
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="txtHiddenDbCount" Text="" Visibility="Collapsed" Foreground="{DynamicResource ThemeTextMuted}" FontSize="11.5" FontStyle="Italic" VerticalAlignment="Center"/>
+                                <CheckBox Grid.Column="1" x:Name="chkShowMigratedDbs" Content="Show migrated databases" Visibility="Collapsed"
+                                          Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" VerticalAlignment="Center"
+                                          Checked="ChkShowMigratedDbs_CheckedChanged" Unchecked="ChkShowMigratedDbs_CheckedChanged"/>
+                            </Grid>
+
                             <!-- Active Database Banner -->
                             <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#38BDF8" BorderThickness="1.5" CornerRadius="6" Padding="10,7" Margin="0,8,0,0">
                                 <StackPanel Orientation="Horizontal">
@@ -475,6 +487,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- STEP 1 CHIP: Copy to Intermediate DB -->
@@ -522,6 +535,39 @@
                                     <TextBlock Text="Step 3: Core Migration" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="14.5"/>
                                     <TextBlock x:Name="txtChip3Status" Text="Migrate to DLRSLSINF_4103PRSDB" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" FontWeight="SemiBold" Margin="0,3,0,0"/>
                                 </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- OPERATION PAUSE / RESUME / STOP CONTROLS -->
+                        <Border Grid.Column="5" x:Name="panelTopOperationControl" Visibility="Collapsed"
+                                Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5" CornerRadius="8" Padding="10,6" Margin="10,0,0,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <!-- Status Badge -->
+                                <Border x:Name="borderOpStateBadge" Background="#1E293B" CornerRadius="4" Padding="8,4" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtOpStateLabel" Text="Running" Foreground="#38BDF8" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                                </Border>
+                                <!-- Pause / Resume Button -->
+                                <Button x:Name="btnTopOpPauseResume" Style="{StaticResource AppBtn}" Padding="10,5" MinHeight="30" FontSize="12" FontWeight="SemiBold"
+                                        Margin="0,0,6,0" Click="BtnTopOpPauseResume_Click" ToolTip="Pause current operation">
+                                    <Button.Background>
+                                        <SolidColorBrush Color="#D97706"/>
+                                    </Button.Background>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="txtTopOpPauseResumeIcon" Text="⏸" Margin="0,0,4,0"/>
+                                        <TextBlock x:Name="txtTopOpPauseResumeText" Text="Pause"/>
+                                    </StackPanel>
+                                </Button>
+                                <!-- Stop Button -->
+                                <Button x:Name="btnTopOpStop" Style="{StaticResource AppBtn}" Padding="10,5" MinHeight="30" FontSize="12" FontWeight="SemiBold"
+                                        Click="BtnTopOpStop_Click" ToolTip="Stop and cancel current operation">
+                                    <Button.Background>
+                                        <SolidColorBrush Color="#DC2626"/>
+                                    </Button.Background>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="⏹" Margin="0,0,4,0"/>
+                                        <TextBlock Text="Stop"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -1063,6 +1109,17 @@
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="MIGRATION PIPELINE COMPLETED" Foreground="{DynamicResource ThemeSuccessText}" FontSize="13" FontWeight="Bold"/>
                                         <TextBlock Text="All core migration steps have been executed and saved into [DLRSLSINF_4103PRSDB]." Foreground="{DynamicResource ThemeSuccessText}" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Stopped / Partial Step 3 Warning Banner -->
+                            <Border x:Name="borderStage4StoppedBanner" Visibility="Collapsed" Background="#451A03" BorderBrush="#F59E0B" BorderThickness="1.5" CornerRadius="8" Padding="14,10" Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⚠️" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock x:Name="txtStage4StoppedTitle" Text="PREVIOUS RUN STOPPED" Foreground="#FDE68A" FontSize="13" FontWeight="Bold"/>
+                                        <TextBlock x:Name="txtStage4StoppedDetail" Text="Previous migration run was stopped. You can relaunch the wizard to resume or retry remaining steps." Foreground="#FEF3C7" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

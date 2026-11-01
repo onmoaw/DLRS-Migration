@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -42,10 +42,8 @@ namespace DBAccess
             public string eascom5 { get; set; } = string.Empty;
             public string eascom6 { get; set; } = string.Empty;
             public int rowid { get; set; } = 0;
-
+            public string convsts { get; set; } = string.Empty;
         }
-
-
 
         public class tblLinfo02 
         {
@@ -61,8 +59,7 @@ namespace DBAccess
             public string addr9 { get; set; } = string.Empty;
             public string addr10 { get; set; } = string.Empty;
             public int rowid { get; set; } = 0;
-
+            public string convsts { get; set; } = string.Empty;
         }
-
     }
 }

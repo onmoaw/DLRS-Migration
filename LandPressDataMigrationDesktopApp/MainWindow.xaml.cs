@@ -73,9 +73,18 @@ namespace LandPressDataMigrationDesktopApp
         private string _currentRunningOperationName = string.Empty;
         private CancellationTokenSource? _currentOperationCts = null;
 
+        // Central Operation Controller for Pausing, Resuming, and Stopping
+        private readonly OperationController _opController = new();
+        private bool _isStagingPhaseActive = false;
+        private int _currentConversionIndex = 0;
+        private int _linfo01BatchesCommitted = 0;
+        private int _linfo01TotalBatches = 0;
+        private int _linfo02BatchesCommitted = 0;
+        private int _linfo02TotalBatches = 0;
+        private string? _lastCompletedProcId = null;
+
         // Execution control mode: default false = 1-Click Automated Pipeline; true = Manual Step-by-Step
         private bool _isManualModeEnabled = false;
-        private bool _isAutoPipelinePaused = false;
         private readonly System.Diagnostics.Stopwatch _autoPipelineStopwatch = new();
         private System.Windows.Threading.DispatcherTimer? _autoPipelineTimer = null;
 
@@ -90,26 +99,30 @@ namespace LandPressDataMigrationDesktopApp
             ApplyControlModeView();
 
             ThemeManager.ThemeChanged += OnThemeChanged;
+            _opController.StateChanged += OnOperationStateChanged;
             Closing += MainWindow_Closing;
-            Closed += (s, e) => ThemeManager.ThemeChanged -= OnThemeChanged;
+            Closed += (s, e) =>
+            {
+                ThemeManager.ThemeChanged -= OnThemeChanged;
+                _opController.StateChanged -= OnOperationStateChanged;
+            };
 
             UpdateWorkflowState();
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (_isOperationRunning)
+            if (_isOperationRunning || _opController.IsRunning)
             {
-                var result = System.Windows.MessageBox.Show(
-                    $"⚠️ Operation in Progress!\n\n" +
-                    $"Currently executing: [{_currentRunningOperationName}]\n\n" +
-                    "Closing the application now will interrupt active database staging/conversion operations and may leave data in an incomplete state.\n\n" +
-                    "Are you sure you want to abort the current operation and exit?",
-                    "Warning: Operation in Progress",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+                string phaseDesc = GetStopConsequenceMessage(_currentActiveStep, out string techDetail);
+                bool confirmed = PipelineConfirmStopWindow.ConfirmStop(
+                    this,
+                    string.IsNullOrWhiteSpace(_currentRunningOperationName) ? $"Step {_currentActiveStep}" : _currentRunningOperationName,
+                    phaseDesc,
+                    techDetail,
+                    isAppClosing: true);
 
-                if (result != MessageBoxResult.Yes)
+                if (!confirmed)
                 {
                     e.Cancel = true;
                     return;
@@ -117,10 +130,167 @@ namespace LandPressDataMigrationDesktopApp
 
                 try
                 {
+                    _opController.RequestStop();
                     _currentOperationCts?.Cancel();
                 }
                 catch { }
             }
+        }
+
+        private void OnOperationStateChanged(object? sender, OperationStateChangedEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                UpdateTopOperationControlUI(e.NewState);
+            });
+        }
+
+        private void UpdateTopOperationControlUI(OperationState state)
+        {
+            if (panelTopOperationControl == null) return;
+
+            if (state == OperationState.Idle || !_isOperationRunning)
+            {
+                panelTopOperationControl.Visibility = Visibility.Collapsed;
+                if (btnTopOpPauseResume != null) btnTopOpPauseResume.IsEnabled = false;
+                if (btnTopOpStop != null) btnTopOpStop.IsEnabled = false;
+                return;
+            }
+
+            panelTopOperationControl.Visibility = Visibility.Visible;
+
+            switch (state)
+            {
+                case OperationState.Running:
+                    txtOpStateLabel.Text = "Running";
+                    borderOpStateBadge.Background = new SolidBrush(MediaColor.FromRgb(30, 41, 59));
+                    txtOpStateLabel.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
+                    txtTopOpPauseResumeIcon.Text = "⏸";
+                    txtTopOpPauseResumeText.Text = "Pause";
+                    if (_isStagingPhaseActive)
+                    {
+                        btnTopOpPauseResume.IsEnabled = false;
+                        btnTopOpPauseResume.ToolTip = "Pause unavailable during staging";
+                    }
+                    else
+                    {
+                        btnTopOpPauseResume.IsEnabled = true;
+                        btnTopOpPauseResume.ToolTip = "Pause current operation";
+                    }
+                    btnTopOpStop.IsEnabled = true;
+                    if (btnPauseFullAuto != null) btnPauseFullAuto.Content = "⏸ Pause";
+                    break;
+
+                case OperationState.PauseRequested:
+                    txtOpStateLabel.Text = "Pausing...";
+                    borderOpStateBadge.Background = new SolidBrush(MediaColor.FromRgb(69, 26, 3));
+                    txtOpStateLabel.Foreground = new SolidBrush(MediaColor.FromRgb(251, 191, 36));
+                    btnTopOpPauseResume.IsEnabled = false;
+                    btnTopOpStop.IsEnabled = true; // allow stop during pausing
+                    break;
+
+                case OperationState.Paused:
+                    txtOpStateLabel.Text = "Paused";
+                    borderOpStateBadge.Background = new SolidBrush(MediaColor.FromRgb(120, 53, 15));
+                    txtOpStateLabel.Foreground = new SolidBrush(MediaColor.FromRgb(253, 230, 138));
+                    txtTopOpPauseResumeIcon.Text = "▶";
+                    txtTopOpPauseResumeText.Text = "Resume";
+                    btnTopOpPauseResume.ToolTip = "Resume operation";
+                    btnTopOpPauseResume.IsEnabled = true;
+                    btnTopOpStop.IsEnabled = true;
+                    if (btnPauseFullAuto != null) btnPauseFullAuto.Content = "▶ Resume";
+                    break;
+
+                case OperationState.StopRequested:
+                    txtOpStateLabel.Text = "Stopping...";
+                    borderOpStateBadge.Background = new SolidBrush(MediaColor.FromRgb(69, 10, 10));
+                    txtOpStateLabel.Foreground = new SolidBrush(MediaColor.FromRgb(248, 113, 113));
+                    btnTopOpPauseResume.IsEnabled = false;
+                    btnTopOpStop.IsEnabled = false;
+                    break;
+
+                case OperationState.Stopped:
+                    txtOpStateLabel.Text = "Stopped";
+                    borderOpStateBadge.Background = new SolidBrush(MediaColor.FromRgb(69, 10, 10));
+                    txtOpStateLabel.Foreground = new SolidBrush(MediaColor.FromRgb(248, 113, 113));
+                    btnTopOpPauseResume.IsEnabled = false;
+                    btnTopOpStop.IsEnabled = false;
+                    break;
+            }
+        }
+
+        private void BtnTopOpPauseResume_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isStagingPhaseActive) return;
+
+            if (_opController.IsPaused)
+            {
+                PipelineExecutionLogger.LogInfo("Pipeline Control", "User resumed operation.");
+                _opController.Resume();
+            }
+            else if (_opController.State == OperationState.Running)
+            {
+                PipelineExecutionLogger.LogInfo("Pipeline Control", "User requested pause. Checkpoint will pause at safe boundary.");
+                _opController.RequestPause();
+            }
+        }
+
+        private void BtnTopOpStop_Click(object sender, RoutedEventArgs e)
+        {
+            string phaseDesc = GetStopConsequenceMessage(_currentActiveStep, out string techDetail);
+            bool confirmed = PipelineConfirmStopWindow.ConfirmStop(
+                this,
+                string.IsNullOrWhiteSpace(_currentRunningOperationName) ? $"Step {_currentActiveStep}" : _currentRunningOperationName,
+                phaseDesc,
+                techDetail);
+
+            if (!confirmed) return;
+
+            PipelineExecutionLogger.LogWarning("Pipeline Control", $"User confirmed stop during [{_currentRunningOperationName}]. Requesting stop.");
+            _opController.RequestStop();
+            _currentOperationCts?.Cancel();
+        }
+
+        private string GetStopConsequenceMessage(int step, out string techDetail)
+        {
+            if (_isStagingPhaseActive || step == 1)
+            {
+                techDetail = $"Database: {_DbName}, Staging DB: {AppConfig.IntermediateDbName}, Staging Transaction Active: true";
+                return "Staging transaction will be rolled back completely. Step 1 will remain uncompleted and must be rerun.";
+            }
+            else if (step == 2)
+            {
+                int committedBatches = _linfo01BatchesCommitted + _linfo02BatchesCommitted;
+                int totalBatches = _linfo01TotalBatches + _linfo02TotalBatches;
+
+                if (totalBatches > 0)
+                {
+                    techDetail = $"tblLinfo01 Batches: {_linfo01BatchesCommitted}/{_linfo01TotalBatches}, tblLinfo02 Batches: {_linfo02BatchesCommitted}/{_linfo02TotalBatches}";
+                    return $"{committedBatches} of {totalBatches} batches have been written to the intermediate database. The remaining batches will remain unconverted.";
+                }
+                else
+                {
+                    techDetail = $"Linfo01 Count: {tblLinfo01List.Count}, Linfo02 Count: {tblLinfo02List.Count}, Row Index: {_currentConversionIndex}";
+                    return "In-memory font conversion will be halted immediately. No records have been written to the intermediate database yet.";
+                }
+            }
+            else
+            {
+                techDetail = $"Last Completed ProcID: {_lastCompletedProcId ?? "(none)"}, Core DB: {_BaseDbName}";
+                return $"Migration will halt after the current step finishes. Core database contains partial data from completed steps up to ProcID {_lastCompletedProcId ?? "none"}.";
+            }
+        }
+
+        private async void ChkShowMigratedDbs_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_baseConnectionString)) return;
+            try
+            {
+                using var conn = new SqlConnection(_baseConnectionString);
+                await conn.OpenAsync();
+                LoadDatabases(conn);
+            }
+            catch { }
         }
 
         private void BtnThemeToggle_Click(object sender, RoutedEventArgs e)
@@ -331,6 +501,9 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (lblConversionCount != null)
                     lblConversionCount.Visibility = Visibility.Visible;
+
+                if (chkShowMigratedDbs != null)
+                    chkShowMigratedDbs.Visibility = Visibility.Visible;
             }
             else
             {
@@ -344,6 +517,12 @@ namespace LandPressDataMigrationDesktopApp
                     panelAdminDelayControl.Visibility = Visibility.Collapsed;
                 if (chkConversionDelay != null)
                     chkConversionDelay.IsChecked = false;
+
+                if (chkShowMigratedDbs != null)
+                {
+                    chkShowMigratedDbs.Visibility = Visibility.Collapsed;
+                    chkShowMigratedDbs.IsChecked = false;
+                }
 
                 // Standard User view: Remove remaining time (ETA), speed, and record counts.
                 // Keep strictly just the progress % and the progression bar.
@@ -1087,12 +1266,13 @@ namespace LandPressDataMigrationDesktopApp
         }
 
         // ------------------------------
-        // LOAD DATABASES
+        // LOAD DATABASES (Feature B: Excludes Migrated Databases)
         // ------------------------------
         private void LoadDatabases(SqlConnection conn)
         {
             lstDatabases.Items.Clear();
 
+            var allDbs = new List<string>();
             string sql = @"
                 SELECT name
                 FROM sys.databases
@@ -1100,11 +1280,84 @@ namespace LandPressDataMigrationDesktopApp
                   AND name NOT IN ('master', 'tempdb', 'model', 'msdb', 'DLRS_Migration_Intrm')
                 ORDER BY name";
 
-            using var cmd = new SqlCommand(sql, conn);
-            using var reader = cmd.ExecuteReader();
+            using (var cmd = new SqlCommand(sql, conn))
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                    allDbs.Add(reader.GetString(0));
+            }
 
-            while (reader.Read())
-                lstDatabases.Items.Add(reader.GetString(0));
+            // Feature B: Single round-trip query to fetch databases marked COMPLETED in tblUnitMigrationLog
+            var completedDbs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                string completedSql = $@"
+                    IF OBJECT_ID('[{AppConfig.IntermediateDbName}].dbo.tblUnitMigrationLog') IS NOT NULL
+                    BEGIN
+                        SELECT DISTINCT LTRIM(RTRIM(SourceDbName))
+                        FROM [{AppConfig.IntermediateDbName}].dbo.tblUnitMigrationLog
+                        WHERE UPPER(Status) = 'COMPLETED'
+                          AND SourceDbName IS NOT NULL
+                          AND LEN(LTRIM(RTRIM(SourceDbName))) > 0;
+                    END";
+
+                using var completedCmd = new SqlCommand(completedSql, conn);
+                using var completedReader = completedCmd.ExecuteReader();
+                while (completedReader.Read())
+                {
+                    if (!completedReader.IsDBNull(0))
+                    {
+                        string db = completedReader.GetString(0).Trim();
+                        if (!string.IsNullOrEmpty(db))
+                            completedDbs.Add(db);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Fail-open: if query fails or table does not exist, log warning and do not block
+                PipelineExecutionLogger.LogWarning("LoadDatabases", $"Feature B: Could not query completed databases (fail-open): {ex.Message}");
+            }
+
+            int hiddenCount = allDbs.Count(db => completedDbs.Contains(db));
+            bool showMigrated = UserSession.IsAdmin && (chkShowMigratedDbs?.IsChecked == true);
+
+            foreach (var db in allDbs)
+            {
+                bool isCompleted = completedDbs.Contains(db);
+                if (isCompleted)
+                {
+                    if (showMigrated)
+                    {
+                        var item = new ListBoxItem
+                        {
+                            Content = $"{db}  ✔ Migrated",
+                            Foreground = System.Windows.Media.Brushes.Gray,
+                            IsEnabled = false,
+                            Tag = db
+                        };
+                        lstDatabases.Items.Add(item);
+                    }
+                }
+                else
+                {
+                    lstDatabases.Items.Add(db);
+                }
+            }
+
+            if (txtHiddenDbCount != null)
+            {
+                if (hiddenCount > 0 && !showMigrated)
+                {
+                    txtHiddenDbCount.Text = $"ℹ {hiddenCount} migrated database(s) hidden";
+                    txtHiddenDbCount.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    txtHiddenDbCount.Text = string.Empty;
+                    txtHiddenDbCount.Visibility = Visibility.Collapsed;
+                }
+            }
         }
 
         // ── WORKFLOW STATE MANAGEMENT & SEQUENTIAL ENFORCEMENT ──
@@ -1631,27 +1884,12 @@ namespace LandPressDataMigrationDesktopApp
 
         private void BtnPauseFullAuto_Click(object sender, RoutedEventArgs e)
         {
-            _isAutoPipelinePaused = !_isAutoPipelinePaused;
-            if (btnPauseFullAuto != null)
-                btnPauseFullAuto.Content = _isAutoPipelinePaused ? "▶ Resume" : "⏸ Pause";
+            BtnTopOpPauseResume_Click(sender, e);
         }
 
         private void BtnStopFullAuto_Click(object sender, RoutedEventArgs e)
         {
-            var res = System.Windows.MessageBox.Show(
-                "Are you sure you want to stop the automated pipeline?\n\nAny currently executing SQL command will finish, and subsequent pipeline steps will be cancelled.",
-                "Confirm Pipeline Stop",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (res == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    _currentOperationCts?.Cancel();
-                }
-                catch { }
-            }
+            BtnTopOpStop_Click(sender, e);
         }
 
         private async Task RunCompleteAutoPipelineAsync()
@@ -1710,16 +1948,18 @@ namespace LandPressDataMigrationDesktopApp
 
             _isOperationRunning = true;
             _currentRunningOperationName = $"Automated Pipeline (Stage -> Convert -> Migrate) for [{_DbName}]";
+            _opController.Start();
             _currentOperationCts = new CancellationTokenSource();
-            var ct = _currentOperationCts.Token;
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_currentOperationCts.Token, _opController.Token);
+            var ct = linkedCts.Token;
 
             if (btnStartFullAuto != null) btnStartFullAuto.IsEnabled = false;
             if (chkConversionDelay != null) chkConversionDelay.IsEnabled = false;
             if (panelAutoControls != null) panelAutoControls.Visibility = Visibility.Visible;
             if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 2;
             if (borderAutoCompletedBanner != null) borderAutoCompletedBanner.Visibility = Visibility.Collapsed;
+            if (borderStage4StoppedBanner != null) borderStage4StoppedBanner.Visibility = Visibility.Collapsed;
 
-            _isAutoPipelinePaused = false;
             if (btnPauseFullAuto != null) btnPauseFullAuto.Content = "⏸ Pause";
 
             _autoPipelineStopwatch.Restart();
@@ -1757,10 +1997,13 @@ namespace LandPressDataMigrationDesktopApp
 
                     try
                     {
-                        (hsb, l01, l02) = await IntermediateDbService.StageDataFromSourceAsync(_baseConnectionString, _DbName);
+                        _isStagingPhaseActive = true;
+                        UpdateTopOperationControlUI(_opController.State);
+
+                        (hsb, l01, l02) = await IntermediateDbService.StageDataFromSourceAsync(_baseConnectionString, _DbName, ct: ct);
                         phase1Success = true;
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (!ct.IsCancellationRequested)
                     {
                         var (action, _) = PipelineAlertWindow.ShowAlert(
                             this,
@@ -1775,6 +2018,11 @@ namespace LandPressDataMigrationDesktopApp
                         else
                             return; // Abort
                     }
+                    finally
+                    {
+                        _isStagingPhaseActive = false;
+                        UpdateTopOperationControlUI(_opController.State);
+                    }
                 }
 
                 _isStage2Completed = true;
@@ -1785,9 +2033,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 await LoadIntermediateTablesAsync();
                 await Task.Delay(AppConfig.AutoRunStepDelayMs, ct);
-
-                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
-                    await Task.Delay(200, ct);
+                await _opController.CheckpointAsync(ct);
 
                 // ══════════════════════════════════════════════════════════════════
                 // PHASE 2: UNICODE FONT CONVERSION & INTERMEDIATE DB UPDATE
@@ -1811,7 +2057,7 @@ namespace LandPressDataMigrationDesktopApp
                         await FetchStagedDataForAutoAsync(ct);
                         fetchSuccess = true;
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (!ct.IsCancellationRequested)
                     {
                         var (action, _) = PipelineAlertWindow.ShowAlert(
                             this,
@@ -1829,9 +2075,7 @@ namespace LandPressDataMigrationDesktopApp
                 }
 
                 if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45;
-
-                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
-                    await Task.Delay(200, ct);
+                await _opController.CheckpointAsync(ct);
 
                 // Perform in-memory Unicode font conversion
                 if (txtFullAutoStatus != null)
@@ -1848,8 +2092,7 @@ namespace LandPressDataMigrationDesktopApp
                     txtFullAutoDetail.Text = $"Converted {tblLinfo01List.Count + tblLinfo02List.Count:N0} records ({mappingWarns} mapping notice(s) recorded in [📋 Logs]).";
                 }
 
-                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
-                    await Task.Delay(200, ct);
+                await _opController.CheckpointAsync(ct);
 
                 // Commit Unicode updates to DLRS_Migration_Intrm
                 if (txtFullAutoStatus != null)
@@ -1867,7 +2110,7 @@ namespace LandPressDataMigrationDesktopApp
                         await CommitUnicodeUpdateForAutoAsync(ct);
                         updateSuccess = true;
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (!ct.IsCancellationRequested)
                     {
                         var (action, _) = PipelineAlertWindow.ShowAlert(
                             this,
@@ -1887,9 +2130,7 @@ namespace LandPressDataMigrationDesktopApp
                 _isStage3Completed = true;
                 if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 75;
                 await Task.Delay(AppConfig.AutoRunStepDelayMs, ct);
-
-                while (_isAutoPipelinePaused && !ct.IsCancellationRequested)
-                    await Task.Delay(200, ct);
+                await _opController.CheckpointAsync(ct);
 
                 // ══════════════════════════════════════════════════════════════════
                 // PHASE 3: SEQUENTIAL STORED PROCEDURES MIGRATION TO CORE DB
@@ -1920,8 +2161,8 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 80;
 
-                // Launch Data Migration Wizard popup in Auto-Run mode so the user sees live execution!
-                var wizard = new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName, autoStart: true)
+                // Launch Data Migration Wizard popup in Auto-Run mode with OperationController wired!
+                var wizard = new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName, autoStart: true, controller: _opController)
                 {
                     Owner = this
                 };
@@ -1936,12 +2177,31 @@ namespace LandPressDataMigrationDesktopApp
                         logged = true;
                         await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
                     }
+
+                    // Feature B: Refresh DB list immediately so completed database is hidden
+                    try
+                    {
+                        using var rConn = new SqlConnection(_baseConnectionString);
+                        await rConn.OpenAsync();
+                        LoadDatabases(rConn);
+                    }
+                    catch { }
                 };
 
                 wizard.ShowDialog();
 
                 if (!wizard.IsMigrationCompleted)
                 {
+                    _lastCompletedProcId = wizard.LastCompletedProcId;
+                    if (borderStage4StoppedBanner != null)
+                    {
+                        borderStage4StoppedBanner.Visibility = Visibility.Visible;
+                        if (txtStage4StoppedTitle != null)
+                            txtStage4StoppedTitle.Text = $"PREVIOUS RUN STOPPED AT PROCID {_lastCompletedProcId ?? "UNKNOWN"}";
+                        if (txtStage4StoppedDetail != null)
+                            txtStage4StoppedDetail.Text = "Previous migration run was stopped. You can relaunch the wizard to resume from the next pending step.";
+                    }
+
                     if (txtFullAutoStatus != null)
                     {
                         txtFullAutoStatus.Text = "⚠️ Migration wizard was closed or stopped before completion.";
@@ -1957,8 +2217,8 @@ namespace LandPressDataMigrationDesktopApp
                             await IntermediateDbService.LogCompletedUnitsAsync(
                                 _baseConnectionString, 
                                 _DbName, 
-                                status: "INCOMPLETE", 
-                                remarks: "Migration wizard closed before all required steps finished.");
+                                status: _opController.IsStopRequested ? "CANCELLED" : "INCOMPLETE", 
+                                remarks: $"Migration stopped at ProcID {_lastCompletedProcId ?? "none"}.");
                         }
                     }
                     catch { }
@@ -1996,6 +2256,11 @@ namespace LandPressDataMigrationDesktopApp
                         logged = true;
                         await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
                     }
+
+                    // Feature B: Refresh DB list immediately so completed database disappears from available list
+                    using var rConn = new SqlConnection(_baseConnectionString);
+                    await rConn.OpenAsync();
+                    LoadDatabases(rConn);
                 }
                 catch { }
 
@@ -2012,6 +2277,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (OperationCanceledException)
             {
+                _opController.AcknowledgeStopped();
                 if (txtFullAutoStatus != null)
                 {
                     txtFullAutoStatus.Text = "⚠️ Automated pipeline was stopped by user.";
@@ -2026,7 +2292,7 @@ namespace LandPressDataMigrationDesktopApp
                             _baseConnectionString, 
                             _DbName, 
                             status: "CANCELLED", 
-                            remarks: "Pipeline was stopped by user.");
+                            remarks: $"Pipeline was stopped by user during Step {_currentActiveStep}.");
                     }
                 }
                 catch { }
@@ -2059,8 +2325,10 @@ namespace LandPressDataMigrationDesktopApp
             {
                 _autoPipelineTimer?.Stop();
                 _isOperationRunning = false;
+                _isStagingPhaseActive = false;
                 _currentRunningOperationName = string.Empty;
                 _currentOperationCts = null;
+                _opController.Reset();
 
                 if (btnStartFullAuto != null)
                     btnStartFullAuto.IsEnabled = (!_isStage4Completed && !string.IsNullOrEmpty(_DbName));
@@ -2194,21 +2462,31 @@ namespace LandPressDataMigrationDesktopApp
             int totalToConvert = tblLinfo01List.Count + tblLinfo02List.Count;
             if (totalToConvert == 0) return;
 
-            bool alreadyUnicode = tblLinfo01List.Any(r => ContainsBengaliUnicode(r.KRemark)) ||
-                                  tblLinfo02List.Any(r => ContainsBengaliUnicode(r.OwnName));
+            bool hasAnyUnicode = tblLinfo01List.Any(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.KRemark)) ||
+                                  tblLinfo02List.Any(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.OwnName));
 
-            if (alreadyUnicode)
+            bool hasUnconvertedRows = tblLinfo01List.Any(r => r.convsts != "SUCCESS" && !ContainsBengaliUnicode(r.KRemark)) ||
+                                      tblLinfo02List.Any(r => r.convsts != "SUCCESS" && !ContainsBengaliUnicode(r.OwnName));
+
+            if (hasAnyUnicode && !hasUnconvertedRows)
             {
                 Dispatcher.Invoke(() =>
                 {
                     if (txtFullAutoDetail != null)
-                        txtFullAutoDetail.Text = "Data is already Unicode. Skipping text re-conversion to prevent character corruption.";
+                        txtFullAutoDetail.Text = "All data is already in Unicode. Skipping text re-conversion to prevent character corruption.";
                 });
                 return;
             }
 
+            int alreadyConvertedCount = tblLinfo01List.Count(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.KRemark)) +
+                                        tblLinfo02List.Count(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.OwnName));
+            if (alreadyConvertedCount > 0)
+            {
+                PipelineExecutionLogger.LogInfo("Step 2", $"Resuming partial conversion: {alreadyConvertedCount:N0} records already in Unicode, {totalToConvert - alreadyConvertedCount:N0} remaining to convert.");
+            }
+
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            int processed = 0;
+            int processed = alreadyConvertedCount;
             DateTime lastUi = DateTime.MinValue;
             int rowDelayMs = AppConfig.GetConversionRowDelayMs(UserSession.IsAdmin, chkConversionDelay?.IsChecked == true);
             int uiUpdateIntervalMs = Math.Max(20, AppConfig.ConversionUiUpdateIntervalMs);
@@ -2220,98 +2498,118 @@ namespace LandPressDataMigrationDesktopApp
 
             try
             {
-                await Task.Run(() =>
-            {
-                for (int i = 0; i < tblLinfo01List.Count; i++)
+                await Task.Run(async () =>
                 {
-                    ct.ThrowIfCancellationRequested();
-                    var item = tblLinfo01List[i];
-                    string recId = item.rowid > 0 ? item.rowid.ToString() : (item.UnitCod + ":" + item.KhtNum);
-
-                    if (!string.IsNullOrEmpty(item.KRemark)) item.KRemark = ConvertAndCheckMapping(item.KRemark, "tblLinfo01", "KRemark", recId);
-                    if (!string.IsNullOrEmpty(item.eascom1)) item.eascom1 = ConvertAndCheckMapping(item.eascom1, "tblLinfo01", "eascom1", recId);
-                    if (!string.IsNullOrEmpty(item.eascom2)) item.eascom2 = ConvertAndCheckMapping(item.eascom2, "tblLinfo01", "eascom2", recId);
-                    if (!string.IsNullOrEmpty(item.eascom3)) item.eascom3 = ConvertAndCheckMapping(item.eascom3, "tblLinfo01", "eascom3", recId);
-                    if (!string.IsNullOrEmpty(item.eascom4)) item.eascom4 = ConvertAndCheckMapping(item.eascom4, "tblLinfo01", "eascom4", recId);
-                    if (!string.IsNullOrEmpty(item.eascom5)) item.eascom5 = ConvertAndCheckMapping(item.eascom5, "tblLinfo01", "eascom5", recId);
-                    if (!string.IsNullOrEmpty(item.eascom6)) item.eascom6 = ConvertAndCheckMapping(item.eascom6, "tblLinfo01", "eascom6", recId);
-
-                    if (rowDelayMs > 0)
+                    for (int i = 0; i < tblLinfo01List.Count; i++)
                     {
-                        System.Threading.Thread.Sleep(rowDelayMs);
-                    }
+                        _currentConversionIndex = i;
+                        await _opController.CheckpointAsync(ct);
 
-                    processed++;
-
-                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= uiUpdateIntervalMs || processed == totalToConvert)
-                    {
-                        lastUi = DateTime.UtcNow;
-                        int curr = processed;
-                        double pct = (double)curr / totalToConvert * 100.0;
-                        double sec = sw.Elapsed.TotalSeconds;
-                        double spd = sec > 0.05 ? curr / sec : 0;
-                        double rem = spd > 0 ? (totalToConvert - curr) / spd : 0;
-
-                        Dispatcher.Invoke(() =>
+                        var item = tblLinfo01List[i];
+                        if (item.convsts == "SUCCESS" || ContainsBengaliUnicode(item.KRemark))
                         {
-                            if (pbConversion != null) pbConversion.Value = pct;
-                            if (lblConversionPercent != null) lblConversionPercent.Text = $"{pct:F1}%";
-                            if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
-                            if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
-                            if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+                            item.convsts = "SUCCESS";
+                            continue;
+                        }
 
-                            if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
-                        });
-                    }
-                }
+                        string recId = item.rowid > 0 ? item.rowid.ToString() : (item.UnitCod + ":" + item.KhtNum);
 
-                for (int i = 0; i < tblLinfo02List.Count; i++)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    var item = tblLinfo02List[i];
-                    string recId = item.rowid > 0 ? item.rowid.ToString() : item.OwnName;
+                        if (!string.IsNullOrEmpty(item.KRemark)) item.KRemark = ConvertAndCheckMapping(item.KRemark, "tblLinfo01", "KRemark", recId);
+                        if (!string.IsNullOrEmpty(item.eascom1)) item.eascom1 = ConvertAndCheckMapping(item.eascom1, "tblLinfo01", "eascom1", recId);
+                        if (!string.IsNullOrEmpty(item.eascom2)) item.eascom2 = ConvertAndCheckMapping(item.eascom2, "tblLinfo01", "eascom2", recId);
+                        if (!string.IsNullOrEmpty(item.eascom3)) item.eascom3 = ConvertAndCheckMapping(item.eascom3, "tblLinfo01", "eascom3", recId);
+                        if (!string.IsNullOrEmpty(item.eascom4)) item.eascom4 = ConvertAndCheckMapping(item.eascom4, "tblLinfo01", "eascom4", recId);
+                        if (!string.IsNullOrEmpty(item.eascom5)) item.eascom5 = ConvertAndCheckMapping(item.eascom5, "tblLinfo01", "eascom5", recId);
+                        if (!string.IsNullOrEmpty(item.eascom6)) item.eascom6 = ConvertAndCheckMapping(item.eascom6, "tblLinfo01", "eascom6", recId);
 
-                    if (!string.IsNullOrEmpty(item.OwnName)) item.OwnName = ConvertAndCheckMapping(item.OwnName, "tblLinfo02", "OwnName", recId);
-                    if (!string.IsNullOrEmpty(item.addr1)) item.addr1 = ConvertAndCheckMapping(item.addr1, "tblLinfo02", "addr1", recId);
-                    if (!string.IsNullOrEmpty(item.addr2)) item.addr2 = ConvertAndCheckMapping(item.addr2, "tblLinfo02", "addr2", recId);
-                    if (!string.IsNullOrEmpty(item.addr3)) item.addr3 = ConvertAndCheckMapping(item.addr3, "tblLinfo02", "addr3", recId);
-                    if (!string.IsNullOrEmpty(item.addr4)) item.addr4 = ConvertAndCheckMapping(item.addr4, "tblLinfo02", "addr4", recId);
-                    if (!string.IsNullOrEmpty(item.addr5)) item.addr5 = ConvertAndCheckMapping(item.addr5, "tblLinfo02", "addr5", recId);
-                    if (!string.IsNullOrEmpty(item.addr6)) item.addr6 = ConvertAndCheckMapping(item.addr6, "tblLinfo02", "addr6", recId);
-                    if (!string.IsNullOrEmpty(item.addr7)) item.addr7 = ConvertAndCheckMapping(item.addr7, "tblLinfo02", "addr7", recId);
-                    if (!string.IsNullOrEmpty(item.addr8)) item.addr8 = ConvertAndCheckMapping(item.addr8, "tblLinfo02", "addr8", recId);
-                    if (!string.IsNullOrEmpty(item.addr9)) item.addr9 = ConvertAndCheckMapping(item.addr9, "tblLinfo02", "addr9", recId);
-                    if (!string.IsNullOrEmpty(item.addr10)) item.addr10 = ConvertAndCheckMapping(item.addr10, "tblLinfo02", "addr10", recId);
+                        item.convsts = "SUCCESS";
 
-                    if (rowDelayMs > 0)
-                    {
-                        System.Threading.Thread.Sleep(rowDelayMs);
-                    }
-
-                    processed++;
-
-                    if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= uiUpdateIntervalMs || processed == totalToConvert)
-                    {
-                        lastUi = DateTime.UtcNow;
-                        int curr = processed;
-                        double pct = (double)curr / totalToConvert * 100.0;
-                        double sec = sw.Elapsed.TotalSeconds;
-                        double spd = sec > 0.05 ? curr / sec : 0;
-                        double rem = spd > 0 ? (totalToConvert - curr) / spd : 0;
-
-                        Dispatcher.Invoke(() =>
+                        if (rowDelayMs > 0)
                         {
-                            if (pbConversion != null) pbConversion.Value = pct;
-                            if (lblConversionPercent != null) lblConversionPercent.Text = $"{pct:F1}%";
-                            if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
-                            if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
-                            if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+                            System.Threading.Thread.Sleep(rowDelayMs);
+                        }
 
-                            if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
-                        });
+                        processed++;
+
+                        if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= uiUpdateIntervalMs || processed == totalToConvert)
+                        {
+                            lastUi = DateTime.UtcNow;
+                            int curr = processed;
+                            double pct = (double)curr / totalToConvert * 100.0;
+                            double sec = sw.Elapsed.TotalSeconds;
+                            double spd = sec > 0.05 ? curr / sec : 0;
+                            double rem = spd > 0 ? (totalToConvert - curr) / spd : 0;
+
+                            Dispatcher.Invoke(() =>
+                            {
+                                if (pbConversion != null) pbConversion.Value = pct;
+                                if (lblConversionPercent != null) lblConversionPercent.Text = $"{pct:F1}%";
+                                if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
+                                if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
+                                if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+
+                                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
+                            });
+                        }
                     }
-                }
-            }, ct);
+
+                    for (int i = 0; i < tblLinfo02List.Count; i++)
+                    {
+                        _currentConversionIndex = tblLinfo01List.Count + i;
+                        await _opController.CheckpointAsync(ct);
+
+                        var item = tblLinfo02List[i];
+                        if (item.convsts == "SUCCESS" || ContainsBengaliUnicode(item.OwnName))
+                        {
+                            item.convsts = "SUCCESS";
+                            continue;
+                        }
+
+                        string recId = item.rowid > 0 ? item.rowid.ToString() : item.OwnName;
+
+                        if (!string.IsNullOrEmpty(item.OwnName)) item.OwnName = ConvertAndCheckMapping(item.OwnName, "tblLinfo02", "OwnName", recId);
+                        if (!string.IsNullOrEmpty(item.addr1)) item.addr1 = ConvertAndCheckMapping(item.addr1, "tblLinfo02", "addr1", recId);
+                        if (!string.IsNullOrEmpty(item.addr2)) item.addr2 = ConvertAndCheckMapping(item.addr2, "tblLinfo02", "addr2", recId);
+                        if (!string.IsNullOrEmpty(item.addr3)) item.addr3 = ConvertAndCheckMapping(item.addr3, "tblLinfo02", "addr3", recId);
+                        if (!string.IsNullOrEmpty(item.addr4)) item.addr4 = ConvertAndCheckMapping(item.addr4, "tblLinfo02", "addr4", recId);
+                        if (!string.IsNullOrEmpty(item.addr5)) item.addr5 = ConvertAndCheckMapping(item.addr5, "tblLinfo02", "addr5", recId);
+                        if (!string.IsNullOrEmpty(item.addr6)) item.addr6 = ConvertAndCheckMapping(item.addr6, "tblLinfo02", "addr6", recId);
+                        if (!string.IsNullOrEmpty(item.addr7)) item.addr7 = ConvertAndCheckMapping(item.addr7, "tblLinfo02", "addr7", recId);
+                        if (!string.IsNullOrEmpty(item.addr8)) item.addr8 = ConvertAndCheckMapping(item.addr8, "tblLinfo02", "addr8", recId);
+                        if (!string.IsNullOrEmpty(item.addr9)) item.addr9 = ConvertAndCheckMapping(item.addr9, "tblLinfo02", "addr9", recId);
+                        if (!string.IsNullOrEmpty(item.addr10)) item.addr10 = ConvertAndCheckMapping(item.addr10, "tblLinfo02", "addr10", recId);
+
+                        item.convsts = "SUCCESS";
+
+                        if (rowDelayMs > 0)
+                        {
+                            System.Threading.Thread.Sleep(rowDelayMs);
+                        }
+
+                        processed++;
+
+                        if ((DateTime.UtcNow - lastUi).TotalMilliseconds >= uiUpdateIntervalMs || processed == totalToConvert)
+                        {
+                            lastUi = DateTime.UtcNow;
+                            int curr = processed;
+                            double pct = (double)curr / totalToConvert * 100.0;
+                            double sec = sw.Elapsed.TotalSeconds;
+                            double spd = sec > 0.05 ? curr / sec : 0;
+                            double rem = spd > 0 ? (totalToConvert - curr) / spd : 0;
+
+                            Dispatcher.Invoke(() =>
+                            {
+                                if (pbConversion != null) pbConversion.Value = pct;
+                                if (lblConversionPercent != null) lblConversionPercent.Text = $"{pct:F1}%";
+                                if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
+                                if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
+                                if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+
+                                if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
+                            });
+                        }
+                    }
+                });
             }
             finally
             {
@@ -2333,11 +2631,11 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (tblLinfo01List.Count > 0)
             {
-                await UpdateTblLinfo01InBatchesAsync();
+                await UpdateTblLinfo01InBatchesAsync(ct);
             }
             if (tblLinfo02List.Count > 0)
             {
-                await UpdateTblLinfo02InBatchesAsync();
+                await UpdateTblLinfo02InBatchesAsync(ct);
             }
 
             Dispatcher.Invoke(() =>
@@ -2414,13 +2712,18 @@ namespace LandPressDataMigrationDesktopApp
             txtStep1Status.Text = $"⏳ Copying and staging data from [{_DbName}] into [{AppConfig.IntermediateDbName}]...";
 
             _isOperationRunning = true;
+            _isStagingPhaseActive = true;
             _currentRunningOperationName = $"Step 1: Staging data from [{_DbName}] into [{AppConfig.IntermediateDbName}]";
+            _opController.Start();
+            UpdateTopOperationControlUI(_opController.State);
             _currentOperationCts = new CancellationTokenSource();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_currentOperationCts.Token, _opController.Token);
+            var ct = linkedCts.Token;
 
             try
             {
                 var (hsbCount, l01Count, l02Count) = await IntermediateDbService.StageDataFromSourceAsync(
-                    _baseConnectionString, _DbName);
+                    _baseConnectionString, _DbName, ct: ct);
 
                 _isStage2Completed = true; // Step 1 is completed
                 pbStep1Copy.Visibility = Visibility.Collapsed;
@@ -2444,6 +2747,14 @@ namespace LandPressDataMigrationDesktopApp
                 // Smoothly switch view to Step 2
                 ShowStep(2);
             }
+            catch (OperationCanceledException)
+            {
+                _opController.AcknowledgeStopped();
+                pbStep1Copy.Visibility = Visibility.Collapsed;
+                txtStep1Status.Text = "⚠️ Staging was stopped and rolled back by user.";
+                txtStep1Status.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
+                txtStep1Status.Visibility = Visibility.Visible;
+            }
             catch (Exception ex)
             {
                 pbStep1Copy.Visibility = Visibility.Collapsed;
@@ -2454,8 +2765,11 @@ namespace LandPressDataMigrationDesktopApp
             }
             finally
             {
+                _isStagingPhaseActive = false;
                 _isOperationRunning = false;
                 _currentRunningOperationName = string.Empty;
+                _currentOperationCts = null;
+                _opController.Reset();
                 if (!_isStage2Completed) btnCopyToIntrmDb.IsEnabled = true;
             }
         }
@@ -2509,7 +2823,19 @@ namespace LandPressDataMigrationDesktopApp
 
             try
             {
-                string dbName = lstDatabases.SelectedItem.ToString()!;
+                if (lstDatabases.SelectedItem is ListBoxItem lbi && !lbi.IsEnabled)
+                {
+                    lstDatabases.SelectionChanged -= Databases_SelectionChanged;
+                    lstDatabases.SelectedItem = null;
+                    lstDatabases.SelectionChanged += Databases_SelectionChanged;
+                    return;
+                }
+
+                string dbName = (lstDatabases.SelectedItem is ListBoxItem item)
+                    ? (item.Tag?.ToString() ?? item.Content?.ToString() ?? string.Empty)
+                    : lstDatabases.SelectedItem.ToString()!;
+
+                if (string.IsNullOrWhiteSpace(dbName)) return;
 
                 if (dbName == AppConfig.IntermediateDbName)
                 {
@@ -2631,21 +2957,20 @@ namespace LandPressDataMigrationDesktopApp
                 return;
             }
 
-            // Guard: Check if loaded records already contain Bengali Unicode
-            var alreadyConvertedTables = new List<string>();
-            if (tblLinfo01List.Any(r => ContainsBengaliUnicode(r.KRemark)))
-                alreadyConvertedTables.Add("dbo.tblLinfo01 (KRemark)");
-            if (tblLinfo02List.Any(r => ContainsBengaliUnicode(r.OwnName) || ContainsBengaliUnicode(r.addr1)))
-                alreadyConvertedTables.Add("dbo.tblLinfo02 (OwnName / Addresses)");
+            // Guard: Check if loaded records already contain Bengali Unicode or are partially converted
+            bool hasAnyUnicode = tblLinfo01List.Any(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.KRemark)) ||
+                                  tblLinfo02List.Any(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.OwnName) || ContainsBengaliUnicode(r.addr1));
 
-            if (alreadyConvertedTables.Count > 0)
+            bool hasUnconvertedRows = tblLinfo01List.Any(r => r.convsts != "SUCCESS" && !ContainsBengaliUnicode(r.KRemark)) ||
+                                      tblLinfo02List.Any(r => r.convsts != "SUCCESS" && !ContainsBengaliUnicode(r.OwnName) && !ContainsBengaliUnicode(r.addr1));
+
+            if (hasAnyUnicode && !hasUnconvertedRows)
             {
                 if (!UserSession.IsAdmin)
                 {
                     System.Windows.MessageBox.Show(
                         $"⛔ Conversion Blocked:\n\n" +
-                        $"The following table(s) in database \"{_DbName}\" already contain Bengali Unicode text:\n" +
-                        $"• {string.Join("\n• ", alreadyConvertedTables)}\n\n" +
+                        $"All records in database \"{_DbName}\" already contain Bengali Unicode text.\n\n" +
                         "Re-running font conversion on already-converted Unicode text will cause severe character corruption (Mojibake).\n\n" +
                         "This operation has been blocked to protect data integrity.",
                         "Conversion Blocked - Already Converted",
@@ -2657,8 +2982,7 @@ namespace LandPressDataMigrationDesktopApp
                 {
                     var confirm = System.Windows.MessageBox.Show(
                         $"⚠️ DANGER - ALREADY CONVERTED DATA DETECTED:\n\n" +
-                        $"The following table(s) in database \"{_DbName}\" already contain Bengali Unicode text:\n" +
-                        $"• {string.Join("\n• ", alreadyConvertedTables)}\n\n" +
+                        $"All records in database \"{_DbName}\" already contain Bengali Unicode text.\n\n" +
                         "Re-running font conversion on records that are ALREADY in Unicode will corrupt vowel signs and conjuncts (Yuktakshar), turning Bangla text into illegible Mojibake.\n\n" +
                         "Are you absolutely sure you want to force re-conversion?",
                         "Confirm Re-Conversion",
@@ -2667,6 +2991,13 @@ namespace LandPressDataMigrationDesktopApp
                     if (confirm != MessageBoxResult.Yes)
                         return;
                 }
+            }
+
+            int alreadyConvertedCount = tblLinfo01List.Count(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.KRemark)) +
+                                        tblLinfo02List.Count(r => r.convsts == "SUCCESS" || ContainsBengaliUnicode(r.OwnName) || ContainsBengaliUnicode(r.addr1));
+            if (alreadyConvertedCount > 0)
+            {
+                PipelineExecutionLogger.LogInfo("Step 2", $"Resuming partial conversion: {alreadyConvertedCount:N0} records already converted, {totalToConvert - alreadyConvertedCount:N0} remaining to convert.");
             }
 
             fontConverterBTN.IsEnabled = false;
@@ -2680,10 +3011,13 @@ namespace LandPressDataMigrationDesktopApp
 
             _isOperationRunning = true;
             _currentRunningOperationName = "Step 2: Unicode Font Conversion in memory";
+            _opController.Start();
             _currentOperationCts = new CancellationTokenSource();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_currentOperationCts.Token, _opController.Token);
+            var ct = linkedCts.Token;
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            int processed = 0;
+            int processed = alreadyConvertedCount;
             DateTime lastUiUpdate = DateTime.MinValue;
 
             void UpdateUi(int currentProcessed, string currentTable)
@@ -2720,7 +3054,7 @@ namespace LandPressDataMigrationDesktopApp
 
             try
             {
-                await Task.Run(() =>
+                await Task.Run(async () =>
                 {
                     // Convert tblLinfo01
                     if (tblLinfo01List.Count > 0)
@@ -2733,10 +3067,17 @@ namespace LandPressDataMigrationDesktopApp
 
                         for (int i = 0; i < tblLinfo01List.Count; i++)
                         {
-                            if (_currentOperationCts?.IsCancellationRequested == true)
-                                break;
+                            _currentConversionIndex = i;
+                            await _opController.CheckpointAsync(ct);
 
                             var item = tblLinfo01List[i];
+                            if (item.convsts == "SUCCESS" || ContainsBengaliUnicode(item.KRemark))
+                            {
+                                item.convsts = "SUCCESS";
+                                processed++;
+                                continue;
+                            }
+
                             string recId = item.rowid > 0 ? item.rowid.ToString() : (item.UnitCod + ":" + item.KhtNum);
 
                             if (!string.IsNullOrEmpty(item.KRemark)) item.KRemark = ConvertAndCheckMapping(item.KRemark, "tblLinfo01", "KRemark", recId);
@@ -2746,6 +3087,8 @@ namespace LandPressDataMigrationDesktopApp
                             if (!string.IsNullOrEmpty(item.eascom4)) item.eascom4 = ConvertAndCheckMapping(item.eascom4, "tblLinfo01", "eascom4", recId);
                             if (!string.IsNullOrEmpty(item.eascom5)) item.eascom5 = ConvertAndCheckMapping(item.eascom5, "tblLinfo01", "eascom5", recId);
                             if (!string.IsNullOrEmpty(item.eascom6)) item.eascom6 = ConvertAndCheckMapping(item.eascom6, "tblLinfo01", "eascom6", recId);
+
+                            item.convsts = "SUCCESS";
 
                             if (rowDelayMs > 0)
                             {
@@ -2778,10 +3121,17 @@ namespace LandPressDataMigrationDesktopApp
 
                         for (int i = 0; i < tblLinfo02List.Count; i++)
                         {
-                            if (_currentOperationCts?.IsCancellationRequested == true)
-                                break;
+                            _currentConversionIndex = tblLinfo01List.Count + i;
+                            await _opController.CheckpointAsync(ct);
 
                             var item = tblLinfo02List[i];
+                            if (item.convsts == "SUCCESS" || ContainsBengaliUnicode(item.OwnName))
+                            {
+                                item.convsts = "SUCCESS";
+                                processed++;
+                                continue;
+                            }
+
                             string recId = item.rowid > 0 ? item.rowid.ToString() : item.OwnName;
 
                             if (!string.IsNullOrEmpty(item.OwnName)) item.OwnName = ConvertAndCheckMapping(item.OwnName, "tblLinfo02", "OwnName", recId);
@@ -2795,6 +3145,8 @@ namespace LandPressDataMigrationDesktopApp
                             if (!string.IsNullOrEmpty(item.addr8)) item.addr8 = ConvertAndCheckMapping(item.addr8, "tblLinfo02", "addr8", recId);
                             if (!string.IsNullOrEmpty(item.addr9)) item.addr9 = ConvertAndCheckMapping(item.addr9, "tblLinfo02", "addr9", recId);
                             if (!string.IsNullOrEmpty(item.addr10)) item.addr10 = ConvertAndCheckMapping(item.addr10, "tblLinfo02", "addr10", recId);
+
+                            item.convsts = "SUCCESS";
 
                             if (rowDelayMs > 0)
                             {
@@ -2819,7 +3171,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 sw.Stop();
 
-                if (_currentOperationCts?.IsCancellationRequested == true)
+                if (ct.IsCancellationRequested)
                 {
                     FontConversionSts.Text = "⚠️ Conversion was cancelled by user.";
                     FontConversionSts.Visibility = Visibility.Visible;
@@ -2887,32 +3239,21 @@ namespace LandPressDataMigrationDesktopApp
 
             _isOperationRunning = true;
             _currentRunningOperationName = "Step 2: Updating intermediate database with Unicode records";
+            _opController.Start();
             _currentOperationCts = new CancellationTokenSource();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_currentOperationCts.Token, _opController.Token);
+            var ct = linkedCts.Token;
 
             try
             {
                 if (tblLinfo01List.Count > 0)
                 {
-                    await UpdateTblLinfo01InBatchesAsync();
-                }
-
-                if (_currentOperationCts?.IsCancellationRequested == true)
-                {
-                    dbUpdateSts.Text = "⚠️ Database update was cancelled by user.";
-                    dbUpdateSts.Visibility = Visibility.Visible;
-                    return;
+                    await UpdateTblLinfo01InBatchesAsync(ct);
                 }
 
                 if (tblLinfo02List.Count > 0)
                 {
-                    await UpdateTblLinfo02InBatchesAsync();
-                }
-
-                if (_currentOperationCts?.IsCancellationRequested == true)
-                {
-                    dbUpdateSts.Text = "⚠️ Database update was cancelled by user.";
-                    dbUpdateSts.Visibility = Visibility.Visible;
-                    return;
+                    await UpdateTblLinfo02InBatchesAsync(ct);
                 }
 
                 pbDbUpdate.Value = 100;
@@ -2931,15 +3272,23 @@ namespace LandPressDataMigrationDesktopApp
                 if (btnGoToStep3 != null) btnGoToStep3.Visibility = Visibility.Visible;
                 ShowStep(3); // Smoothly transition to Step 3 (Migration)
             }
+            catch (OperationCanceledException)
+            {
+                _opController.AcknowledgeStopped();
+                dbUpdateSts.Text = "⚠️ Database update was cancelled by user.";
+                dbUpdateSts.Visibility = Visibility.Visible;
+            }
             finally
             {
                 _isOperationRunning = false;
                 _currentRunningOperationName = string.Empty;
+                _currentOperationCts = null;
+                _opController.Reset();
                 if (!_isStage3Completed) updateDatabaseBTN.IsEnabled = true;
             }
         }
 
-        private async Task UpdateTblLinfo01InBatchesAsync()
+        private async Task UpdateTblLinfo01InBatchesAsync(CancellationToken ct = default)
         {
             var fixedConnectionString = BuildConnectionString(_BaseDbName);
             int batchSize = AppConfig.BatchChunkSize;
@@ -2948,20 +3297,18 @@ namespace LandPressDataMigrationDesktopApp
             try
             {
                 var batches = tblLinfo01List.Batch(batchSize).ToList();
-                int totalBatches = batches.Count;
+                _linfo01TotalBatches = batches.Count;
+                _linfo01BatchesCommitted = 0;
 
                 foreach (var batch in batches)
                 {
-                    if (_currentOperationCts?.IsCancellationRequested == true)
-                    {
-                        tblLinfo01_Update_Status.Text = "⚠️ Update cancelled by user.";
-                        break;
-                    }
+                    // Safe checkpoint BETWEEN batches only per spec
+                    await _opController.CheckpointAsync(ct);
 
                     batchNumber++;
 
                     tblLinfo01_Update_Status.Text =
-                        $"Updating tblLinfo01: batch {batchNumber} of {totalBatches}...";
+                        $"Updating tblLinfo01: batch {batchNumber} of {_linfo01TotalBatches}...";
                     tblLinfo01_Update_Status.Visibility = Visibility.Visible;
 
                     // IMPORTANT: only send THIS batch
@@ -2971,36 +3318,39 @@ namespace LandPressDataMigrationDesktopApp
 
                     string? result = await Task.Run(() =>
                     {
-                        using (var conn = new SqlConnection(fixedConnectionString))
-                        {
-                            conn.Open();
-                            using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                            {
-                                cmd.CommandType = CommandType.StoredProcedure;
-                                cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "UPDTTBLINF01";
-                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
-                                cmd.Parameters.Add("@Djson1", SqlDbType.NVarChar, -1).Value = jsonstring;
+                        using var conn = new SqlConnection(fixedConnectionString);
+                        conn.Open();
+                        using var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn);
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "UPDTTBLINF01";
+                        cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
+                        cmd.Parameters.Add("@Djson1", SqlDbType.NVarChar, -1).Value = jsonstring;
 
-                                return cmd.ExecuteScalar()?.ToString();
-                            }
-                        }
-                    });
+                        return cmd.ExecuteScalar()?.ToString();
+                    }, ct);
+
+                    _linfo01BatchesCommitted++;
 
                     if (AppConfig.BatchUpdateDelayMs > 0)
-                        await Task.Delay(AppConfig.BatchUpdateDelayMs);
+                        await Task.Delay(AppConfig.BatchUpdateDelayMs, ct);
                 }
 
-                tblLinfo01_Update_Status.Text = $"tblLinfo01 updated successfully ({totalBatches} batches).";
+                tblLinfo01_Update_Status.Text = $"tblLinfo01 updated successfully ({_linfo01TotalBatches} batches).";
+            }
+            catch (OperationCanceledException)
+            {
+                tblLinfo01_Update_Status.Text = $"⚠️ Update stopped at batch {_linfo01BatchesCommitted} of {_linfo01TotalBatches}.";
+                throw;
             }
             catch (Exception ex)
             {
                 tblLinfo01_Update_Status.Text = $"Unexpected error: {ex.Message}";
-                return;
+                throw;
             }
         }
 
 
-        private async Task UpdateTblLinfo02InBatchesAsync()
+        private async Task UpdateTblLinfo02InBatchesAsync(CancellationToken ct = default)
         {
             var fixedConnectionString = BuildConnectionString(_BaseDbName);
             int batchSize = AppConfig.BatchChunkSize;
@@ -3009,19 +3359,17 @@ namespace LandPressDataMigrationDesktopApp
             try
             {
                 var batches = tblLinfo02List.Batch(batchSize).ToList();
-                int totalBatches = batches.Count;
+                _linfo02TotalBatches = batches.Count;
+                _linfo02BatchesCommitted = 0;
 
                 foreach (var batch in batches)
                 {
-                    if (_currentOperationCts?.IsCancellationRequested == true)
-                    {
-                        tblLinfo02_Update_Status.Text = "⚠️ Update cancelled by user.";
-                        break;
-                    }
+                    // Safe checkpoint BETWEEN batches only per spec
+                    await _opController.CheckpointAsync(ct);
 
                     batchNumber++;
 
-                    tblLinfo02_Update_Status.Text = $"Updating tblLinfo02: batch {batchNumber} of {totalBatches}...";
+                    tblLinfo02_Update_Status.Text = $"Updating tblLinfo02: batch {batchNumber} of {_linfo02TotalBatches}...";
                     tblLinfo02_Update_Status.Visibility = Visibility.Visible;
 
                     // IMPORTANT: only send THIS batch
@@ -3031,31 +3379,34 @@ namespace LandPressDataMigrationDesktopApp
 
                     string? result = await Task.Run(() =>
                     {
-                        using (var conn = new SqlConnection(fixedConnectionString))
-                        {
-                            conn.Open();
-                            using (var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn))
-                            {
-                                cmd.CommandType = CommandType.StoredProcedure;
-                                cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "UPDTTBLINF02";
-                                cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
-                                cmd.Parameters.Add("@Djson1", SqlDbType.NVarChar, -1).Value = jsonstring;
+                        using var conn = new SqlConnection(fixedConnectionString);
+                        conn.Open();
+                        using var cmd = new SqlCommand("SP_LIS_DATA_MIGRATION_REPORT_CODEBOOK", conn);
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("@ProcID", SqlDbType.NVarChar, 2500).Value = "UPDTTBLINF02";
+                        cmd.Parameters.Add("@Desc01", SqlDbType.NVarChar, 200).Value = AppConfig.IntermediateDbName;
+                        cmd.Parameters.Add("@Djson1", SqlDbType.NVarChar, -1).Value = jsonstring;
 
-                                return cmd.ExecuteScalar()?.ToString();
-                            }
-                        }
-                    });
+                        return cmd.ExecuteScalar()?.ToString();
+                    }, ct);
+
+                    _linfo02BatchesCommitted++;
 
                     if (AppConfig.BatchUpdateDelayMs > 0)
-                        await Task.Delay(AppConfig.BatchUpdateDelayMs);
+                        await Task.Delay(AppConfig.BatchUpdateDelayMs, ct);
                 }
 
-                tblLinfo02_Update_Status.Text = $"tblLinfo02 updated successfully ({totalBatches} batches).";
+                tblLinfo02_Update_Status.Text = $"tblLinfo02 updated successfully ({_linfo02TotalBatches} batches).";
+            }
+            catch (OperationCanceledException)
+            {
+                tblLinfo02_Update_Status.Text = $"⚠️ Update stopped at batch {_linfo02BatchesCommitted} of {_linfo02TotalBatches}.";
+                throw;
             }
             catch (Exception ex)
             {
                 tblLinfo02_Update_Status.Text = $"Unexpected error: {ex.Message}";
-                return;
+                throw;
             }
         }
 
@@ -3340,7 +3691,7 @@ namespace LandPressDataMigrationDesktopApp
 
             string targetCs = BuildConnectionString(_BaseDbName);
             // Staged and Unicode-converted data resides in DLRS_Migration_Intrm
-            var wizard = new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName)
+            var wizard = new DataMigrationWizardWindow(targetCs, AppConfig.IntermediateDbName, controller: _opController)
             {
                 Owner = this
             };
@@ -3355,6 +3706,14 @@ namespace LandPressDataMigrationDesktopApp
                     logged = true;
                     await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
                 }
+
+                try
+                {
+                    using var rConn = new SqlConnection(_baseConnectionString);
+                    await rConn.OpenAsync();
+                    LoadDatabases(rConn);
+                }
+                catch { }
             };
 
             wizard.ShowDialog();
@@ -3368,9 +3727,43 @@ namespace LandPressDataMigrationDesktopApp
                     logged = true;
                     await IntermediateDbService.LogCompletedUnitsAsync(_baseConnectionString, _DbName, "COMPLETED", remarks: wizard.GetExecutionSummary());
                 }
+
+                try
+                {
+                    using var rConn = new SqlConnection(_baseConnectionString);
+                    await rConn.OpenAsync();
+                    LoadDatabases(rConn);
+                }
+                catch { }
             }
             else
             {
+                _lastCompletedProcId = wizard.LastCompletedProcId;
+                if (!string.IsNullOrEmpty(_lastCompletedProcId))
+                {
+                    if (borderStage4StoppedBanner != null)
+                    {
+                        borderStage4StoppedBanner.Visibility = Visibility.Visible;
+                        if (txtStage4StoppedTitle != null)
+                            txtStage4StoppedTitle.Text = $"PREVIOUS RUN STOPPED AT PROCID {_lastCompletedProcId}";
+                        if (txtStage4StoppedDetail != null)
+                            txtStage4StoppedDetail.Text = "Previous migration run was stopped. You can relaunch the wizard to resume or retry remaining steps.";
+                    }
+
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(_DbName) && !string.IsNullOrEmpty(_baseConnectionString))
+                        {
+                            await IntermediateDbService.LogCompletedUnitsAsync(
+                                _baseConnectionString, 
+                                _DbName, 
+                                status: "CANCELLED", 
+                                remarks: $"Migration stopped at ProcID {_lastCompletedProcId}.");
+                        }
+                    }
+                    catch { }
+                }
+
                 // Re-verify in database in case steps were executed
                 string cs = BuildConnectionString(_DbName);
                 bool isDone = await CheckMigrationAlreadyCompletedInDbAsync(cs);
