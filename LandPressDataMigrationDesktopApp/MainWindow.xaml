@@ -204,7 +204,14 @@
                                          IsReadOnly="True" ToolTip="Selected dedicated folder path"/>
                                 <Button Grid.Column="1" x:Name="btnBrowseWorkspace" Content="📂 Browse" Width="90" Height="30"
                                         Margin="6,0,0,0" Style="{StaticResource AppBtn}" FontSize="12" FontWeight="SemiBold"
-                                        Click="BtnBrowseWorkspaceFolder_Click"/>
+                                        Click="BtnBrowseWorkspaceFolder_Click">
+                                    <Button.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#0284C7" Offset="0"/>
+                                            <GradientStop Color="#0369A1" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Button.Background>
+                                </Button>
                                 <!-- <Button Grid.Column="2" x:Name="btnNewWorkspaceFolder" Content="➕ New" Width="70" Height="30"
                                         Margin="6,0,0,0" Style="{StaticResource AppBtn}" FontSize="12" FontWeight="SemiBold"
                                         Click="BtnNewWorkspaceFolder_Click"/> -->
@@ -315,7 +322,14 @@
                                             </Button>
                                             <Button x:Name="btnBackupCoreDb" Content="💾 Backup" Visibility="Collapsed"
                                                     Style="{StaticResource AppBtn}" Padding="8,4" MinHeight="26" FontSize="11.5" FontWeight="SemiBold"
-                                                    Click="BtnBackupCoreDb_Click"/>
+                                                    Click="BtnBackupCoreDb_Click">
+                                                <Button.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#8B5CF6" Offset="0"/>
+                                                        <GradientStop Color="#6D28D9" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Button.Background>
+                                            </Button>
                                         </StackPanel>
                                     </Grid>
 
@@ -491,7 +505,7 @@
                                     <Button Grid.Column="1" Content="Browse…" Width="78" MinHeight="30" Padding="10,4" Margin="6,0,0,0"
                                             Style="{StaticResource AppBtn}" FontSize="12.5" Click="BtnBrowseBak_Click">
                                         <Button.Background>
-                                            <SolidColorBrush Color="#475569"/>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#0284C7" Offset="0"/><GradientStop Color="#0369A1" Offset="1"/></LinearGradientBrush>
                                         </Button.Background>
                                     </Button>
                                 </Grid>
@@ -517,7 +531,7 @@
                                     <Button Grid.Column="1" Content="Browse…" Width="78" MinHeight="30" Padding="10,4" Margin="6,0,0,0"
                                             Style="{StaticResource AppBtn}" FontSize="12.5" Click="BtnBrowseMdf_Click">
                                         <Button.Background>
-                                            <SolidColorBrush Color="#475569"/>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#0284C7" Offset="0"/><GradientStop Color="#0369A1" Offset="1"/></LinearGradientBrush>
                                         </Button.Background>
                                     </Button>
                                 </Grid>
@@ -531,7 +545,7 @@
                                     <Button Grid.Column="1" Content="Browse…" Width="78" MinHeight="30" Padding="10,4" Margin="6,0,0,0"
                                             Style="{StaticResource AppBtn}" FontSize="12.5" Click="BtnBrowseLdf_Click">
                                         <Button.Background>
-                                            <SolidColorBrush Color="#475569"/>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#0284C7" Offset="0"/><GradientStop Color="#0369A1" Offset="1"/></LinearGradientBrush>
                                         </Button.Background>
                                     </Button>
                                 </Grid>

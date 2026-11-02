@@ -36,7 +36,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v1.02a";
+        public const string Version = "v1.02b";
 
         /// <summary>
         /// Permanent intermediate staging database required on the connected SQL Server instance.
@@ -69,14 +69,14 @@ namespace LandPressDataMigrationDesktopApp
         /// Default: 2 ms per row (~500 records/sec with high-precision OS timer).
         /// Set to 0 if standard users should also run at full raw speed.
         /// </summary>
-        public static int StandardUserConversionRowDelayMs = 2;
+        public static int StandardUserConversionRowDelayMs = 1;
 
         /// <summary>
         /// Delay in milliseconds per record applied to Admin Users WHEN they check the "Throttle Delay" toggle.
         /// When the toggle is UNCHECKED (default), Admin runs in TRUE REAL-TIME (0 ms raw speed, ~10,000+ rec/sec).
         /// Default: 2 ms per row.
         /// </summary>
-        public static int AdminThrottleRowDelayMs = 2;
+        public static int AdminThrottleRowDelayMs = 1;
 
         /// <summary>
         /// Global delay setting. Maps to StandardUserConversionRowDelayMs.
