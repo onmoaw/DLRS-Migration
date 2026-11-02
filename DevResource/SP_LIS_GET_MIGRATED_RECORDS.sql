@@ -1,18 +1,15 @@
--- ==============================================================================
--- Stored Procedure: dbo_lis.SP_LIS_GET_MIGRATED_RECORDS
--- Purpose: Retrieves migrated land records from DLRSLSINF_4103PRSDB for a given
---          Mouza (UNITCOD), Survey (RSNUM), with optional Khatian and Owner filters.
+﻿-- ==============================================================================
+-- Stored Procedure: [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]
+-- Database: DLRSLSINF_4103PRSDB
+-- Purpose: Retrieves migrated land records for a given Mouza (UNITCOD),
+--          Survey Type (RSNUM), with optional Khatian and Owner filters.
 --          Returns 3 synchronized result sets:
---            Result Set 0: Khatians (LINFO00 + LANDTYPE + AREAINF + Plot Count & Total Area)
+--            Result Set 0: Khatians (LINFO00 + LANDTYPE + AREAINF + Plot Aggregates)
 --            Result Set 1: Owners (LINFO02)
---            Result Set 2: Plots (LINFO01 + LANDUSE with 4-Ka Agri, 4-Kha Non-Agri, 4-Ga Local Name)
+--            Result Set 2: Plots (LINFO01 + 3-part Land Classification from LANDUSE)
 -- ==============================================================================
 
 USE [DLRSLSINF_4103PRSDB]
-GO
-
-IF OBJECT_ID('[dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]', 'P') IS NOT NULL
-    DROP PROCEDURE [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]
 GO
 
 SET ANSI_NULLS ON
@@ -20,7 +17,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]
+CREATE OR ALTER PROCEDURE [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]
     @ComCod         NVARCHAR(10)  = '4103',
     @RsNum          NVARCHAR(20)  = '201901',
     @UnitCod        NVARCHAR(20),             -- Full 9-digit Mouza code (e.g. '010502003')
@@ -94,7 +91,7 @@ BEGIN
                             AND lf02.KHTNUM = k.CurrentKhatian
     WHERE (@OwnerName IS NULL OR lf02.OWNNAME LIKE '%' + @OwnerName + '%');
 
-    -- 3. Plots from LINFO01 with dynamic 3-part Land Classification
+    -- 3. Plots from LINFO01 with dynamic 3-part Land Classification from LANDUSE
     SELECT 
         lf01.COMCOD,
         lf01.RSNUM,
@@ -107,10 +104,12 @@ BEGIN
         lf01.SLNUM AS PlotSerial,
         lf01.LUCODE AS LuCode,
         -- ৪(ক) কৃষি: populated when specific LUTYPE = 'কৃষি'
-        CASE WHEN specLu.LUTYPE = N'কৃষি' THEN ISNULL(specLu.LUNAME, '') ELSE N'' END AS AgriLandClass_4Ka,
+        CASE WHEN specLu.LUTYPE = N'কৃষি' OR (specLu.LUTYPE LIKE N'%কৃষি%' AND specLu.LUTYPE NOT LIKE N'%অকৃষি%')
+             THEN ISNULL(specLu.LUNAME, '') ELSE N'' END AS AgriLandClass_4Ka,
         -- ৪(খ) অকৃষি: populated when specific LUTYPE = 'অকৃষি'
-        CASE WHEN specLu.LUTYPE = N'অকৃষি' THEN ISNULL(specLu.LUNAME, '') ELSE N'' END AS NonAgriLandClass_4Kha,
-        -- ৪(গ) স্থানীয় নাম: parent group (03000)
+        CASE WHEN specLu.LUTYPE = N'অকৃষি' OR specLu.LUTYPE LIKE N'%অকৃষি%'
+             THEN ISNULL(specLu.LUNAME, '') ELSE N'' END AS NonAgriLandClass_4Kha,
+        -- ৪(গ) স্থানীয় নাম: parent group (first 2 digits + '000')
         ISNULL(parentLu.LUNAME, '') AS LocalName_4Ga,
         ISNULL(lf01.TPLTAREA, 0) AS TotalPlotArea,
         ISNULL(lf01.KHTSHARE, 0) AS KhatianShare,
@@ -141,7 +140,7 @@ BEGIN
     FROM #tblPlot
     GROUP BY KHTNUM;
 
-    -- Precompute concatenated owner names for quick display in Khatian grid
+    -- Precompute concatenated owner names for quick display in Khatian master grid
     SELECT 
         KHTNUM,
         STRING_AGG(OwnerName, N', ') AS AllOwnerNames
@@ -236,11 +235,10 @@ BEGIN
     FROM #tblPlot p
     ORDER BY p.KHTNUM, p.PlotSerial, p.CurrentPlot;
 
-    -- Cleanup
     DROP TABLE IF EXISTS #tblKhatian;
     DROP TABLE IF EXISTS #tblOwner;
     DROP TABLE IF EXISTS #tblPlot;
     DROP TABLE IF EXISTS #tblPlotAgg;
     DROP TABLE IF EXISTS #tblOwnerSummary;
-END
+END;
 GO

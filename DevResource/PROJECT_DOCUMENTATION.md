@@ -698,14 +698,15 @@ Findings from reading the code (recorded for maintainers; nothing was changed):
 18. **Land Records Viewing Window & Dedicated Stored Procedure (v0.21a):**
     - **Layout:** Model A Master-Detail Tabbed View with draggable `GridSplitter` and maximized full-screen default.
     - **Filters (Strictly 7):**
-      - বিভাগ (Division) — Dropdown populated hierarchically from `dbo.AREAINF` (`XX0000000`).
-      - জেলা (District) — Dropdown populated hierarchically from `dbo.AREAINF` (`XXXX00000`).
+      - Clean display values: Displays purely Bengali administrative names without brackets or raw numeric codes.
+      - বিভাগ (Division) — Strictly `XX0000000` (where `XX != "00"`).
+      - জেলা (District) — Strictly `XXXX00000` (where `DistrictPart != "00"`, strictly excluding division code).
       - জরিপ (Survey Type) — Dropdown (`201901` - BDS / All).
-      - উপজেলা/থানা (Upazila/Thana) — Dropdown populated hierarchically from `dbo.AREAINF` (`XXXXXX000`).
-      - মৌজা (Mouza) — Dropdown populated hierarchically from `dbo.AREAINF` (`XXXXXXXXX`).
+      - উপজেলা/থানা (Upazila/Thana) — Strictly `XXXXXX000` (where `UpazilaPart != "00"`, strictly excluding district/division).
+      - মৌজা (Mouza) — Strictly `XXXXXXXXX` (where `MouzaPart != "000"`, strictly leaf nodes).
       - বর্তমান খতিয়ান (Current Khatian) — Filter textbox.
       - মালিক (Owner) — Filter textbox.
-    - **Dedicated Stored Procedure:** `[dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]` deployed in `DLRSLSINF_4103PRSDB`, returning 3 synchronized result sets:
+    - **Dedicated Stored Procedure:** `[dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]` deployed and maintained directly in `DLRSLSINF_4103PRSDB` (all C# auto-deployment removed). The SP returns 3 synchronized result sets:
       - Result Set 0: Khatians (`LINFO00` + `LANDTYPE` + `AREAINF` + precomputed plot count, total land area, concatenated owner summary, audit metadata).
       - Result Set 1: Owners (`LINFO02` with serial, NID, phone, parent names, share).
       - Result Set 2: Plots (`LINFO01` + dynamic 3-part Land Classification via hierarchical `LUCODE`: `AgriLandClass_4Ka`, `NonAgriLandClass_4Kha`, `LocalName_4Ga`).

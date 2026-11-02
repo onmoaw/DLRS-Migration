@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Win32;
 using ComboBox = System.Windows.Controls.ComboBox;
 using MessageBox = System.Windows.MessageBox;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
@@ -19,8 +18,13 @@ namespace LandPressDataMigrationDesktopApp
     /// Model A: Master-Detail Tabbed View for migrated land records in DLRSLSINF_4103PRSDB.
     /// Features:
     ///   - Strictly 7 cascading filters: Division, District, Survey, Upazila/Thana, Mouza, Current Khatian, Owner.
-    ///   - In-memory hierarchical cascading from dbo.AREAINF (UNITCOD 9-digit schema).
-    ///   - Dedicated SP execution: dbo_lis.SP_LIS_GET_MIGRATED_RECORDS.
+    ///   - Strict 9-digit hierarchical cascading:
+    ///       * বিভাগ (XX0000000)
+    ///       * জেলা (XXXX00000, excluding XX0000000)
+    ///       * উপজেলা/থানা (XXXXXX000, excluding XXXX00000 and XX0000000)
+    ///       * মৌজা (XXXXXXXXX, excluding all parent levels)
+    ///   - Clean dropdown display: Names only (codes removed from dropdown display values).
+    ///   - Direct execution of SP [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS] (zero auto-deployment).
     ///   - Synchronized Master (Khatians) and Detail (Owners, Plots with 4-Ka/Kha/Ga, Audit metadata).
     ///   - Serial number (#) column on the far left of all DataGrids.
     ///   - UTF-8 BOM CSV exports for Khatians and full joined Details.
@@ -130,8 +134,8 @@ namespace LandPressDataMigrationDesktopApp
         {
             _allAreaItems = new List<AreaHierarchyItem>
             {
-                new AreaHierarchyItem { UnitCod = "010000000", UnitNam = "ঢাকা বিভাগ", UnitType = "বিভাগ" },
-                new AreaHierarchyItem { UnitCod = "010500000", UnitNam = "ঢাকা জেলা", UnitType = "জেলা" },
+                new AreaHierarchyItem { UnitCod = "010000000", UnitNam = "ঢাকা", UnitType = "বিভাগ" },
+                new AreaHierarchyItem { UnitCod = "010500000", UnitNam = "ঢাকা", UnitType = "জেলা" },
                 new AreaHierarchyItem { UnitCod = "010502000", UnitNam = "গুলশান / বাড্ডা", UnitType = "উপজেলা/থানা" },
                 new AreaHierarchyItem { UnitCod = "010502003", UnitNam = "জোয়ার সাহারা", UnitType = "মৌজা", ResaNum = "81001" },
                 new AreaHierarchyItem { UnitCod = "010502005", UnitNam = "ভাটারা", UnitType = "মৌজা", ResaNum = "81002" }
@@ -140,6 +144,9 @@ namespace LandPressDataMigrationDesktopApp
             PopulateDivisions();
         }
 
+        /// <summary>
+        /// 1. বিভাগ (Division): Strictly XX0000000 (XX != "00")
+        /// </summary>
         private void PopulateDivisions()
         {
             _isPopulatingDropdowns = true;
@@ -150,24 +157,22 @@ namespace LandPressDataMigrationDesktopApp
                 cmbUpazila.ItemsSource = null;
                 cmbMouza.ItemsSource = null;
 
-                // 1. Division: XX0000000
+                // বিভাগ: XX0000000
                 var divisions = _allAreaItems.Where(a => a.IsDivision).OrderBy(a => a.UnitCod).ToList();
 
                 if (divisions.Count == 0)
                 {
-                    // Synthesize divisions from child codes if parent records are not explicitly stored
-                    var distinctDivs = _allAreaItems
-                        .Where(a => !string.IsNullOrEmpty(a.DivisionCode))
+                    // Synthesize divisions from distinct 2-digit prefixes if explicit XX0000000 row is missing
+                    divisions = _allAreaItems
+                        .Where(a => a.UnitCod.Length == 9 && a.DivisionCode != "00")
                         .GroupBy(a => a.DivisionCode)
                         .Select(g => new AreaHierarchyItem
                         {
-                            UnitCod = g.Key.PadRight(9, '0'),
-                            UnitNam = g.First(x => !string.IsNullOrWhiteSpace(x.UnitNam)).UnitNam + " (বিভাগ)"
+                            UnitCod = g.Key + "0000000",
+                            UnitNam = g.First(x => !string.IsNullOrWhiteSpace(x.UnitNam)).UnitNam
                         })
                         .OrderBy(a => a.UnitCod)
                         .ToList();
-
-                    divisions = distinctDivs;
                 }
 
                 cmbDivision.ItemsSource = divisions;
@@ -184,7 +189,6 @@ namespace LandPressDataMigrationDesktopApp
                 _isPopulatingDropdowns = false;
             }
 
-            // Trigger district population for selected division
             CascadeDistricts();
         }
 
@@ -194,6 +198,9 @@ namespace LandPressDataMigrationDesktopApp
             CascadeDistricts();
         }
 
+        /// <summary>
+        /// 2. জেলা (District): Strictly XXXX00000 where Substring(2,2) != "00" (NEVER XX0000000)
+        /// </summary>
         private void CascadeDistricts()
         {
             if (cmbDivision.SelectedItem is not AreaHierarchyItem selectedDiv) return;
@@ -202,25 +209,25 @@ namespace LandPressDataMigrationDesktopApp
             try
             {
                 string divCode = selectedDiv.DivisionCode;
+
+                // জেলা: XXXX00000 strictly excluding XX0000000
                 var districts = _allAreaItems
-                    .Where(a => a.DivisionCode == divCode && (a.IsDistrict || (a.UnitCod.EndsWith("00000") && a.UnitCod != selectedDiv.UnitCod)))
+                    .Where(a => a.IsDistrict && a.DivisionCode == divCode)
                     .OrderBy(a => a.UnitCod)
                     .ToList();
 
                 if (districts.Count == 0)
                 {
-                    var distinctDists = _allAreaItems
-                        .Where(a => a.DivisionCode == divCode && !string.IsNullOrEmpty(a.DistrictCode))
+                    districts = _allAreaItems
+                        .Where(a => a.UnitCod.Length == 9 && a.DivisionCode == divCode && a.DistrictPart != "00")
                         .GroupBy(a => a.DistrictCode)
                         .Select(g => new AreaHierarchyItem
                         {
-                            UnitCod = g.Key.PadRight(9, '0'),
+                            UnitCod = g.Key + "00000",
                             UnitNam = g.First(x => !string.IsNullOrWhiteSpace(x.UnitNam)).UnitNam
                         })
                         .OrderBy(a => a.UnitCod)
                         .ToList();
-
-                    districts = distinctDists;
                 }
 
                 cmbDistrict.ItemsSource = districts;
@@ -250,6 +257,9 @@ namespace LandPressDataMigrationDesktopApp
             CascadeUpazilas();
         }
 
+        /// <summary>
+        /// 3. উপজেলা/থানা (Upazila): Strictly XXXXXX000 where Substring(4,2) != "00" (NEVER XXXX00000 or XX0000000)
+        /// </summary>
         private void CascadeUpazilas()
         {
             if (cmbDistrict.SelectedItem is not AreaHierarchyItem selectedDist) return;
@@ -258,25 +268,25 @@ namespace LandPressDataMigrationDesktopApp
             try
             {
                 string distCode = selectedDist.DistrictCode;
+
+                // উপজেলা/থানা: XXXXXX000 strictly excluding district and division
                 var upazilas = _allAreaItems
-                    .Where(a => a.DistrictCode == distCode && (a.IsUpazila || (a.UnitCod.EndsWith("000") && a.UnitCod != selectedDist.UnitCod)))
+                    .Where(a => a.IsUpazila && a.DistrictCode == distCode)
                     .OrderBy(a => a.UnitCod)
                     .ToList();
 
                 if (upazilas.Count == 0)
                 {
-                    var distinctUpazilas = _allAreaItems
-                        .Where(a => a.DistrictCode == distCode && !string.IsNullOrEmpty(a.UpazilaCode))
+                    upazilas = _allAreaItems
+                        .Where(a => a.UnitCod.Length == 9 && a.DistrictCode == distCode && a.UpazilaPart != "00")
                         .GroupBy(a => a.UpazilaCode)
                         .Select(g => new AreaHierarchyItem
                         {
-                            UnitCod = g.Key.PadRight(9, '0'),
+                            UnitCod = g.Key + "000",
                             UnitNam = g.First(x => !string.IsNullOrWhiteSpace(x.UnitNam)).UnitNam
                         })
                         .OrderBy(a => a.UnitCod)
                         .ToList();
-
-                    upazilas = distinctUpazilas;
                 }
 
                 cmbUpazila.ItemsSource = upazilas;
@@ -306,6 +316,9 @@ namespace LandPressDataMigrationDesktopApp
             CascadeMouzas();
         }
 
+        /// <summary>
+        /// 4. মৌজা (Mouza): Strictly XXXXXXXXX where Substring(6,3) != "000" (NEVER parent levels)
+        /// </summary>
         private void CascadeMouzas()
         {
             if (cmbUpazila.SelectedItem is not AreaHierarchyItem selectedUpazila) return;
@@ -314,8 +327,10 @@ namespace LandPressDataMigrationDesktopApp
             try
             {
                 string upazilaCode = selectedUpazila.UpazilaCode;
+
+                // মৌজা: XXXXXXXXX strictly leaf nodes
                 var mouzas = _allAreaItems
-                    .Where(a => a.UpazilaCode == upazilaCode && (a.IsMouza || !a.UnitCod.EndsWith("000")))
+                    .Where(a => a.IsMouza && a.UpazilaCode == upazilaCode)
                     .OrderBy(a => a.UnitCod)
                     .ToList();
 
@@ -351,8 +366,8 @@ namespace LandPressDataMigrationDesktopApp
             if (cmbMouza.SelectedItem is AreaHierarchyItem mouza)
             {
                 bdActiveMouzaBadge.Visibility = Visibility.Visible;
-                txtActiveMouzaBadge.Text = $"মৌজা: {mouza.DisplayName}";
-                txtStatus.Text = $"নির্বাচিত মৌজা: {mouza.DisplayName} (কোড: {mouza.UnitCod}) — 'খুঁজুন' বাটনে ক্লিক করে রেকর্ড লোড করুন।";
+                txtActiveMouzaBadge.Text = $"মৌজা: {mouza.UnitNam}";
+                txtStatus.Text = $"নির্বাচিত মৌজা: {mouza.UnitNam} — 'খুঁজুন' বাটনে ক্লিক করে রেকর্ড লোড করুন।";
             }
             else
             {
@@ -438,7 +453,8 @@ namespace LandPressDataMigrationDesktopApp
             {
                 txtStatus.Text = "ডাটা সংগ্রহের সময় ত্রুটি: " + ex.Message;
                 MessageBox.Show(
-                    "রেকর্ড অনুসন্ধানের সময় ডাটাবেজে ত্রুটি হয়েছে:\n\n" + ex.Message,
+                    "রেকর্ড অনুসন্ধানের সময় ডাটাবেজে ত্রুটি হয়েছে:\n\n" + ex.Message +
+                    "\n\nঅনুগ্রহ করে নিশ্চিত করুন [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS] ডাটাবেজে তৈরি করা আছে।",
                     "Database Query Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);

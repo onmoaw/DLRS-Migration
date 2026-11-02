@@ -381,12 +381,18 @@ namespace LandPressDataMigrationDesktopApp
         {
             try
             {
-                string? coreCs = null;
-                try
+                string server = !string.IsNullOrWhiteSpace(_ServerName) ? _ServerName : txtServer.Text.Trim();
+                if (string.IsNullOrWhiteSpace(server))
                 {
-                    coreCs = BuildConnectionString(_BaseDbName);
+                    System.Windows.MessageBox.Show(
+                        "Please enter a server name or connect to SQL Server first.",
+                        "Server Connection Required",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
                 }
-                catch { }
+
+                string coreCs = BuildConnectionString(_BaseDbName);
 
                 var win = new ViewRecordsWindow(coreCs)
                 {
@@ -1724,16 +1730,18 @@ namespace LandPressDataMigrationDesktopApp
 
         private string BuildConnectionString(string database)
         {
-            var auth = ((ComboBoxItem)cmbAuth.SelectedItem).Content.ToString();
+            var server = !string.IsNullOrWhiteSpace(_ServerName) ? _ServerName : txtServer.Text.Trim();
+            var authItem = cmbAuth.SelectedItem as ComboBoxItem;
+            var auth = authItem?.Content?.ToString() ?? "Windows";
 
             if (auth == "Windows")
             {
-                return $"Server={_ServerName};Database={database};Integrated Security=True;" +
+                return $"Server={server};Database={database};Integrated Security=True;" +
                        "Encrypt=True;TrustServerCertificate=True;";
             }
             else
             {
-                return $"Server={_ServerName};Database={database};User Id={txtUser.Text};Password={txtPassword.Password};" +
+                return $"Server={server};Database={database};User Id={txtUser.Text};Password={txtPassword.Password};" +
                        "Encrypt=True;TrustServerCertificate=True;";
             }
         }
