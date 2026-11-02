@@ -15,19 +15,16 @@ namespace LandPressDataMigrationDesktopApp
 {
     /// <summary>
     /// Interaction logic for ViewRecordsWindow.xaml
-    /// Model A: Master-Detail Tabbed View for migrated land records in DLRSLSINF_4103PRSDB.
-    /// Features:
-    ///   - Strictly 7 cascading filters: Division, District, Survey, Upazila/Thana, Mouza, Current Khatian, Owner.
-    ///   - Strict 9-digit hierarchical cascading:
-    ///       * বিভাগ (XX0000000)
-    ///       * জেলা (XXXX00000, excluding XX0000000)
-    ///       * উপজেলা/থানা (XXXXXX000, excluding XXXX00000 and XX0000000)
-    ///       * মৌজা (XXXXXXXXX, excluding all parent levels)
-    ///   - Clean dropdown display: Names only (codes removed from dropdown display values).
+    /// Side-by-Side Master-Detail View for migrated land records in DLRSLSINF_4103PRSDB:
+    ///   - Left Pane: Master Khatian list (# Serial, Current Khatian, Owners, Status).
+    ///   - Right Pane: All-in-one Single-Page Preview without tabs (Overview card, Owners table, Plots table, Audit card).
+    ///   - Strict 7 cascading filters with 9-digit hierarchical breakdown.
+    ///   - Clean display: purely administrative Bengali names without raw numeric codes.
+    ///   - Full loading overlay during search and data loading.
+    ///   - Proportionally scaled typography throughout.
     ///   - Direct execution of SP [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS] (zero auto-deployment).
-    ///   - Synchronized Master (Khatians) and Detail (Owners, Plots with 4-Ka/Kha/Ga, Audit metadata).
     ///   - Serial number (#) column on the far left of all DataGrids.
-    ///   - UTF-8 BOM CSV exports for Khatians and full joined Details.
+    ///   - UTF-8 BOM CSV exports for Master list and complete detailed records.
     /// </summary>
     public partial class ViewRecordsWindow : Window
     {
@@ -95,17 +92,36 @@ namespace LandPressDataMigrationDesktopApp
             Close();
         }
 
+        #region ================= LOADER OVERLAY =================
+
+        private void ShowLoader(string message = "অনুগ্রহ করে অপেক্ষা করুন...")
+        {
+            txtLoadingMessage.Text = message;
+            loadingOverlay.Visibility = Visibility.Visible;
+            btnSearch.IsEnabled = false;
+            btnReset.IsEnabled = false;
+        }
+
+        private void HideLoader()
+        {
+            loadingOverlay.Visibility = Visibility.Collapsed;
+            btnSearch.IsEnabled = true;
+            btnReset.IsEnabled = true;
+        }
+
+        #endregion
+
         #region ================= AREA HIERARCHY CASCADING =================
 
         /// <summary>
-        /// Loads all administrative area records from dbo.AREAINF and populates the cascading dropdowns.
+        /// Loads all administrative area records from dbo.AREAINF and populates cascading dropdowns.
         /// </summary>
         private async Task InitializeAreaHierarchyAsync()
         {
+            ShowLoader("ভৌগোলিক এলাকা তথ্য (AREAINF) লোড করা হচ্ছে...");
             try
             {
                 txtStatus.Text = "ভৌগোলিক এলাকা তথ্য (AREAINF) লোড করা হচ্ছে...";
-                btnSearch.IsEnabled = false;
 
                 _allAreaItems = await LandRecordsViewerService.LoadAreaHierarchyAsync(_coreConnectionString!);
 
@@ -126,7 +142,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             finally
             {
-                btnSearch.IsEnabled = true;
+                HideLoader();
             }
         }
 
@@ -415,9 +431,8 @@ namespace LandPressDataMigrationDesktopApp
             string currentKhatian = txtCurrentKhatian.Text.Trim();
             string ownerName = txtOwner.Text.Trim();
 
-            btnSearch.IsEnabled = false;
-            btnReset.IsEnabled = false;
             txtStatus.Text = $"[{selectedMouza.UnitNam}] এর রেকর্ডসমূহ ডাটাবেজ থেকে সংগ্রহ করা হচ্ছে...";
+            ShowLoader($"[{selectedMouza.UnitNam}] এর রেকর্ডসমূহ লোড করা হচ্ছে...");
 
             try
             {
@@ -431,7 +446,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 DataTable dtKhatians = _dsRecords.Tables["Khatians"];
                 dgKhatians.ItemsSource = dtKhatians.DefaultView;
-                txtKhatianCount.Text = $"মোট খতিয়ান: {dtKhatians.Rows.Count}টি";
+                txtKhatianCount.Text = $"{dtKhatians.Rows.Count}টি";
 
                 if (dtKhatians.Rows.Count > 0)
                 {
@@ -440,12 +455,7 @@ namespace LandPressDataMigrationDesktopApp
                 }
                 else
                 {
-                    dgOwners.ItemsSource = null;
-                    dgPlots.ItemsSource = null;
-                    txtOwnerCount.Text = "মালিক সংখ্যা: ০ জন";
-                    txtPlotCount.Text = "দাগ সংখ্যা: ০টি";
-                    ClearAuditFields();
-                    txtSelectedKhatianHeader.Text = "কোনো খতিয়ান পাওয়া যায়নি";
+                    ClearPreview();
                     txtStatus.Text = "প্রদত্ত ফিল্টারের সাথে কোনো খতিয়ান মেলেনি। ফিল্টার পরিবর্তন করে পুনরায় চেষ্টা করুন।";
                 }
             }
@@ -461,20 +471,24 @@ namespace LandPressDataMigrationDesktopApp
             }
             finally
             {
-                btnSearch.IsEnabled = true;
-                btnReset.IsEnabled = true;
+                HideLoader();
             }
         }
 
         /// <summary>
-        /// Synchronizes the detail tabs (Owners, Plots, and Audit) when a Khatian row is selected.
+        /// Synchronizes the single-page preview panel when a Khatian row is selected in the master list.
         /// </summary>
         private void DgKhatians_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (dgKhatians.SelectedItem is not DataRowView drv)
             {
+                ClearPreview();
                 return;
             }
+
+            // Show preview content, hide empty state
+            pnlEmptyPreview.Visibility = Visibility.Collapsed;
+            pnlPreviewContent.Visibility = Visibility.Visible;
 
             string currentKhatian = drv["CurrentKhatian"]?.ToString() ?? string.Empty;
             string formerKhatian = drv["FormerKhatian"]?.ToString() ?? string.Empty;
@@ -482,9 +496,23 @@ namespace LandPressDataMigrationDesktopApp
             string surveyName = drv["SurveyName"]?.ToString() ?? string.Empty;
 
             txtSelectedKhatianHeader.Text =
-                $"🔍 নির্বাচিত খতিয়ান নং: {currentKhatian} (সাবেক: {(string.IsNullOrWhiteSpace(formerKhatian) ? "—" : formerKhatian)}) | মৌজা: {mouzaName} | জরিপ: {surveyName}";
+                $"🔍 খতিয়ান বিবরণী: খতিয়ান নং {currentKhatian} | মৌজা: {mouzaName} | জরিপ: {surveyName}";
 
-            // 1. Synchronize Owners Tab
+            // Section 1: Identification & Overview Card
+            txtPrevCurrentKhatian.Text = currentKhatian;
+            txtPrevFormerKhatian.Text = !string.IsNullOrWhiteSpace(formerKhatian) ? formerKhatian : "—";
+            txtPrevEntryKhatian.Text = drv["EntryKhatian"]?.ToString() ?? "—";
+            txtPrevSheet.Text = drv["SheetNum"]?.ToString() ?? "—";
+            txtPrevMouza.Text = mouzaName;
+            txtPrevSurvey.Text = surveyName;
+            txtPrevLandType.Text = drv["LandTypeName"]?.ToString() ?? "—";
+            txtPrevPorchaTitle.Text = drv["PorchaTitle"]?.ToString() ?? "—";
+            txtPrevTotalPlots.Text = $"{drv["TotalPlots"]} টি";
+            txtPrevTotalArea.Text = $"{Convert.ToDecimal(drv["TotalArea"] ?? 0):0.0000} একর";
+            txtPrevBadgeStatus.Text = drv["KhatianStatus"]?.ToString() ?? "খসড়া";
+            txtPrevKhatianRemarks.Text = drv["KhatianRemarks"]?.ToString() ?? "—";
+
+            // Section 2: Synchronize Owners Table
             if (_dsRecords != null && _dsRecords.Tables.Contains("Owners"))
             {
                 DataTable dtOwners = _dsRecords.Tables["Owners"];
@@ -496,7 +524,7 @@ namespace LandPressDataMigrationDesktopApp
                 txtOwnerCount.Text = $"মালিক সংখ্যা: {dvOwners.Count} জন";
             }
 
-            // 2. Synchronize Plots Tab (with dynamic 4-Ka, 4-Kha, 4-Ga)
+            // Section 3: Synchronize Plots Table (with dynamic 4-Ka, 4-Kha, 4-Ga)
             if (_dsRecords != null && _dsRecords.Tables.Contains("Plots"))
             {
                 DataTable dtPlots = _dsRecords.Tables["Plots"];
@@ -508,11 +536,7 @@ namespace LandPressDataMigrationDesktopApp
                 txtPlotCount.Text = $"দাগ সংখ্যা: {dvPlots.Count}টি";
             }
 
-            // 3. Synchronize Audit & Metadata Tab
-            txtAuditEntryKhatian.Text = drv["EntryKhatian"]?.ToString() ?? "—";
-            txtAuditSheet.Text = drv["SheetNum"]?.ToString() ?? "—";
-            txtAuditNote.Text = drv["KhatianNote"]?.ToString() ?? "—";
-            txtAuditRemarks.Text = drv["KhatianRemarks"]?.ToString() ?? "—";
+            // Section 4: System Audit & Metadata Card
             txtAuditUserId.Text = drv["EntryUserId"]?.ToString() ?? "—";
 
             string sealId = drv["SealId"]?.ToString() ?? "";
@@ -523,18 +547,41 @@ namespace LandPressDataMigrationDesktopApp
 
             txtAuditTerminal.Text = drv["TerminalId"]?.ToString() ?? "—";
             txtAuditTime.Text = drv["EntryTime"]?.ToString() ?? "—";
+            txtAuditNote.Text = drv["KhatianNote"]?.ToString() ?? "—";
+            txtAuditRemarks.Text = drv["KhatianRemarks"]?.ToString() ?? "—";
         }
 
-        private void ClearAuditFields()
+        private void ClearPreview()
         {
-            txtAuditEntryKhatian.Text = "—";
-            txtAuditSheet.Text = "—";
+            pnlEmptyPreview.Visibility = Visibility.Visible;
+            pnlPreviewContent.Visibility = Visibility.Collapsed;
+
+            dgOwners.ItemsSource = null;
+            dgPlots.ItemsSource = null;
+            txtOwnerCount.Text = "মালিক সংখ্যা: ০ জন";
+            txtPlotCount.Text = "দাগ সংখ্যা: ০টি";
+
+            txtPrevCurrentKhatian.Text = "—";
+            txtPrevFormerKhatian.Text = "—";
+            txtPrevEntryKhatian.Text = "—";
+            txtPrevSheet.Text = "—";
+            txtPrevMouza.Text = "—";
+            txtPrevSurvey.Text = "—";
+            txtPrevLandType.Text = "—";
+            txtPrevPorchaTitle.Text = "—";
+            txtPrevTotalPlots.Text = "—";
+            txtPrevTotalArea.Text = "—";
+            txtPrevBadgeStatus.Text = "—";
+            txtPrevKhatianRemarks.Text = "—";
+
             txtAuditNote.Text = "—";
             txtAuditRemarks.Text = "—";
             txtAuditUserId.Text = "—";
             txtAuditSeal.Text = "—";
             txtAuditTerminal.Text = "—";
             txtAuditTime.Text = "—";
+
+            txtSelectedKhatianHeader.Text = "🔍 নির্বাচিত খতিয়ানের পূর্ণাঙ্গ বিবরণী (Preview)";
         }
 
         /// <summary>
@@ -552,15 +599,9 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             dgKhatians.ItemsSource = null;
-            dgOwners.ItemsSource = null;
-            dgPlots.ItemsSource = null;
+            txtKhatianCount.Text = "০টি";
+            ClearPreview();
 
-            txtKhatianCount.Text = "মোট খতিয়ান: ০টি";
-            txtOwnerCount.Text = "মালিক সংখ্যা: ০ জন";
-            txtPlotCount.Text = "দাগ সংখ্যা: ০টি";
-            ClearAuditFields();
-
-            txtSelectedKhatianHeader.Text = "🔍 নির্বাচিত খতিয়ানের বিস্তারিত বিবরণ: (উপরে তালিকা থেকে একটি খতিয়ান নির্বাচন করুন)";
             txtStatus.Text = "ফিল্টার রিসেট করা হয়েছে। অনুগ্রহ করে নতুন করে অনুসন্ধান করুন।";
         }
 

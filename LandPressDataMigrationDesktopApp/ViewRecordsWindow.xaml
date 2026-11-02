@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LandPressDataMigrationDesktopApp"
         mc:Ignorable="d"
-        Title="ভূমি রেকর্ড পরিদর্শন — Land Records Viewer (Model A: Master-Detail)"
-        Height="900" Width="1440"
-        MinHeight="700" MinWidth="1100"
+        Title="ভূমি রেকর্ড পরিদর্শন — Land Records Viewer (Side-by-Side Master-Detail)"
+        Height="940" Width="1500"
+        MinHeight="750" MinWidth="1150"
         WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
@@ -19,47 +19,47 @@
         TextOptions.TextRenderingMode="ClearType">
 
     <Window.Resources>
-        <!-- Shared Field Label Style -->
+        <!-- Proportionally Scaled Field Label Style -->
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondary}"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
         </Style>
 
-        <!-- Shared Input TextBox Style -->
+        <!-- Proportionally Scaled Search TextBox Style -->
         <Style x:Key="SearchTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="{DynamicResource ThemeInputBg}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
-        <!-- Shared ComboBox Style -->
+        <!-- Proportionally Scaled ComboBox Style -->
         <Style x:Key="SearchComboBox" TargetType="ComboBox">
             <Setter Property="Background" Value="{DynamicResource ThemeInputBg}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
-        <!-- Action Button Style -->
+        <!-- Proportionally Scaled Action Button Style -->
         <Style x:Key="ActionBtn" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="14,6"/>
-            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="16,7"/>
+            <Setter Property="MinHeight" Value="36"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -88,7 +88,7 @@
             </Setter>
         </Style>
 
-        <!-- DataGrid Modern Style -->
+        <!-- DataGrid Modern Style with Proper Spacing and Scaled Typography -->
         <Style x:Key="ModernDataGrid" TargetType="DataGrid">
             <Setter Property="Background" Value="{DynamicResource ThemeCardBg}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
@@ -103,16 +103,16 @@
             <Setter Property="CanUserDeleteRows" Value="False"/>
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="SelectionMode" Value="Single"/>
-            <Setter Property="RowHeight" Value="28"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="RowHeight" Value="32"/>
+            <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="ColumnHeaderStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridColumnHeader">
                         <Setter Property="Background" Value="{DynamicResource ThemeInsetBg}"/>
                         <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondary}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="FontSize" Value="12"/>
-                        <Setter Property="Padding" Value="8,6"/>
+                        <Setter Property="FontSize" Value="13.5"/>
+                        <Setter Property="Padding" Value="10,8"/>
                         <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
                         <Setter Property="BorderThickness" Value="0,0,1,1"/>
                         <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -122,7 +122,7 @@
             <Setter Property="CellStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridCell">
-                        <Setter Property="Padding" Value="8,3"/>
+                        <Setter Property="Padding" Value="10,4"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="DataGridCell">
@@ -136,65 +136,89 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Preview Card Sub-heading Style -->
+        <Style x:Key="PreviewSectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Preview Property Label Style -->
+        <Style x:Key="PropLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Preview Property Value Style -->
+        <Style x:Key="PropVal" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- 0: Top Header -->
             <RowDefinition Height="Auto"/> <!-- 1: Form Search Filter Card (Strictly 7 Filters) -->
-            <RowDefinition Height="*"/>    <!-- 2: Master-Detail Content Area -->
+            <RowDefinition Height="*"/>    <!-- 2: Side-by-Side Master-Detail Area -->
             <RowDefinition Height="Auto"/> <!-- 3: Bottom Status Footer -->
         </Grid.RowDefinitions>
 
         <!-- ================= 0: TOP HEADER ================= -->
-        <Border Grid.Row="0" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Padding="20,10">
+        <Border Grid.Row="0" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Padding="20,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Title & Subtitle -->
+                <!-- Left: Title & Subtitle with Scaled Typography -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="38" Height="38" CornerRadius="8" Background="#065F46" Margin="0,0,12,0" VerticalAlignment="Center">
-                        <TextBlock Text="🏛️" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Width="42" Height="42" CornerRadius="8" Background="#065F46" Margin="0,0,14,0" VerticalAlignment="Center">
+                        <TextBlock Text="🏛️" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="ভূমি রেকর্ড পরিদর্শন — Master-Detail View" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="17" FontWeight="Bold"/>
-                            <Border Background="#0D9488" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="CORE 4103 DB" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text="ভূমি রেকর্ড পরিদর্শন — Land Records Viewer" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="19" FontWeight="Bold"/>
+                            <Border Background="#0D9488" CornerRadius="4" Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="CORE 4103 DB" Foreground="White" FontSize="11" FontWeight="Bold"/>
                             </Border>
-                            <Border x:Name="bdActiveMouzaBadge" Background="#1D4ED8" CornerRadius="4" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                                <TextBlock x:Name="txtActiveMouzaBadge" Text="মৌজা: " Foreground="White" FontSize="10.5" FontWeight="SemiBold"/>
+                            <Border x:Name="bdActiveMouzaBadge" Background="#1D4ED8" CornerRadius="4" Padding="8,3" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                                <TextBlock x:Name="txtActiveMouzaBadge" Text="মৌজা: " Foreground="White" FontSize="12" FontWeight="SemiBold"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="DLRSLSINF_4103PRSDB এর সংরক্ষিত খতিয়ান, মালিক ও দাগ ভিত্তিক ভূমি রেকর্ড অনুসন্ধান (Form 107/108)"
-                                   Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11.5" Margin="0,2,0,0"/>
+                        <TextBlock Text="DLRSLSINF_4103PRSDB এর সংরক্ষিত খতিয়ান, মালিক ও দাগ ভিত্তিক ভূমি রেকর্ড অনুসন্ধান ও পূর্ণাঙ্গ বিবরণী"
+                                   Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" Margin="0,3,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Right: Theme Toggle & Close Button -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="btnThemeToggle" Style="{StaticResource ActionBtn}" Padding="10,5" Margin="0,0,8,0"
+                    <Button x:Name="btnThemeToggle" Style="{StaticResource ActionBtn}" Padding="12,6" Margin="0,0,10,0"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                             Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnThemeToggle_Click">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="txtThemeIcon" Text="☀️" Margin="0,0,5,0" FontSize="12"/>
-                            <TextBlock x:Name="txtThemeLabel" Text="Light" FontSize="11.5" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="txtThemeIcon" Text="☀️" Margin="0,0,6,0" FontSize="13"/>
+                            <TextBlock x:Name="txtThemeLabel" Text="Light" FontSize="13" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="btnClose" Content="✖ বন্ধ করুন" Style="{StaticResource ActionBtn}" Background="#475569" Padding="12,5" Click="BtnClose_Click"/>
+                    <Button x:Name="btnClose" Content="✖ বন্ধ করুন" Style="{StaticResource ActionBtn}" Background="#475569" Padding="14,6" Click="BtnClose_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- ================= 1: SEARCH FILTER CARD (STRICTLY 7 FILTERS) ================= -->
-        <Border Grid.Row="1" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Padding="18,12">
+        <Border Grid.Row="1" Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Padding="20,14">
             <StackPanel>
                 <!-- Row 1: 4 Hierarchical Geographic Dropdowns -->
-                <Grid Margin="0,0,0,8">
+                <Grid Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
@@ -203,9 +227,9 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- 1. বিভাগ (Division) -->
-                    <Grid Grid.Column="0" Margin="0,0,12,0">
+                    <Grid Grid.Column="0" Margin="0,0,14,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="বিভাগ:" Style="{StaticResource FieldLabel}"/>
@@ -213,9 +237,9 @@
                     </Grid>
 
                     <!-- 2. জেলা (District) -->
-                    <Grid Grid.Column="1" Margin="0,0,12,0">
+                    <Grid Grid.Column="1" Margin="0,0,14,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="70"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="জেলা:" Style="{StaticResource FieldLabel}"/>
@@ -223,9 +247,9 @@
                     </Grid>
 
                     <!-- 4. উপজেলা/থানা (Upazila/Thana) -->
-                    <Grid Grid.Column="2" Margin="0,0,12,0">
+                    <Grid Grid.Column="2" Margin="0,0,14,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="95"/>
+                            <ColumnDefinition Width="100"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="উপজেলা/থানা:" Style="{StaticResource FieldLabel}"/>
@@ -235,7 +259,7 @@
                     <!-- 5. মৌজা (Mouza) -->
                     <Grid Grid.Column="3">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="70"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="মৌজা:" Style="{StaticResource FieldLabel}"/>
@@ -253,9 +277,9 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- 3. জরিপ (Survey Type) -->
-                    <Grid Grid.Column="0" Margin="0,0,12,0">
+                    <Grid Grid.Column="0" Margin="0,0,14,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="জরিপ:" Style="{StaticResource FieldLabel}"/>
@@ -266,9 +290,9 @@
                     </Grid>
 
                     <!-- 6. বর্তমান খতিয়ান (Current Khatian) -->
-                    <Grid Grid.Column="1" Margin="0,0,12,0">
+                    <Grid Grid.Column="1" Margin="0,0,14,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="70"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="খতিয়ান নং:" Style="{StaticResource FieldLabel}"/>
@@ -277,9 +301,9 @@
                     </Grid>
 
                     <!-- 7. মালিক (Owner) -->
-                    <Grid Grid.Column="2" Margin="0,0,12,0">
+                    <Grid Grid.Column="2" Margin="0,0,14,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="95"/>
+                            <ColumnDefinition Width="100"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="মালিকের নাম:" Style="{StaticResource FieldLabel}"/>
@@ -290,250 +314,336 @@
                     <!-- Action Buttons -->
                     <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <Button x:Name="btnSearch" Content="🔍 খুঁজুন / Search" Style="{StaticResource ActionBtn}"
-                                Background="#059669" Padding="14,6" Margin="0,0,8,0" Click="BtnSearch_Click"/>
+                                Background="#059669" Padding="18,8" Margin="0,0,10,0" Click="BtnSearch_Click"/>
                         <Button x:Name="btnReset" Content="🔄 রিসেট" Style="{StaticResource ActionBtn}"
-                                Background="#64748B" Padding="12,6" Click="BtnReset_Click"/>
+                                Background="#64748B" Padding="16,8" Click="BtnReset_Click"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>
         </Border>
 
-        <!-- ================= 2: MASTER-DETAIL CONTENT AREA ================= -->
+        <!-- ================= 2: SIDE-BY-SIDE MASTER-DETAIL AREA ================= -->
         <Grid Grid.Row="2" Background="{DynamicResource ThemeInsetBg}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="1.2*" MinHeight="180"/> <!-- Master: Khatians Grid -->
-                <RowDefinition Height="6"/>                    <!-- GridSplitter -->
-                <RowDefinition Height="*" MinHeight="180"/>   <!-- Detail: Tabbed Details -->
-            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="460" MinWidth="360" MaxWidth="700"/> <!-- Col 0: Left: Master List -->
+                <ColumnDefinition Width="6"/>                                   <!-- Col 1: GridSplitter -->
+                <ColumnDefinition Width="*"/>                                   <!-- Col 2: Right: Full Preview Section -->
+            </Grid.ColumnDefinitions>
 
-            <!-- ── MASTER: KHATIAN LIST GRID ── -->
-            <Border Grid.Row="0" Background="{DynamicResource ThemeCardBg}" Margin="12,10,12,0"
-                    BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,10">
+            <!-- ── LEFT PANE: MASTER KHATIAN LIST ── -->
+            <Border Grid.Column="0" Background="{DynamicResource ThemeCardBg}" Margin="12,12,0,12"
+                    BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,12">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Master Header Bar -->
-                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <!-- Master List Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="📋 খতিয়ান তালিকা (Khatian Master Records)" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13.5"/>
-                            <Border x:Name="bdKhatianBadge" Background="#0284C7" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="txtKhatianCount" Text="মোট খতিয়ান: ০টি" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                            <TextBlock Text="📋 খতিয়ান তালিকা" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="15"/>
+                            <Border x:Name="bdKhatianBadge" Background="#0284C7" CornerRadius="10" Padding="10,3" Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtKhatianCount" Text="০টি" Foreground="White" FontSize="12" FontWeight="Bold"/>
                             </Border>
-                            <TextBlock Text="— যে কোনো খতিয়ানে ক্লিক করলে নিচে মালিক ও দাগের বিস্তারিত তথ্য দৃশ্যমান হবে"
-                                       Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"/>
                         </StackPanel>
 
-                        <Button Grid.Column="1" x:Name="btnExportKhatiansCsv" Content="📊 খতিয়ান তালিকা CSV"
+                        <Button Grid.Column="1" x:Name="btnExportKhatiansCsv" Content="📊 CSV"
                                 Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}"
                                 BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
-                                Foreground="{DynamicResource ThemeTextPrimary}" Padding="10,4" FontSize="11.5"
+                                Foreground="{DynamicResource ThemeTextPrimary}" Padding="10,4" FontSize="12.5"
                                 Click="BtnExportKhatiansCsv_Click"/>
                     </Grid>
 
-                    <!-- Master DataGrid -->
+                    <!-- Master DataGrid: Serial Number, Current Khatian, Owners, and Status -->
                     <DataGrid Grid.Row="1" x:Name="dgKhatians" Style="{StaticResource ModernDataGrid}"
                               SelectionChanged="DgKhatians_SelectionChanged">
                         <DataGrid.Columns>
                             <!-- Serial Number Column on Left -->
                             <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="45"/>
-                            <DataGridTextColumn Header="বর্তমান খতিয়ান" Binding="{Binding CurrentKhatian}" Width="120" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="সাবেক খতিয়ান" Binding="{Binding FormerKhatian}" Width="110"/>
-                            <DataGridTextColumn Header="এন্ট্রি খতিয়ান" Binding="{Binding EntryKhatian}" Width="100"/>
-                            <DataGridTextColumn Header="মৌজা" Binding="{Binding MouzaName}" Width="130"/>
-                            <DataGridTextColumn Header="জরিপ" Binding="{Binding SurveyName}" Width="100"/>
-                            <DataGridTextColumn Header="শিট নং" Binding="{Binding SheetNum}" Width="65"/>
-                            <DataGridTextColumn Header="খতিয়ানের ধরন" Binding="{Binding LandTypeName}" Width="110"/>
-                            <DataGridTextColumn Header="পর্চা শিরোনাম" Binding="{Binding PorchaTitle}" Width="150"/>
-                            <DataGridTextColumn Header="মোট দাগ" Binding="{Binding TotalPlots}" Width="70"/>
-                            <DataGridTextColumn Header="মোট জমি (একর)" Binding="{Binding TotalArea, StringFormat={}{0:0.0000}}" Width="105"/>
-                            <DataGridTextColumn Header="মালিকগণ" Binding="{Binding AllOwnerNames}" Width="200"/>
-                            <DataGridTextColumn Header="অবস্থা" Binding="{Binding KhatianStatus}" Width="100"/>
-                            <DataGridTextColumn Header="মন্তব্য" Binding="{Binding KhatianRemarks}" Width="*"/>
+                            <DataGridTextColumn Header="বর্তমান খতিয়ান" Binding="{Binding CurrentKhatian}" Width="110" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="মালিকগণ" Binding="{Binding AllOwnerNames}" Width="*"/>
+                            <DataGridTextColumn Header="অবস্থা" Binding="{Binding KhatianStatus}" Width="85"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
             </Border>
 
-            <!-- ── RESIZABLE SPLITTER ── -->
-            <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                          Background="{DynamicResource ThemeCardBorder}" Cursor="SizeNS" ToolTip="ড্র্যাগ করে আকার পরিবর্তন করুন"/>
+            <!-- ── RESIZABLE VERTICAL SPLITTER ── -->
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                          Background="{DynamicResource ThemeCardBorder}" Cursor="SizeWE" ToolTip="ড্র্যাগ করে দুই পাশের আকার পরিবর্তন করুন"/>
 
-            <!-- ── DETAIL: SYNCHRONIZED TABBED VIEW ── -->
-            <Border Grid.Row="2" Background="{DynamicResource ThemeCardBg}" Margin="12,0,12,10"
-                    BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8">
+            <!-- ── RIGHT PANE: ALL-IN-ONE KHATIAN PREVIEW (NO TABS) ── -->
+            <Border Grid.Column="2" Background="{DynamicResource ThemeCardBg}" Margin="0,12,12,12"
+                    BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="18,14">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/> <!-- Preview Header Bar -->
+                        <RowDefinition Height="*"/>    <!-- Scrollable Preview Content -->
                     </Grid.RowDefinitions>
 
-                    <!-- Detail Header Bar -->
-                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                    <!-- Preview Header Bar -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock x:Name="txtSelectedKhatianHeader" Text="🔍 নির্বাচিত খতিয়ানের বিস্তারিত বিবরণ: (উপরে তালিকা থেকে একটি খতিয়ান নির্বাচন করুন)"
-                                       Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13"/>
-                        </StackPanel>
+                        <TextBlock x:Name="txtSelectedKhatianHeader" Text="🔍 নির্বাচিত খতিয়ানের পূর্ণাঙ্গ বিবরণী (Preview)"
+                                   Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
 
-                        <Button Grid.Column="1" x:Name="btnExportDetailsCsv" Content="📊 বিস্তারিত CSV এক্সপোর্ট"
+                        <Button Grid.Column="1" x:Name="btnExportDetailsCsv" Content="📊 সম্পূর্ণ বিবরণী CSV এক্সপোর্ট"
                                 Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}"
                                 BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
-                                Foreground="{DynamicResource ThemeTextPrimary}" Padding="10,4" FontSize="11.5"
+                                Foreground="{DynamicResource ThemeTextPrimary}" Padding="14,6" FontSize="13"
                                 Click="BtnExportDetailsCsv_Click"/>
                     </Grid>
 
-                    <!-- Tab Control for Owners, Plots, and Audit Notes -->
-                    <TabControl Grid.Row="1" x:Name="tcDetails" Background="Transparent" BorderBrush="{DynamicResource ThemeCardBorder}">
+                    <!-- Empty State Placeholder (when no khatian is selected) -->
+                    <Border Grid.Row="1" x:Name="pnlEmptyPreview" Background="{DynamicResource ThemeInsetBg}" CornerRadius="8"
+                            BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" Visibility="Visible">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="📄" FontSize="44" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <TextBlock Text="কোনো খতিয়ান নির্বাচিত নেই" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource ThemeTextPrimary}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="👈 বামের তালিকা থেকে যে কোনো একটি খতিয়ান নির্বাচন করুন, এখানে তার পূর্ণাঙ্গ বিবরণী দৃশ্যমান হবে।"
+                                       FontSize="13.5" Foreground="{DynamicResource ThemeTextSecondary}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
 
-                        <!-- TAB 1: 👥 মালিকগণের বিবরণ (LINFO02) -->
-                        <TabItem Header="👥 মালিকগণের বিবরণ (Owners)">
-                            <Grid Margin="0,6,0,0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock x:Name="txtOwnerCount" Text="মালিক সংখ্যা: ০ জন" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" Margin="2,0,0,4"/>
-                                <DataGrid Grid.Row="1" x:Name="dgOwners" Style="{StaticResource ModernDataGrid}">
-                                    <DataGrid.Columns>
-                                        <!-- Serial Number on Left -->
-                                        <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="45"/>
-                                        <DataGridTextColumn Header="মালিকের নাম" Binding="{Binding OwnerName}" Width="180" FontWeight="Bold"/>
-                                        <DataGridTextColumn Header="পিতা / স্বামীর নাম" Binding="{Binding FatherName}" Width="160"/>
-                                        <DataGridTextColumn Header="মাতার নাম" Binding="{Binding MotherName}" Width="140"/>
-                                        <DataGridTextColumn Header="স্বামী / স্ত্রী" Binding="{Binding SpouseName}" Width="120"/>
-                                        <DataGridTextColumn Header="লিঙ্গ" Binding="{Binding Gender}" Width="70"/>
-                                        <DataGridTextColumn Header="এনআইডি নম্বর" Binding="{Binding Nid}" Width="130"/>
-                                        <DataGridTextColumn Header="জন্ম নিবন্ধন নং" Binding="{Binding BirthReg}" Width="120"/>
-                                        <DataGridTextColumn Header="মোবাইল নম্বর" Binding="{Binding Phone}" Width="110"/>
-                                        <DataGridTextColumn Header="ইমেইল" Binding="{Binding Email}" Width="120"/>
-                                        <DataGridTextColumn Header="ঠিকানা" Binding="{Binding Address}" Width="220"/>
-                                        <DataGridTextColumn Header="অংশ / জমির পরিমাণ" Binding="{Binding OwnerShareArea, StringFormat={}{0:0.0000}}" Width="120"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Grid>
-                        </TabItem>
+                    <!-- Scrollable Single-Page Preview Content -->
+                    <ScrollViewer Grid.Row="1" x:Name="pnlPreviewContent" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                        <StackPanel Margin="0,0,8,0">
 
-                        <!-- TAB 2: 🗺️ দাগ ও জমির শ্রেণী (LINFO01) -->
-                        <TabItem Header="🗺️ দাগ ও জমির শ্রেণী (Plots &amp; Land Classification)">
-                            <Grid Margin="0,6,0,0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock x:Name="txtPlotCount" Text="দাগ সংখ্যা: ০টি" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="11" Margin="2,0,0,4"/>
-                                <DataGrid Grid.Row="1" x:Name="dgPlots" Style="{StaticResource ModernDataGrid}">
-                                    <DataGrid.Columns>
-                                        <!-- Serial Number on Left -->
-                                        <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="45"/>
-                                        <DataGridTextColumn Header="বর্তমান দাগ নং" Binding="{Binding CurrentPlot}" Width="110" FontWeight="Bold"/>
-                                        <DataGridTextColumn Header="সাবেক দাগ নং" Binding="{Binding FormerPlot}" Width="100"/>
-                                        <DataGridTextColumn Header="সি.এস. দাগ নং" Binding="{Binding CsPlot}" Width="95"/>
-                                        <DataGridTextColumn Header="সাবেক খতিয়ান নং" Binding="{Binding SabekKhatian}" Width="105"/>
-                                        <DataGridTextColumn Header="দাগের মোট জমি (একর)" Binding="{Binding TotalPlotArea, StringFormat={}{0:0.0000}}" Width="135"/>
-                                        <DataGridTextColumn Header="খতিয়ানের অংশ" Binding="{Binding KhatianShare, StringFormat={}{0:0.0000}}" Width="110"/>
-                                        <DataGridTextColumn Header="অত্র খতিয়ানে জমি (একর)" Binding="{Binding KhatianPlotArea, StringFormat={}{0:0.0000}}" Width="135"/>
-                                        <!-- Dynamic 3-part Land Classification -->
-                                        <DataGridTextColumn Header="৪(ক) কৃষি" Binding="{Binding AgriLandClass_4Ka}" Width="110"/>
-                                        <DataGridTextColumn Header="৪(খ) অকৃষি" Binding="{Binding NonAgriLandClass_4Kha}" Width="110"/>
-                                        <DataGridTextColumn Header="৪(গ) স্থানীয় নাম" Binding="{Binding LocalName_4Ga}" Width="120"/>
-                                        <DataGridTextColumn Header="দাগের মন্তব্য" Binding="{Binding PlotRemarks}" Width="*"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Grid>
-                        </TabItem>
+                            <!-- ================= SECTION 1: KHATIAN IDENTIFICATION & OVERVIEW CARD ================= -->
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                    CornerRadius="8" Padding="18,14" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                        <TextBlock Text="📋 খতিয়ান পরিচিতি ও সারাংশ" Style="{StaticResource PreviewSectionHeader}" Margin="0"/>
+                                        <Border Background="#065F46" CornerRadius="4" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock x:Name="txtPrevBadgeStatus" Text="খসড়া" Foreground="White" FontSize="11.5" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
 
-                        <!-- TAB 3: ℹ️ খতিয়ান মেটাডাটা ও অডিট -->
-                        <TabItem Header="ℹ️ খতিয়ান মেটাডাটা ও অডিট (Audit &amp; Notes)">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                    <!-- Grid Row 1 -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <!-- Left Card: Identification & Notes -->
-                                    <Border Grid.Column="0" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,0,6,0">
-                                        <StackPanel>
-                                            <TextBlock Text="📌 খতিয়ান পরিচিতি ও নোট" FontWeight="Bold" FontSize="12.5" Foreground="{DynamicResource ThemeTextPrimary}" Margin="0,0,0,8"/>
-                                            
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="এন্ট্রি খতিয়ান নম্বর:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditEntryKhatian" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12"/>
-                                            </Grid>
-
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="নকশা শিট নম্বর:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditSheet" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12"/>
-                                            </Grid>
-
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="খতিয়ান নোট:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditNote" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" TextWrapping="Wrap"/>
-                                            </Grid>
-
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="বিশেষ মন্তব্য:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditRemarks" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" TextWrapping="Wrap"/>
-                                            </Grid>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="বর্তমান খতিয়ান নং:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevCurrentKhatian" Text="—" Style="{StaticResource PropVal}" FontSize="16" Foreground="#0284C7"/>
                                         </StackPanel>
-                                    </Border>
 
-                                    <!-- Right Card: Audit Trail -->
-                                    <Border Grid.Column="1" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="6,0,0,0">
-                                        <StackPanel>
-                                            <TextBlock Text="🛡️ সিস্টেম অডিট ও ট্রেইল" FontWeight="Bold" FontSize="12.5" Foreground="{DynamicResource ThemeTextPrimary}" Margin="0,0,0,8"/>
-
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="এন্ট্রি ইউজার আইডি:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditUserId" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12"/>
-                                            </Grid>
-
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="সিল আইডি ও বিবরণ:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditSeal" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12"/>
-                                            </Grid>
-
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="টার্মিনাল আইডি:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditTerminal" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12"/>
-                                            </Grid>
-
-                                            <Grid Margin="0,0,0,4">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                <TextBlock Text="এন্ট্রি তারিখ ও সময়:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
-                                                <TextBlock Grid.Column="1" x:Name="txtAuditTime" Text="—" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12"/>
-                                            </Grid>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="সাবেক খতিয়ান নং:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevFormerKhatian" Text="—" Style="{StaticResource PropVal}"/>
                                         </StackPanel>
-                                    </Border>
-                                </Grid>
-                            </ScrollViewer>
-                        </TabItem>
-                    </TabControl>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="এন্ট্রি খতিয়ান নং:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevEntryKhatian" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="3">
+                                            <TextBlock Text="নকশা শিট নং:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevSheet" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Grid Row 2 -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="মৌজার নাম:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevMouza" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="জরিপের ধরন:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevSurvey" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="মোট দাগ সংখ্যা:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevTotalPlots" Text="—" Style="{StaticResource PropVal}" Foreground="#059669"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="3">
+                                            <TextBlock Text="মোট জমির পরিমাণ (একর):" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevTotalArea" Text="—" Style="{StaticResource PropVal}" Foreground="#059669"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Grid Row 3 -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="খতিয়ানের ধরন:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevLandType" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="পর্চা শিরোনাম:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevPorchaTitle" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="মন্তব্য ও বিবরণ:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtPrevKhatianRemarks" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ================= SECTION 2: OWNERS TABLE ================= -->
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                    CornerRadius="8" Padding="18,14" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="👥 মালিকগণের বিবরণ (Owners)" Style="{StaticResource PreviewSectionHeader}" Margin="0"/>
+                                        <TextBlock Grid.Column="1" x:Name="txtOwnerCount" Text="মালিক সংখ্যা: ০ জন" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <DataGrid x:Name="dgOwners" Style="{StaticResource ModernDataGrid}" MaxHeight="280">
+                                        <DataGrid.Columns>
+                                            <!-- Serial Number on Left -->
+                                            <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="45"/>
+                                            <DataGridTextColumn Header="মালিকের নাম" Binding="{Binding OwnerName}" Width="190" FontWeight="Bold"/>
+                                            <DataGridTextColumn Header="পিতা / স্বামীর নাম" Binding="{Binding FatherName}" Width="170"/>
+                                            <DataGridTextColumn Header="মাতার নাম" Binding="{Binding MotherName}" Width="150"/>
+                                            <DataGridTextColumn Header="স্বামী / স্ত্রী" Binding="{Binding SpouseName}" Width="130"/>
+                                            <DataGridTextColumn Header="লিঙ্গ" Binding="{Binding Gender}" Width="75"/>
+                                            <DataGridTextColumn Header="এনআইডি নম্বর" Binding="{Binding Nid}" Width="140"/>
+                                            <DataGridTextColumn Header="জন্ম নিবন্ধন নং" Binding="{Binding BirthReg}" Width="130"/>
+                                            <DataGridTextColumn Header="মোবাইল" Binding="{Binding Phone}" Width="115"/>
+                                            <DataGridTextColumn Header="ঠিকানা" Binding="{Binding Address}" Width="220"/>
+                                            <DataGridTextColumn Header="অংশ / জমির পরিমাণ" Binding="{Binding OwnerShareArea, StringFormat={}{0:0.0000}}" Width="130"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ================= SECTION 3: PLOTS & LAND CLASSIFICATION ================= -->
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                    CornerRadius="8" Padding="18,14" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="🗺️ দাগ ও জমির শ্রেণী (Plots &amp; Land Classification)" Style="{StaticResource PreviewSectionHeader}" Margin="0"/>
+                                        <TextBlock Grid.Column="1" x:Name="txtPlotCount" Text="দাগ সংখ্যা: ০টি" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <DataGrid x:Name="dgPlots" Style="{StaticResource ModernDataGrid}" MaxHeight="300">
+                                        <DataGrid.Columns>
+                                            <!-- Serial Number on Left -->
+                                            <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="45"/>
+                                            <DataGridTextColumn Header="বর্তমান দাগ নং" Binding="{Binding CurrentPlot}" Width="115" FontWeight="Bold"/>
+                                            <DataGridTextColumn Header="সাবেক দাগ নং" Binding="{Binding FormerPlot}" Width="105"/>
+                                            <DataGridTextColumn Header="সি.এস. দাগ নং" Binding="{Binding CsPlot}" Width="100"/>
+                                            <DataGridTextColumn Header="সাবেক খতিয়ান নং" Binding="{Binding SabekKhatian}" Width="110"/>
+                                            <DataGridTextColumn Header="দাগের মোট জমি (একর)" Binding="{Binding TotalPlotArea, StringFormat={}{0:0.0000}}" Width="140"/>
+                                            <DataGridTextColumn Header="খতিয়ানের অংশ" Binding="{Binding KhatianShare, StringFormat={}{0:0.0000}}" Width="115"/>
+                                            <DataGridTextColumn Header="অত্র খতিয়ানে জমি (একর)" Binding="{Binding KhatianPlotArea, StringFormat={}{0:0.0000}}" Width="145"/>
+                                            <!-- Dynamic 3-part Land Classification -->
+                                            <DataGridTextColumn Header="৪(ক) কৃষি" Binding="{Binding AgriLandClass_4Ka}" Width="120"/>
+                                            <DataGridTextColumn Header="৪(খ) অকৃষি" Binding="{Binding NonAgriLandClass_4Kha}" Width="120"/>
+                                            <DataGridTextColumn Header="৪(গ) স্থানীয় নাম" Binding="{Binding LocalName_4Ga}" Width="130"/>
+                                            <DataGridTextColumn Header="দাগের মন্তব্য" Binding="{Binding PlotRemarks}" Width="*"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ================= SECTION 4: AUDIT TRAIL & SYSTEM METADATA ================= -->
+                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                    CornerRadius="8" Padding="18,14">
+                                <StackPanel>
+                                    <TextBlock Text="🛡️ সিস্টেম অডিট ও ট্রেইল (System Audit &amp; Metadata)" Style="{StaticResource PreviewSectionHeader}" Margin="0,0,0,10"/>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="এন্ট্রি ইউজার আইডি:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtAuditUserId" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="সিল আইডি ও বিবরণ:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtAuditSeal" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="টার্মিনাল আইডি:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtAuditTerminal" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="3">
+                                            <TextBlock Text="এন্ট্রি তারিখ ও সময়:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtAuditTime" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="খতিয়ান নোট:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtAuditNote" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="বিশেষ মন্তব্য:" Style="{StaticResource PropLabel}"/>
+                                            <TextBlock x:Name="txtAuditRemarks" Text="—" Style="{StaticResource PropVal}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </Border>
         </Grid>
 
         <!-- ================= 3: BOTTOM STATUS & DETAIL BANNER ================= -->
-        <Border Grid.Row="3" Background="{DynamicResource ThemeFooterBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,1,0,0" Padding="20,8">
+        <Border Grid.Row="3" Background="{DynamicResource ThemeFooterBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,1,0,0" Padding="20,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -542,12 +652,26 @@
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock x:Name="txtStatus" Text="প্রস্তুত: অনুগ্রহ করে বিভাগ, জেলা, উপজেলা এবং মৌজা নির্বাচন করে খুঁজুন বাটনে ক্লিক করুন"
-                               Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
+                               Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13"/>
                 </StackPanel>
 
                 <TextBlock Grid.Column="1" x:Name="txtDbInfo" Text="Database: DLRSLSINF_4103PRSDB"
-                           Foreground="{DynamicResource ThemeTextMuted}" FontSize="11" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource ThemeTextMuted}" FontSize="12.5" VerticalAlignment="Center"/>
             </Grid>
         </Border>
+
+        <!-- ================= 4: FULL-SCREEN LOADING OVERLAY ================= -->
+        <Grid x:Name="loadingOverlay" Background="#80000000" Visibility="Collapsed" Grid.RowSpan="4">
+            <Border Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                    CornerRadius="10" Padding="28,24" HorizontalAlignment="Center" VerticalAlignment="Center" Width="380">
+                <StackPanel HorizontalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Height="6" Margin="0,0,0,18" Foreground="#059669"/>
+                    <TextBlock x:Name="txtLoadingMessage" Text="অনুগ্রহ করে অপেক্ষা করুন..." FontWeight="Bold" FontSize="15"
+                               HorizontalAlignment="Center" Foreground="{DynamicResource ThemeTextPrimary}"/>
+                    <TextBlock Text="ডাটাবেজ থেকে ভূমি রেকর্ড সংগ্রহ ও লোড করা হচ্ছে..." FontSize="13"
+                               HorizontalAlignment="Center" Foreground="{DynamicResource ThemeTextSecondary}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
