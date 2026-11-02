@@ -1,4 +1,4 @@
-# DLRS Data Migration Tool — Project Documentation
+﻿# DLRS Data Migration Tool — Project Documentation
 
 > **Document scope:** complete technical documentation of the solution in this repository (architecture, modules, classes, database objects, configuration, workflows, build/deploy and known limitations).
 > **Verified against:** the actual source of this working copy (branch `main`, commit `0b836be`). At scan time the working tree also contained two uncommitted local edits (`MainWindow.xaml`, `MainWindow.xaml.cs` — the "Throttle Delay" checkbox behaviour), which are included in this description.
@@ -685,16 +685,32 @@ Findings from reading the code (recorded for maintainers; nothing was changed):
 
 **UI / UX**
 
-11. `ViewRecordsWindow` is a **prototype** — it renders `LandRecordDummyModel` rows created by `SeedDummyRecords()` and is not wired to any database query.
+11. `ViewRecordsWindow` has been fully implemented in **v0.21a** as a production-grade **Model A: Master-Detail Tabbed View** directly querying `DLRSLSINF_4103PRSDB` via dedicated Stored Procedure `dbo_lis.SP_LIS_GET_MIGRATED_RECORDS` and `LandRecordsViewerService`. It features 7 cascading filters (Division, District, Survey, Upazila/Thana, Mouza, Current Khatian, Owner), dynamic 3-part Land Classification (`৪(ক) কৃষি`, `৪(খ) অকৃষি`, `৪(গ) স্থানীয় নাম`), Serial numbers (`#`) on the far left of all DataGrids, and UTF-8 BOM CSV exports.
 12. Window sizes are fixed (`Height="940" Width="1440"` in `MainWindow`, `WindowStartupLocation=CenterScreen`) with no small-screen layout; the left column is a fixed 450 px.
 13. The login form is the only authentication and it is client-side only (see §12).
 
 **Version / documentation drift**
 
-14. `DLRS_DATA_MIGRATION_SYSTEM_OPERATION_MANUAL.md` documents app **v0.14**, while `AppConfig.Version` is now **v0.20a**, and it states `ConversionRowDelayMs` default `0` while the code uses `2`. Prefer `AppConfig.cs` as the source of truth.
+14. `DLRS_DATA_MIGRATION_SYSTEM_OPERATION_MANUAL.md` documents app **v0.14**, while `AppConfig.Version` is now **v0.21a**, and it states `ConversionRowDelayMs` default `0` while the code uses `2`. Prefer `AppConfig.cs` as the source of truth.
 15. `README.md` is only a snippet of the `AREAINF` migration query, not a project readme.
 16. **Pause/Stop & Database Filtering (v0.19a):** Added cooperative `OperationController` managing Pause/Resume/Stop with atomic SQL transaction rollback for staging, batch-boundary checkpoints for conversion, and ProcID-boundary checkpoints for migration. Added automatic exclusion of migrated databases (`tblUnitMigrationLog` where `Status = 'COMPLETED'`) with caption and Admin reveal toggle.
 17. **Dedicated Database Folder Locking & Pre-Flight Flow (v0.20a):** Added persistent folder lock (`WorkspaceDirectoryManager`), Step 0 folder selection/creation, Step 2 Core DB (`DLRSLSINF_4103PRSDB`) presence & physical location verification with automatic detach/relocation/restore into the folder, Step 3 Intermediate DB location validation & relocation, strict folder-bound filtering for database selection (`sys.master_files`), and forced folder routing for all Restore / Attach operations.
+18. **Land Records Viewing Window & Dedicated Stored Procedure (v0.21a):**
+    - **Layout:** Model A Master-Detail Tabbed View with draggable `GridSplitter` and maximized full-screen default.
+    - **Filters (Strictly 7):**
+      - বিভাগ (Division) — Dropdown populated hierarchically from `dbo.AREAINF` (`XX0000000`).
+      - জেলা (District) — Dropdown populated hierarchically from `dbo.AREAINF` (`XXXX00000`).
+      - জরিপ (Survey Type) — Dropdown (`201901` - BDS / All).
+      - উপজেলা/থানা (Upazila/Thana) — Dropdown populated hierarchically from `dbo.AREAINF` (`XXXXXX000`).
+      - মৌজা (Mouza) — Dropdown populated hierarchically from `dbo.AREAINF` (`XXXXXXXXX`).
+      - বর্তমান খতিয়ান (Current Khatian) — Filter textbox.
+      - মালিক (Owner) — Filter textbox.
+    - **Dedicated Stored Procedure:** `[dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]` deployed in `DLRSLSINF_4103PRSDB`, returning 3 synchronized result sets:
+      - Result Set 0: Khatians (`LINFO00` + `LANDTYPE` + `AREAINF` + precomputed plot count, total land area, concatenated owner summary, audit metadata).
+      - Result Set 1: Owners (`LINFO02` with serial, NID, phone, parent names, share).
+      - Result Set 2: Plots (`LINFO01` + dynamic 3-part Land Classification via hierarchical `LUCODE`: `AgriLandClass_4Ka`, `NonAgriLandClass_4Kha`, `LocalName_4Ga`).
+    - **Serial Numbers:** Serial number column (`#`) displayed on the far left of all DataGrids (`dgKhatians`, `dgOwners`, `dgPlots`).
+    - **CSV Export:** UTF-8 BOM CSV exports for Master Khatian list and Full Detailed records (Khatian + Owners + Plots) for Microsoft Excel compatibility.
 
 ---
 

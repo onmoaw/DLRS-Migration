@@ -202,12 +202,12 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="txtWorkspaceFolder" Style="{StaticResource InputBox}" Height="30" FontSize="12.5"
                                          IsReadOnly="True" ToolTip="Selected dedicated folder path"/>
-                                <Button Grid.Column="1" x:Name="btnBrowseWorkspace" Content="📂 Browse" Width="78" Height="30"
+                                <Button Grid.Column="1" x:Name="btnBrowseWorkspace" Content="📂 Browse" Width="90" Height="30"
                                         Margin="6,0,0,0" Style="{StaticResource AppBtn}" FontSize="12" FontWeight="SemiBold"
                                         Click="BtnBrowseWorkspaceFolder_Click"/>
-                                <Button Grid.Column="2" x:Name="btnNewWorkspaceFolder" Content="➕ New" Width="65" Height="30"
+                                <!-- <Button Grid.Column="2" x:Name="btnNewWorkspaceFolder" Content="➕ New" Width="70" Height="30"
                                         Margin="6,0,0,0" Style="{StaticResource AppBtn}" FontSize="12" FontWeight="SemiBold"
-                                        Click="BtnNewWorkspaceFolder_Click"/>
+                                        Click="BtnNewWorkspaceFolder_Click"/> -->
                             </Grid>
 
                             <!-- Folder Status & Scan Badge -->

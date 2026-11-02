@@ -1,4 +1,4 @@
-using DBAccess;
+﻿using DBAccess;
 using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
 using System.ComponentModel;
@@ -381,7 +381,14 @@ namespace LandPressDataMigrationDesktopApp
         {
             try
             {
-                var win = new ViewRecordsWindow
+                string? coreCs = null;
+                try
+                {
+                    coreCs = BuildConnectionString(_BaseDbName);
+                }
+                catch { }
+
+                var win = new ViewRecordsWindow(coreCs)
                 {
                     Owner = this
                 };

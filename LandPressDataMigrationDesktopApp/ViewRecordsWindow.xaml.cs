@@ -1,69 +1,66 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32;
 using ComboBox = System.Windows.Controls.ComboBox;
 using MessageBox = System.Windows.MessageBox;
-using Clipboard = System.Windows.Clipboard;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 
 namespace LandPressDataMigrationDesktopApp
 {
     /// <summary>
-    /// Data model representing a Land Record (Khatian, Dag, Owner, Area) with demo/dummy data.
-    /// </summary>
-    public class LandRecordDummyModel
-    {
-        public int SlNo { get; set; }
-        public string Division { get; set; } = "সিলেট";
-        public string District { get; set; } = "সিলেট";
-        public string Upazila { get; set; } = "সিলেট সদর";
-        public string Mouza { get; set; } = "আম্বরখানা (০১)";
-        public string SurveyType { get; set; } = "বি.এস. (BS)";
-        public string CurrentKhatian { get; set; } = "";
-        public string FormerKhatian { get; set; } = "";
-        public string CurrentPlot { get; set; } = "";
-        public string FormerPlot { get; set; } = "";
-        public string CsPlot { get; set; } = "";
-        public string OwnerName { get; set; } = "";
-        public string FatherName { get; set; } = "";
-        public string MotherName { get; set; } = "";
-        public string SpouseName { get; set; } = "";
-        public string Nid { get; set; } = "";
-        public string BirthReg { get; set; } = "";
-        public string Mobile { get; set; } = "";
-        public string Address { get; set; } = "";
-        public string LandClass { get; set; } = "নাল";
-        public string LandAreaAcre { get; set; } = "০.১২৫০";
-        public string Share { get; set; } = "০.২৫০০";
-    }
-
-    /// <summary>
     /// Interaction logic for ViewRecordsWindow.xaml
-    /// Pop-up screen featuring all land search/filter fields from the provided specification.
+    /// Model A: Master-Detail Tabbed View for migrated land records in DLRSLSINF_4103PRSDB.
+    /// Features:
+    ///   - Strictly 7 cascading filters: Division, District, Survey, Upazila/Thana, Mouza, Current Khatian, Owner.
+    ///   - In-memory hierarchical cascading from dbo.AREAINF (UNITCOD 9-digit schema).
+    ///   - Dedicated SP execution: dbo_lis.SP_LIS_GET_MIGRATED_RECORDS.
+    ///   - Synchronized Master (Khatians) and Detail (Owners, Plots with 4-Ka/Kha/Ga, Audit metadata).
+    ///   - Serial number (#) column on the far left of all DataGrids.
+    ///   - UTF-8 BOM CSV exports for Khatians and full joined Details.
     /// </summary>
     public partial class ViewRecordsWindow : Window
     {
-        private List<LandRecordDummyModel> _allDummyRecords = new List<LandRecordDummyModel>();
+        private readonly string? _coreConnectionString;
+        private List<AreaHierarchyItem> _allAreaItems = new();
+        private DataSet? _dsRecords;
+        private bool _isPopulatingDropdowns = false;
 
-        public ViewRecordsWindow()
+        public ViewRecordsWindow() : this(null)
+        {
+        }
+
+        public ViewRecordsWindow(string? coreConnectionString)
         {
             InitializeComponent();
+            _coreConnectionString = coreConnectionString;
+
             Loaded += ViewRecordsWindow_Loaded;
             Unloaded += ViewRecordsWindow_Unloaded;
         }
 
-        private void ViewRecordsWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void ViewRecordsWindow_Loaded(object sender, RoutedEventArgs e)
         {
             ThemeManager.ThemeChanged += OnThemeChanged;
             UpdateThemeButton();
 
-            // Initialize rich realistic dummy land records
-            SeedDummyRecords();
-
-            // Populate the grid with all records by default
-            FilterAndDisplayRecords();
+            if (!string.IsNullOrWhiteSpace(_coreConnectionString))
+            {
+                txtDbInfo.Text = "Database: DLRSLSINF_4103PRSDB (সংযুক্ত)";
+                await InitializeAreaHierarchyAsync();
+            }
+            else
+            {
+                txtDbInfo.Text = "Database: সংযোগ পাওয়া যায়নি (অফলাইন মোড)";
+                txtStatus.Text = "সতর্কতা: কোনো সক্রিয় ডাটাবেজ সংযোগ প্রদান করা হয়নি। ডেমো এলাকা লোড করা হচ্ছে...";
+                LoadFallbackAreaHierarchy();
+            }
         }
 
         private void ViewRecordsWindow_Unloaded(object sender, RoutedEventArgs e)
@@ -94,374 +91,632 @@ namespace LandPressDataMigrationDesktopApp
             Close();
         }
 
+        #region ================= AREA HIERARCHY CASCADING =================
+
         /// <summary>
-        /// Populates a comprehensive list of dummy records with authentic Bengali land data.
+        /// Loads all administrative area records from dbo.AREAINF and populates the cascading dropdowns.
         /// </summary>
-        private void SeedDummyRecords()
+        private async Task InitializeAreaHierarchyAsync()
         {
-            _allDummyRecords = new List<LandRecordDummyModel>
+            try
             {
-                new LandRecordDummyModel
+                txtStatus.Text = "ভৌগোলিক এলাকা তথ্য (AREAINF) লোড করা হচ্ছে...";
+                btnSearch.IsEnabled = false;
+
+                _allAreaItems = await LandRecordsViewerService.LoadAreaHierarchyAsync(_coreConnectionString!);
+
+                if (_allAreaItems.Count == 0)
                 {
-                    SlNo = 1,
-                    Division = "সিলেট",
-                    District = "সিলেট",
-                    Upazila = "সিলেট সদর",
-                    Mouza = "আম্বরখানা (০১)",
-                    SurveyType = "বি.এস. (BS)",
-                    CurrentKhatian = "১০৫",
-                    FormerKhatian = "৪৫",
-                    CurrentPlot = "১২০৪",
-                    FormerPlot = "৮৫০",
-                    CsPlot = "৩১২",
-                    OwnerName = "মো: রফিকুল ইসলাম",
-                    FatherName = "মরহুম আব্দুল জলিল",
-                    MotherName = "আমেনা বেগম",
-                    SpouseName = "ফাতেমা খাতুন",
-                    Nid = "১৯৮৫৯১১২৩৪৫৬৭৮৯০১",
-                    BirthReg = "১৯৮৫৯১১০০০১২৩৪৫৬৭",
-                    Mobile = "০১৭xxxxxxxx",
-                    Address = "গ্রাম: আম্বরখানা, ডাকঘর: সিলেট-৩১০০",
-                    LandClass = "বাড়ি",
-                    LandAreaAcre = "০.০৮৫০ একর",
-                    Share = "০.৫০০০"
-                },
-                new LandRecordDummyModel
-                {
-                    SlNo = 2,
-                    Division = "সিলেট",
-                    District = "সিলেট",
-                    Upazila = "সিলেট সদর",
-                    Mouza = "আম্বরখানা (০১)",
-                    SurveyType = "বি.এস. (BS)",
-                    CurrentKhatian = "১০৫",
-                    FormerKhatian = "৪৫",
-                    CurrentPlot = "১২০৪",
-                    FormerPlot = "৮৫০",
-                    CsPlot = "৩১২",
-                    OwnerName = "মোসা: ফাতেমা খাতুন",
-                    FatherName = "মো: শামসুল হক",
-                    MotherName = "জাহানারা বেগম",
-                    SpouseName = "মো: রফিকুল ইসলাম",
-                    Nid = "১৯৮৮৯১১২৩৪৫৬৭৮৯১০",
-                    BirthReg = "১৯৮৮৯১১০০০১২৩৪৫৮৮",
-                    Mobile = "০১৮xxxxxxxx",
-                    Address = "গ্রাম: আম্বরখানা, ডাকঘর: সিলেট-৩১০০",
-                    LandClass = "বাড়ি",
-                    LandAreaAcre = "০.০৮৫০ একর",
-                    Share = "০.৫০০০"
-                },
-                new LandRecordDummyModel
-                {
-                    SlNo = 3,
-                    Division = "সিলেট",
-                    District = "সিলেট",
-                    Upazila = "সিলেট সদর",
-                    Mouza = "শিবগঞ্জ (০৪)",
-                    SurveyType = "বি.এস. (BS)",
-                    CurrentKhatian = "২১০",
-                    FormerKhatian = "৮৯",
-                    CurrentPlot = "১৫৬২",
-                    FormerPlot = "৯২০",
-                    CsPlot = "৪১৫",
-                    OwnerName = "কামাল উদ্দিন চৌধুরী",
-                    FatherName = "নাসির উদ্দিন চৌধুরী",
-                    MotherName = "রোকেয়া চৌধুরী",
-                    SpouseName = "নাজমা বেগম",
-                    Nid = "১৯৭৫৯১১২৩৪৫৬৭৮৯২২",
-                    BirthReg = "১৯৭৫৯১১০০০১২৩৪৫৯৯",
-                    Mobile = "০১৯xxxxxxxx",
-                    Address = "গ্রাম: শিবগঞ্জ, ডাকঘর: সিলেট সদর",
-                    LandClass = "নাল",
-                    LandAreaAcre = "০.২৫০০ একর",
-                    Share = "১.০০০০"
-                },
-                new LandRecordDummyModel
-                {
-                    SlNo = 4,
-                    Division = "সিলেট",
-                    District = "সিলেট",
-                    Upazila = "সিলেট সদর",
-                    Mouza = "লামাবাজার (০২)",
-                    SurveyType = "বি.এস. (BS)",
-                    CurrentKhatian = "৩১৫",
-                    FormerKhatian = "১১০",
-                    CurrentPlot = "১৮৪০",
-                    FormerPlot = "১০১৫",
-                    CsPlot = "৫৫০",
-                    OwnerName = "সৈয়দ আশরাফ আলী",
-                    FatherName = "সৈয়দ মনসুর আলী",
-                    MotherName = "সৈয়দা সেলিনা বানু",
-                    SpouseName = "পারভীন সুলতানা",
-                    Nid = "১৯৮০৯১১২৩৪৫৬৭৮৯৩৩",
-                    BirthReg = "১৯৮০৯১১০০০১২৩৪৬১১",
-                    Mobile = "০১৬xxxxxxxx",
-                    Address = "গ্রাম: লামাবাজার, ডাকঘর: সিলেট-৩১০০",
-                    LandClass = "দোকান",
-                    LandAreaAcre = "০.০৪০০ একর",
-                    Share = "০.৭৫০০"
-                },
-                new LandRecordDummyModel
-                {
-                    SlNo = 5,
-                    Division = "সিলেট",
-                    District = "সিলেট",
-                    Upazila = "সিলেট সদর",
-                    Mouza = "উপশহর (০৩)",
-                    SurveyType = "বি.এস. (BS)",
-                    CurrentKhatian = "৪২০",
-                    FormerKhatian = "১৮৫",
-                    CurrentPlot = "২২১০",
-                    FormerPlot = "১২৪৫",
-                    CsPlot = "৬৭০",
-                    OwnerName = "মাহবুবুর রহমান",
-                    FatherName = "তোফাজ্জল হোসেন",
-                    MotherName = "মমতাজ বেগম",
-                    SpouseName = "রুমানা আক্তার",
-                    Nid = "১৯৯১৯১১২৩৪৫৬৭৮৯৪৪",
-                    BirthReg = "১৯৯১৯১১০০০১২৩৪৬২২",
-                    Mobile = "০১৫xxxxxxxx",
-                    Address = "গ্রাম: উপশহর, ব্লক-সি, সিলেট",
-                    LandClass = "ভিটি",
-                    LandAreaAcre = "০.১৫০০ একর",
-                    Share = "১.০০০০"
-                },
-                new LandRecordDummyModel
-                {
-                    SlNo = 6,
-                    Division = "সিলেট",
-                    District = "সিলেট",
-                    Upazila = "সিলেট সদর",
-                    Mouza = "পাঠানটুলা (০৫)",
-                    SurveyType = "বি.এস. (BS)",
-                    CurrentKhatian = "৫২৫",
-                    FormerKhatian = "২২০",
-                    CurrentPlot = "২৫৩০",
-                    FormerPlot = "১৪৩০",
-                    CsPlot = "৭৮০",
-                    OwnerName = "মো: আনোয়ার হোসেন",
-                    FatherName = "মো: খলিলুর রহমান",
-                    MotherName = "হাফেজা বেগম",
-                    SpouseName = "শাহিদা আক্তার",
-                    Nid = "১৯৮২৯১১২৩৪৫৬৭৮৯৫৫",
-                    BirthReg = "১৯৮২৯১১০০০১২৩৪৬৩৩",
-                    Mobile = "০১৭xxxxxxxx",
-                    Address = "গ্রাম: পাঠানটুলা, সিলেট সদর",
-                    LandClass = "পুকুর",
-                    LandAreaAcre = "০.৩২০০ একর",
-                    Share = "০.৫০০০"
+                    txtStatus.Text = "AREAINF টেবিলে কোনো এলাকা পাওয়া যায়নি। ডেমো এলাকা ব্যবহার করা হচ্ছে।";
+                    LoadFallbackAreaHierarchy();
+                    return;
                 }
-            };
-        }
 
-        /// <summary>
-        /// Executes filtering against the dummy data based on all input fields.
-        /// </summary>
-        private void BtnShowResults_Click(object sender, RoutedEventArgs e)
-        {
-            FilterAndDisplayRecords();
-        }
-
-        private void FilterAndDisplayRecords()
-        {
-            string division = GetSelectedComboValue(cmbDivision);
-            string district = GetSelectedComboValue(cmbDistrict);
-            string survey = GetSelectedComboValue(cmbSurvey);
-            string upazila = GetSelectedComboValue(cmbUpazila);
-            string mouza = GetSelectedComboValue(cmbMouza);
-
-            string curKhatian = txtCurrentKhatian.Text.Trim();
-            string formerKhatian = txtFormerKhatian.Text.Trim();
-            string curPlot = txtCurrentPlot.Text.Trim();
-            string formerPlot = txtFormerPlot.Text.Trim();
-            string csPlot = txtCsPlot.Text.Trim();
-
-            string owner = txtOwner.Text.Trim();
-            string father = txtFather.Text.Trim();
-            string mother = txtMother.Text.Trim();
-            string spouse = txtSpouse.Text.Trim();
-            string nid = txtNid.Text.Trim();
-            string birthReg = txtBirthReg.Text.Trim();
-            string mobile = txtMobile.Text.Trim();
-            string address = txtOwnerAddress.Text.Trim();
-
-            var query = _allDummyRecords.AsEnumerable();
-
-            if (!string.IsNullOrEmpty(division) && division != "নির্বাচন করুন")
-                query = query.Where(r => r.Division.Contains(division, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(district) && district != "নির্বাচন করুন")
-                query = query.Where(r => r.District.Contains(district, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(survey) && survey != "নির্বাচন করুন")
-                query = query.Where(r => r.SurveyType.Contains(survey, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(upazila) && upazila != "নির্বাচন করুন")
-                query = query.Where(r => r.Upazila.Contains(upazila, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(mouza) && mouza != "নির্বাচন করুন")
-                query = query.Where(r => r.Mouza.Contains(mouza, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(curKhatian))
-                query = query.Where(r => r.CurrentKhatian.Contains(curKhatian, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(formerKhatian))
-                query = query.Where(r => r.FormerKhatian.Contains(formerKhatian, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(curPlot))
-                query = query.Where(r => r.CurrentPlot.Contains(curPlot, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(formerPlot))
-                query = query.Where(r => r.FormerPlot.Contains(formerPlot, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(csPlot))
-                query = query.Where(r => r.CsPlot.Contains(csPlot, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(owner))
-                query = query.Where(r => r.OwnerName.Contains(owner, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(father))
-                query = query.Where(r => r.FatherName.Contains(father, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(mother))
-                query = query.Where(r => r.MotherName.Contains(mother, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(spouse))
-                query = query.Where(r => r.SpouseName.Contains(spouse, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(nid))
-                query = query.Where(r => r.Nid.Contains(nid, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(birthReg))
-                query = query.Where(r => r.BirthReg.Contains(birthReg, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(mobile))
-                query = query.Where(r => r.Mobile.Contains(mobile, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrEmpty(address))
-                query = query.Where(r => r.Address.Contains(address, StringComparison.OrdinalIgnoreCase));
-
-            var filteredList = query.ToList();
-
-            dgRecords.ItemsSource = filteredList;
-            txtRecordCount.Text = $"মোট রেকর্ড: {filteredList.Count} টি";
-
-            if (filteredList.Count > 0)
+                PopulateDivisions();
+                txtStatus.Text = "প্রস্তুত: অনুগ্রহ করে বিভাগ, জেলা, উপজেলা এবং মৌজা নির্বাচন করে খুঁজুন বাটনে ক্লিক করুন।";
+            }
+            catch (Exception ex)
             {
-                dgRecords.SelectedIndex = 0;
+                txtStatus.Text = "AREAINF লোড করার সময় ত্রুটি ঘটেছে: " + ex.Message;
+                LoadFallbackAreaHierarchy();
+            }
+            finally
+            {
+                btnSearch.IsEnabled = true;
+            }
+        }
+
+        private void LoadFallbackAreaHierarchy()
+        {
+            _allAreaItems = new List<AreaHierarchyItem>
+            {
+                new AreaHierarchyItem { UnitCod = "010000000", UnitNam = "ঢাকা বিভাগ", UnitType = "বিভাগ" },
+                new AreaHierarchyItem { UnitCod = "010500000", UnitNam = "ঢাকা জেলা", UnitType = "জেলা" },
+                new AreaHierarchyItem { UnitCod = "010502000", UnitNam = "গুলশান / বাড্ডা", UnitType = "উপজেলা/থানা" },
+                new AreaHierarchyItem { UnitCod = "010502003", UnitNam = "জোয়ার সাহারা", UnitType = "মৌজা", ResaNum = "81001" },
+                new AreaHierarchyItem { UnitCod = "010502005", UnitNam = "ভাটারা", UnitType = "মৌজা", ResaNum = "81002" }
+            };
+
+            PopulateDivisions();
+        }
+
+        private void PopulateDivisions()
+        {
+            _isPopulatingDropdowns = true;
+            try
+            {
+                cmbDivision.ItemsSource = null;
+                cmbDistrict.ItemsSource = null;
+                cmbUpazila.ItemsSource = null;
+                cmbMouza.ItemsSource = null;
+
+                // 1. Division: XX0000000
+                var divisions = _allAreaItems.Where(a => a.IsDivision).OrderBy(a => a.UnitCod).ToList();
+
+                if (divisions.Count == 0)
+                {
+                    // Synthesize divisions from child codes if parent records are not explicitly stored
+                    var distinctDivs = _allAreaItems
+                        .Where(a => !string.IsNullOrEmpty(a.DivisionCode))
+                        .GroupBy(a => a.DivisionCode)
+                        .Select(g => new AreaHierarchyItem
+                        {
+                            UnitCod = g.Key.PadRight(9, '0'),
+                            UnitNam = g.First(x => !string.IsNullOrWhiteSpace(x.UnitNam)).UnitNam + " (বিভাগ)"
+                        })
+                        .OrderBy(a => a.UnitCod)
+                        .ToList();
+
+                    divisions = distinctDivs;
+                }
+
+                cmbDivision.ItemsSource = divisions;
+                cmbDivision.DisplayMemberPath = nameof(AreaHierarchyItem.DisplayName);
+                cmbDivision.SelectedValuePath = nameof(AreaHierarchyItem.DivisionCode);
+
+                if (divisions.Count > 0)
+                {
+                    cmbDivision.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                _isPopulatingDropdowns = false;
+            }
+
+            // Trigger district population for selected division
+            CascadeDistricts();
+        }
+
+        private void CmbDivision_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isPopulatingDropdowns) return;
+            CascadeDistricts();
+        }
+
+        private void CascadeDistricts()
+        {
+            if (cmbDivision.SelectedItem is not AreaHierarchyItem selectedDiv) return;
+
+            _isPopulatingDropdowns = true;
+            try
+            {
+                string divCode = selectedDiv.DivisionCode;
+                var districts = _allAreaItems
+                    .Where(a => a.DivisionCode == divCode && (a.IsDistrict || (a.UnitCod.EndsWith("00000") && a.UnitCod != selectedDiv.UnitCod)))
+                    .OrderBy(a => a.UnitCod)
+                    .ToList();
+
+                if (districts.Count == 0)
+                {
+                    var distinctDists = _allAreaItems
+                        .Where(a => a.DivisionCode == divCode && !string.IsNullOrEmpty(a.DistrictCode))
+                        .GroupBy(a => a.DistrictCode)
+                        .Select(g => new AreaHierarchyItem
+                        {
+                            UnitCod = g.Key.PadRight(9, '0'),
+                            UnitNam = g.First(x => !string.IsNullOrWhiteSpace(x.UnitNam)).UnitNam
+                        })
+                        .OrderBy(a => a.UnitCod)
+                        .ToList();
+
+                    districts = distinctDists;
+                }
+
+                cmbDistrict.ItemsSource = districts;
+                cmbDistrict.DisplayMemberPath = nameof(AreaHierarchyItem.DisplayName);
+                cmbDistrict.SelectedValuePath = nameof(AreaHierarchyItem.DistrictCode);
+
+                if (districts.Count > 0)
+                {
+                    cmbDistrict.SelectedIndex = 0;
+                }
+                else
+                {
+                    cmbDistrict.ItemsSource = null;
+                }
+            }
+            finally
+            {
+                _isPopulatingDropdowns = false;
+            }
+
+            CascadeUpazilas();
+        }
+
+        private void CmbDistrict_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isPopulatingDropdowns) return;
+            CascadeUpazilas();
+        }
+
+        private void CascadeUpazilas()
+        {
+            if (cmbDistrict.SelectedItem is not AreaHierarchyItem selectedDist) return;
+
+            _isPopulatingDropdowns = true;
+            try
+            {
+                string distCode = selectedDist.DistrictCode;
+                var upazilas = _allAreaItems
+                    .Where(a => a.DistrictCode == distCode && (a.IsUpazila || (a.UnitCod.EndsWith("000") && a.UnitCod != selectedDist.UnitCod)))
+                    .OrderBy(a => a.UnitCod)
+                    .ToList();
+
+                if (upazilas.Count == 0)
+                {
+                    var distinctUpazilas = _allAreaItems
+                        .Where(a => a.DistrictCode == distCode && !string.IsNullOrEmpty(a.UpazilaCode))
+                        .GroupBy(a => a.UpazilaCode)
+                        .Select(g => new AreaHierarchyItem
+                        {
+                            UnitCod = g.Key.PadRight(9, '0'),
+                            UnitNam = g.First(x => !string.IsNullOrWhiteSpace(x.UnitNam)).UnitNam
+                        })
+                        .OrderBy(a => a.UnitCod)
+                        .ToList();
+
+                    upazilas = distinctUpazilas;
+                }
+
+                cmbUpazila.ItemsSource = upazilas;
+                cmbUpazila.DisplayMemberPath = nameof(AreaHierarchyItem.DisplayName);
+                cmbUpazila.SelectedValuePath = nameof(AreaHierarchyItem.UpazilaCode);
+
+                if (upazilas.Count > 0)
+                {
+                    cmbUpazila.SelectedIndex = 0;
+                }
+                else
+                {
+                    cmbUpazila.ItemsSource = null;
+                }
+            }
+            finally
+            {
+                _isPopulatingDropdowns = false;
+            }
+
+            CascadeMouzas();
+        }
+
+        private void CmbUpazila_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isPopulatingDropdowns) return;
+            CascadeMouzas();
+        }
+
+        private void CascadeMouzas()
+        {
+            if (cmbUpazila.SelectedItem is not AreaHierarchyItem selectedUpazila) return;
+
+            _isPopulatingDropdowns = true;
+            try
+            {
+                string upazilaCode = selectedUpazila.UpazilaCode;
+                var mouzas = _allAreaItems
+                    .Where(a => a.UpazilaCode == upazilaCode && (a.IsMouza || !a.UnitCod.EndsWith("000")))
+                    .OrderBy(a => a.UnitCod)
+                    .ToList();
+
+                cmbMouza.ItemsSource = mouzas;
+                cmbMouza.DisplayMemberPath = nameof(AreaHierarchyItem.DisplayName);
+                cmbMouza.SelectedValuePath = nameof(AreaHierarchyItem.UnitCod);
+
+                if (mouzas.Count > 0)
+                {
+                    cmbMouza.SelectedIndex = 0;
+                }
+                else
+                {
+                    cmbMouza.ItemsSource = null;
+                }
+            }
+            finally
+            {
+                _isPopulatingDropdowns = false;
+            }
+
+            UpdateActiveMouzaBadge();
+        }
+
+        private void CmbMouza_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isPopulatingDropdowns) return;
+            UpdateActiveMouzaBadge();
+        }
+
+        private void UpdateActiveMouzaBadge()
+        {
+            if (cmbMouza.SelectedItem is AreaHierarchyItem mouza)
+            {
+                bdActiveMouzaBadge.Visibility = Visibility.Visible;
+                txtActiveMouzaBadge.Text = $"মৌজা: {mouza.DisplayName}";
+                txtStatus.Text = $"নির্বাচিত মৌজা: {mouza.DisplayName} (কোড: {mouza.UnitCod}) — 'খুঁজুন' বাটনে ক্লিক করে রেকর্ড লোড করুন।";
             }
             else
             {
-                txtSelectedRecordDetail.Text = "কোনো রেকর্ড পাওয়া যায়নি (ফিল্টার পরিবর্তন করে পুনরায় অনুসন্ধান করুন)";
+                bdActiveMouzaBadge.Visibility = Visibility.Collapsed;
             }
         }
 
-        private string GetSelectedComboValue(ComboBox cmb)
+        #endregion
+
+        #region ================= SEARCH & DATA RETRIEVAL =================
+
+        /// <summary>
+        /// Executes the dedicated stored procedure [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]
+        /// against the core database for the selected Mouza, Survey, Khatian and Owner.
+        /// </summary>
+        private async void BtnSearch_Click(object sender, RoutedEventArgs e)
         {
-            if (cmb?.SelectedItem is ComboBoxItem item)
+            if (cmbMouza.SelectedItem is not AreaHierarchyItem selectedMouza)
             {
-                return item.Content?.ToString() ?? "";
+                MessageBox.Show(
+                    "অনুগ্রহ করে ড্রপডাউন থেকে একটি মৌজা নির্বাচন করুন।",
+                    "মৌজা নির্বাচন আবশ্যক",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
             }
-            return cmb?.Text ?? "";
+
+            if (string.IsNullOrWhiteSpace(_coreConnectionString))
+            {
+                MessageBox.Show(
+                    "ডাটাবেজ সংযোগ সক্রিয় নয়। অনুগ্রহ করে মূল উইন্ডো থেকে ডাটাবেজ সংযোগ নিশ্চিত করুন।",
+                    "ডাটাবেজ সংযোগ অনুপস্থিত",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            string unitCod = selectedMouza.UnitCod;
+            string rsNum = "201901";
+            if (cmbSurvey.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            {
+                rsNum = cbi.Tag.ToString() ?? "201901";
+            }
+
+            string currentKhatian = txtCurrentKhatian.Text.Trim();
+            string ownerName = txtOwner.Text.Trim();
+
+            btnSearch.IsEnabled = false;
+            btnReset.IsEnabled = false;
+            txtStatus.Text = $"[{selectedMouza.UnitNam}] এর রেকর্ডসমূহ ডাটাবেজ থেকে সংগ্রহ করা হচ্ছে...";
+
+            try
+            {
+                _dsRecords = await LandRecordsViewerService.GetMigratedLandRecordsAsync(
+                    _coreConnectionString,
+                    "4103",
+                    rsNum,
+                    unitCod,
+                    string.IsNullOrWhiteSpace(currentKhatian) ? null : currentKhatian,
+                    string.IsNullOrWhiteSpace(ownerName) ? null : ownerName);
+
+                DataTable dtKhatians = _dsRecords.Tables["Khatians"];
+                dgKhatians.ItemsSource = dtKhatians.DefaultView;
+                txtKhatianCount.Text = $"মোট খতিয়ান: {dtKhatians.Rows.Count}টি";
+
+                if (dtKhatians.Rows.Count > 0)
+                {
+                    dgKhatians.SelectedIndex = 0;
+                    txtStatus.Text = $"অনুসন্ধান সম্পন্ন: {dtKhatians.Rows.Count}টি খতিয়ান লোড হয়েছে।";
+                }
+                else
+                {
+                    dgOwners.ItemsSource = null;
+                    dgPlots.ItemsSource = null;
+                    txtOwnerCount.Text = "মালিক সংখ্যা: ০ জন";
+                    txtPlotCount.Text = "দাগ সংখ্যা: ০টি";
+                    ClearAuditFields();
+                    txtSelectedKhatianHeader.Text = "কোনো খতিয়ান পাওয়া যায়নি";
+                    txtStatus.Text = "প্রদত্ত ফিল্টারের সাথে কোনো খতিয়ান মেলেনি। ফিল্টার পরিবর্তন করে পুনরায় চেষ্টা করুন।";
+                }
+            }
+            catch (Exception ex)
+            {
+                txtStatus.Text = "ডাটা সংগ্রহের সময় ত্রুটি: " + ex.Message;
+                MessageBox.Show(
+                    "রেকর্ড অনুসন্ধানের সময় ডাটাবেজে ত্রুটি হয়েছে:\n\n" + ex.Message,
+                    "Database Query Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnSearch.IsEnabled = true;
+                btnReset.IsEnabled = true;
+            }
         }
 
         /// <summary>
-        /// Clears all search inputs and restores full demo list.
+        /// Synchronizes the detail tabs (Owners, Plots, and Audit) when a Khatian row is selected.
+        /// </summary>
+        private void DgKhatians_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dgKhatians.SelectedItem is not DataRowView drv)
+            {
+                return;
+            }
+
+            string currentKhatian = drv["CurrentKhatian"]?.ToString() ?? string.Empty;
+            string formerKhatian = drv["FormerKhatian"]?.ToString() ?? string.Empty;
+            string mouzaName = drv["MouzaName"]?.ToString() ?? string.Empty;
+            string surveyName = drv["SurveyName"]?.ToString() ?? string.Empty;
+
+            txtSelectedKhatianHeader.Text =
+                $"🔍 নির্বাচিত খতিয়ান নং: {currentKhatian} (সাবেক: {(string.IsNullOrWhiteSpace(formerKhatian) ? "—" : formerKhatian)}) | মৌজা: {mouzaName} | জরিপ: {surveyName}";
+
+            // 1. Synchronize Owners Tab
+            if (_dsRecords != null && _dsRecords.Tables.Contains("Owners"))
+            {
+                DataTable dtOwners = _dsRecords.Tables["Owners"];
+                var dvOwners = new DataView(dtOwners)
+                {
+                    RowFilter = $"CurrentKhatian = '{currentKhatian.Replace("'", "''")}'"
+                };
+                dgOwners.ItemsSource = dvOwners;
+                txtOwnerCount.Text = $"মালিক সংখ্যা: {dvOwners.Count} জন";
+            }
+
+            // 2. Synchronize Plots Tab (with dynamic 4-Ka, 4-Kha, 4-Ga)
+            if (_dsRecords != null && _dsRecords.Tables.Contains("Plots"))
+            {
+                DataTable dtPlots = _dsRecords.Tables["Plots"];
+                var dvPlots = new DataView(dtPlots)
+                {
+                    RowFilter = $"CurrentKhatian = '{currentKhatian.Replace("'", "''")}'"
+                };
+                dgPlots.ItemsSource = dvPlots;
+                txtPlotCount.Text = $"দাগ সংখ্যা: {dvPlots.Count}টি";
+            }
+
+            // 3. Synchronize Audit & Metadata Tab
+            txtAuditEntryKhatian.Text = drv["EntryKhatian"]?.ToString() ?? "—";
+            txtAuditSheet.Text = drv["SheetNum"]?.ToString() ?? "—";
+            txtAuditNote.Text = drv["KhatianNote"]?.ToString() ?? "—";
+            txtAuditRemarks.Text = drv["KhatianRemarks"]?.ToString() ?? "—";
+            txtAuditUserId.Text = drv["EntryUserId"]?.ToString() ?? "—";
+
+            string sealId = drv["SealId"]?.ToString() ?? "";
+            string sealDesc = drv["SealDesc"]?.ToString() ?? "";
+            txtAuditSeal.Text = !string.IsNullOrWhiteSpace(sealDesc)
+                ? $"{sealId} - {sealDesc}"
+                : (!string.IsNullOrWhiteSpace(sealId) ? sealId : "—");
+
+            txtAuditTerminal.Text = drv["TerminalId"]?.ToString() ?? "—";
+            txtAuditTime.Text = drv["EntryTime"]?.ToString() ?? "—";
+        }
+
+        private void ClearAuditFields()
+        {
+            txtAuditEntryKhatian.Text = "—";
+            txtAuditSheet.Text = "—";
+            txtAuditNote.Text = "—";
+            txtAuditRemarks.Text = "—";
+            txtAuditUserId.Text = "—";
+            txtAuditSeal.Text = "—";
+            txtAuditTerminal.Text = "—";
+            txtAuditTime.Text = "—";
+        }
+
+        /// <summary>
+        /// Clears all input search filters and resets selection.
         /// </summary>
         private void BtnReset_Click(object sender, RoutedEventArgs e)
         {
-            cmbDivision.SelectedIndex = 0;
-            cmbDistrict.SelectedIndex = 0;
+            txtCurrentKhatian.Text = string.Empty;
+            txtOwner.Text = string.Empty;
             cmbSurvey.SelectedIndex = 0;
-            cmbUpazila.SelectedIndex = 0;
-            cmbMouza.SelectedIndex = 0;
 
-            txtCurrentKhatian.Text = "";
-            txtFormerKhatian.Text = "";
-            txtCurrentPlot.Text = "";
-            txtFormerPlot.Text = "";
-            txtCsPlot.Text = "";
+            if (cmbDivision.Items.Count > 0)
+            {
+                cmbDivision.SelectedIndex = 0;
+            }
 
-            txtOwner.Text = "";
-            txtFather.Text = "";
-            txtMother.Text = "";
-            txtSpouse.Text = "";
-            txtNid.Text = "";
-            txtBirthReg.Text = "";
-            txtMobile.Text = "";
-            txtOwnerAddress.Text = "";
+            dgKhatians.ItemsSource = null;
+            dgOwners.ItemsSource = null;
+            dgPlots.ItemsSource = null;
 
-            FilterAndDisplayRecords();
+            txtKhatianCount.Text = "মোট খতিয়ান: ০টি";
+            txtOwnerCount.Text = "মালিক সংখ্যা: ০ জন";
+            txtPlotCount.Text = "দাগ সংখ্যা: ০টি";
+            ClearAuditFields();
+
+            txtSelectedKhatianHeader.Text = "🔍 নির্বাচিত খতিয়ানের বিস্তারিত বিবরণ: (উপরে তালিকা থেকে একটি খতিয়ান নির্বাচন করুন)";
+            txtStatus.Text = "ফিল্টার রিসেট করা হয়েছে। অনুগ্রহ করে নতুন করে অনুসন্ধান করুন।";
+        }
+
+        #endregion
+
+        #region ================= CSV EXPORTS (UTF-8 BOM) =================
+
+        /// <summary>
+        /// Exports the Khatians master list to CSV with UTF-8 BOM encoding.
+        /// </summary>
+        private void BtnExportKhatiansCsv_Click(object sender, RoutedEventArgs e)
+        {
+            if (_dsRecords == null || !_dsRecords.Tables.Contains("Khatians") || _dsRecords.Tables["Khatians"].Rows.Count == 0)
+            {
+                MessageBox.Show("এক্সপোর্ট করার মতো কোনো খতিয়ান ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var sfd = new SaveFileDialog
+            {
+                Title = "খতিয়ান তালিকা এক্সপোর্ট করুন (CSV)",
+                Filter = "CSV File (*.csv)|*.csv",
+                FileName = $"Khatians_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+
+            if (sfd.ShowDialog() != true) return;
+
+            try
+            {
+                var sb = new StringBuilder();
+                DataTable dt = _dsRecords.Tables["Khatians"];
+
+                // Header
+                var colHeaders = new List<string>();
+                foreach (DataColumn col in dt.Columns)
+                {
+                    colHeaders.Add($"\"{col.ColumnName}\"");
+                }
+                sb.AppendLine(string.Join(",", colHeaders));
+
+                // Rows
+                foreach (DataRow row in dt.Rows)
+                {
+                    var fields = new List<string>();
+                    foreach (DataColumn col in dt.Columns)
+                    {
+                        string val = row[col]?.ToString() ?? "";
+                        fields.Add($"\"{val.Replace("\"", "\"\"")}\"");
+                    }
+                    sb.AppendLine(string.Join(",", fields));
+                }
+
+                // Write with UTF-8 BOM for proper Bengali rendering in Excel
+                File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
+
+                MessageBox.Show(
+                    $"খতিয়ান তালিকা সফলভাবে এক্সপোর্ট করা হয়েছে:\n\n{sfd.FileName}",
+                    "এক্সপোর্ট সম্পন্ন",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("CSV এক্সপোর্টে ত্রুটি: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         /// <summary>
-        /// Automatically fills in demo search inputs so the user can test the UI immediately.
+        /// Exports complete detailed records (Khatian + Owners + Plots) to CSV.
         /// </summary>
-        private void BtnFillDemoData_Click(object sender, RoutedEventArgs e)
+        private void BtnExportDetailsCsv_Click(object sender, RoutedEventArgs e)
         {
-            SetComboByText(cmbDivision, "সিলেট");
-            SetComboByText(cmbDistrict, "সিলেট");
-            SetComboByText(cmbSurvey, "বি.এস. (BS)");
-            SetComboByText(cmbUpazila, "সিলেট সদর");
-            SetComboByText(cmbMouza, "আম্বরখানা (০১)");
-
-            txtCurrentKhatian.Text = "১০৫";
-            txtCurrentPlot.Text = "১২০৪";
-            txtOwner.Text = "রফিকুল";
-
-            FilterAndDisplayRecords();
-        }
-
-        private void SetComboByText(ComboBox cmb, string text)
-        {
-            for (int i = 0; i < cmb.Items.Count; i++)
+            if (_dsRecords == null || !_dsRecords.Tables.Contains("Khatians") || _dsRecords.Tables["Khatians"].Rows.Count == 0)
             {
-                if (cmb.Items[i] is ComboBoxItem cbi && cbi.Content?.ToString() == text)
-                {
-                    cmb.SelectedIndex = i;
-                    return;
-                }
+                MessageBox.Show("এক্সপোর্ট করার মতো কোনো বিস্তারিত ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
             }
-        }
 
-        private void DgRecords_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (dgRecords.SelectedItem is LandRecordDummyModel selected)
+            var sfd = new SaveFileDialog
             {
-                txtSelectedRecordDetail.Text =
-                    $"খতিয়ান: {selected.CurrentKhatian} (সাবেক: {selected.FormerKhatian}) | " +
-                    $"দাগ: {selected.CurrentPlot} (সাবেক: {selected.FormerPlot}, সি.এস: {selected.CsPlot}) | " +
-                    $"মালিক: {selected.OwnerName} | পিতা: {selected.FatherName} | " +
-                    $"শ্রেণী: {selected.LandClass} | পরিমাণ: {selected.LandAreaAcre} | অংশ: {selected.Share}";
-            }
-        }
+                Title = "সম্পূর্ণ বিস্তারিত রেকর্ড এক্সপোর্ট করুন (CSV)",
+                Filter = "CSV File (*.csv)|*.csv",
+                FileName = $"LandRecords_FullDetail_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
 
-        private void BtnExportCsv_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgRecords.ItemsSource is IEnumerable<LandRecordDummyModel> items)
+            if (sfd.ShowDialog() != true) return;
+
+            try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("SlNo,Division,District,Upazila,Mouza,SurveyType,CurrentKhatian,FormerKhatian,CurrentPlot,FormerPlot,CsPlot,OwnerName,FatherName,MotherName,SpouseName,Nid,BirthReg,Mobile,Address,LandClass,LandAreaAcre,Share");
 
-                foreach (var r in items)
+                // Detailed Combined Headers
+                sb.AppendLine("SlNo,CurrentKhatian,FormerKhatian,MouzaName,SurveyName,SheetNum,LandTypeName,PorchaTitle,OwnerSerial,OwnerName,FatherName,MotherName,SpouseName,Nid,BirthReg,Mobile,OwnerAddress,OwnerShareArea,PlotSerial,CurrentPlot,FormerPlot,CsPlot,AgriLandClass_4Ka,NonAgriLandClass_4Kha,LocalName_4Ga,TotalPlotArea,KhatianShare,KhatianPlotArea,PlotRemarks");
+
+                DataTable dtKht = _dsRecords.Tables["Khatians"];
+                DataTable? dtOwners = _dsRecords.Tables.Contains("Owners") ? _dsRecords.Tables["Owners"] : null;
+                DataTable? dtPlots = _dsRecords.Tables.Contains("Plots") ? _dsRecords.Tables["Plots"] : null;
+
+                int rowCount = 0;
+                foreach (DataRow khtRow in dtKht.Rows)
                 {
-                    sb.AppendLine($"\"{r.SlNo}\",\"{r.Division}\",\"{r.District}\",\"{r.Upazila}\",\"{r.Mouza}\",\"{r.SurveyType}\",\"{r.CurrentKhatian}\",\"{r.FormerKhatian}\",\"{r.CurrentPlot}\",\"{r.FormerPlot}\",\"{r.CsPlot}\",\"{r.OwnerName}\",\"{r.FatherName}\",\"{r.MotherName}\",\"{r.SpouseName}\",\"{r.Nid}\",\"{r.BirthReg}\",\"{r.Mobile}\",\"{r.Address}\",\"{r.LandClass}\",\"{r.LandAreaAcre}\",\"{r.Share}\"");
+                    string khtNum = khtRow["CurrentKhatian"]?.ToString() ?? "";
+                    var ownerRows = dtOwners?.Select($"CurrentKhatian = '{khtNum.Replace("'", "''")}'") ?? Array.Empty<DataRow>();
+                    var plotRows = dtPlots?.Select($"CurrentKhatian = '{khtNum.Replace("'", "''")}'") ?? Array.Empty<DataRow>();
+
+                    int maxRows = Math.Max(ownerRows.Length, plotRows.Length);
+                    if (maxRows == 0) maxRows = 1;
+
+                    for (int i = 0; i < maxRows; i++)
+                    {
+                        rowCount++;
+                        var oRow = i < ownerRows.Length ? ownerRows[i] : null;
+                        var pRow = i < plotRows.Length ? plotRows[i] : null;
+
+                        var fields = new List<string>
+                        {
+                            rowCount.ToString(),
+                            CsvEscape(khtRow["CurrentKhatian"]),
+                            CsvEscape(khtRow["FormerKhatian"]),
+                            CsvEscape(khtRow["MouzaName"]),
+                            CsvEscape(khtRow["SurveyName"]),
+                            CsvEscape(khtRow["SheetNum"]),
+                            CsvEscape(khtRow["LandTypeName"]),
+                            CsvEscape(khtRow["PorchaTitle"]),
+                            CsvEscape(oRow?["OwnerSerial"]),
+                            CsvEscape(oRow?["OwnerName"]),
+                            CsvEscape(oRow?["FatherName"]),
+                            CsvEscape(oRow?["MotherName"]),
+                            CsvEscape(oRow?["SpouseName"]),
+                            CsvEscape(oRow?["Nid"]),
+                            CsvEscape(oRow?["BirthReg"]),
+                            CsvEscape(oRow?["Phone"]),
+                            CsvEscape(oRow?["Address"]),
+                            CsvEscape(oRow?["OwnerShareArea"]),
+                            CsvEscape(pRow?["PlotSerial"]),
+                            CsvEscape(pRow?["CurrentPlot"]),
+                            CsvEscape(pRow?["FormerPlot"]),
+                            CsvEscape(pRow?["CsPlot"]),
+                            CsvEscape(pRow?["AgriLandClass_4Ka"]),
+                            CsvEscape(pRow?["NonAgriLandClass_4Kha"]),
+                            CsvEscape(pRow?["LocalName_4Ga"]),
+                            CsvEscape(pRow?["TotalPlotArea"]),
+                            CsvEscape(pRow?["KhatianShare"]),
+                            CsvEscape(pRow?["KhatianPlotArea"]),
+                            CsvEscape(pRow?["PlotRemarks"])
+                        };
+
+                        sb.AppendLine(string.Join(",", fields));
+                    }
                 }
 
-                try
-                {
-                    Clipboard.SetText(sb.ToString());
-                    MessageBox.Show(
-                        "রেকর্ডসমূহ সফলভাবে ক্লিপবোর্ডে কপি হয়েছে (CSV ফরম্যাটে)। আপনি এক্সেল বা নোটপ্যাডে পেস্ট করতে পারেন।",
-                        "CSV Export Success",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("ক্লিপবোর্ডে কপি করতে সমস্যা হয়েছে: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
+                File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
+
+                MessageBox.Show(
+                    $"সম্পূর্ণ বিস্তারিত রেকর্ড সফলভাবে এক্সপোর্ট করা হয়েছে ({rowCount} সারি):\n\n{sfd.FileName}",
+                    "এক্সপোর্ট সম্পন্ন",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("CSV এক্সপোর্টে ত্রুটি: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private static string CsvEscape(object? obj)
+        {
+            if (obj == null || obj == DBNull.Value) return "\"\"";
+            string s = obj.ToString() ?? "";
+            return $"\"{s.Replace("\"", "\"\"")}\"";
+        }
+
+        #endregion
     }
 }
