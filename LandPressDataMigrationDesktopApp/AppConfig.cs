@@ -36,7 +36,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v1.03a";
+        public const string Version = "v1.03b";
 
         /// <summary>
         /// Permanent intermediate staging database required on the connected SQL Server instance.
@@ -188,7 +188,7 @@ namespace LandPressDataMigrationDesktopApp
                 Description = "Prepares and imports area and mauza boundaries from the staging database into AREAINF.",
                 UserDescription = "Prepares and registers area, mauza, and boundary records into the core database.",
                 IsEnabled = true,
-                IsRequired = false
+                IsRequired = true
             },
 
             // 3. Verify Khatians & Check Mismatches
@@ -262,7 +262,7 @@ namespace LandPressDataMigrationDesktopApp
                 Description = "Inserts distinct unit codes from tblHalsabek into dbo_lis.mapinf01 for sheet '000'.",
                 UserDescription = "Updates and registers map unit boundaries and sheet identifiers in the central database.",
                 IsEnabled = true,
-                IsRequired = false
+                IsRequired = true
             },
 
             // 8. Import Detailed Plot Attributes
@@ -276,7 +276,7 @@ namespace LandPressDataMigrationDesktopApp
                 Description = "Migrates distinct plot records into dbo_lis.plotinf01.",
                 UserDescription = "Migrates detailed land classification, plot attributes, and spatial records into the central database.",
                 IsEnabled = true,
-                IsRequired = false,
+                IsRequired = true,
                 RequiresRsNumber = true
             },
 

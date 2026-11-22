@@ -489,7 +489,10 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             RefreshStepDots();
-            CheckCompletionBanner();
+            if (!_isAutoRunning)
+            {
+                CheckCompletionBanner();
+            }
         }
 
         #endregion
@@ -596,7 +599,6 @@ namespace LandPressDataMigrationDesktopApp
                 if (_isAutoRunning)
                 {
                     lblAutoStatus.Text = "✔ All sequential migration steps completed!";
-                    CheckCompletionBanner();
                 }
             }
             finally
@@ -608,6 +610,9 @@ namespace LandPressDataMigrationDesktopApp
                 btnStopAuto.Visibility  = Visibility.Collapsed;
                 RefreshNav();
             }
+
+            // Check and trigger completion banner and summary dialog AFTER resetting _isAutoRunning to false
+            CheckCompletionBanner();
         }
 
         private void BtnPauseAuto_Click(object sender, RoutedEventArgs e)
@@ -822,7 +827,10 @@ namespace LandPressDataMigrationDesktopApp
 
                 RenderActiveStep();
                 RefreshStepDots();
-                CheckCompletionBanner();
+                if (!_isAutoRunning)
+                {
+                    CheckCompletionBanner();
+                }
                 return true;
             }
             catch (SqlException sqlEx)
@@ -941,7 +949,10 @@ namespace LandPressDataMigrationDesktopApp
             }
             else
             {
-                CheckCompletionBanner();
+                if (!_isAutoRunning)
+                {
+                    CheckCompletionBanner();
+                }
             }
         }
 
@@ -949,14 +960,17 @@ namespace LandPressDataMigrationDesktopApp
 
         private void CheckCompletionBanner()
         {
-            var requiredSteps = _steps.Where(s => s.Config.IsRequired).ToList();
-            bool allRequiredDone = requiredSteps.Count > 0 && requiredSteps.All(s => s.IsCompleted);
+            // Do not evaluate or show completion dialog while auto-run loop is in progress
+            if (_isAutoRunning) return;
 
-            if (allRequiredDone)
+            // A migration is complete ONLY when ALL active steps in the wizard have completed (or skipped / bypassed due to DB)
+            bool allStepsDone = _steps.Count > 0 && _steps.All(s => s.IsCompleted || s.IsSkipped || s.IsBypassedDueToDb);
+
+            if (allStepsDone)
             {
                 IsMigrationCompleted = true;
                 string summary = GetExecutionSummary();
-                PipelineExecutionLogger.LogInfo("Step 3 (Migration SP)", $"All required migration steps finished successfully! {summary}");
+                PipelineExecutionLogger.LogInfo("Step 3 (Migration SP)", $"All migration steps finished successfully! {summary}");
                 if (doneBanner != null)
                     doneBanner.Visibility = Visibility.Visible;
 
