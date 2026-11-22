@@ -72,37 +72,40 @@ namespace LandPressDataMigrationDesktopApp
         /// </summary>
         public static async Task<List<AreaHierarchyItem>> LoadAreaHierarchyAsync(string coreConnectionString, string comCod = "4103")
         {
-            var list = new List<AreaHierarchyItem>();
-
-            using var conn = new SqlConnection(coreConnectionString);
-            await conn.OpenAsync();
-
-            const string sql = @"
-                SELECT 
-                    LTRIM(RTRIM(UNITCOD)) AS UNITCOD,
-                    LTRIM(RTRIM(ISNULL(UNITNAM, ''))) AS UNITNAM,
-                    LTRIM(RTRIM(ISNULL(UNITTYPE, ''))) AS UNITTYPE,
-                    LTRIM(RTRIM(ISNULL(RESANUM, ''))) AS RESANUM
-                FROM dbo.AREAINF
-                WHERE COMCOD = @comCod OR COMCOD = '0000'
-                ORDER BY UNITCOD;";
-
-            using var cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@comCod", comCod);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            return await Task.Run(async () =>
             {
-                list.Add(new AreaHierarchyItem
-                {
-                    UnitCod  = reader.GetString(0),
-                    UnitNam  = reader.GetString(1),
-                    UnitType = reader.GetString(2),
-                    ResaNum  = reader.GetString(3)
-                });
-            }
+                var list = new List<AreaHierarchyItem>();
 
-            return list;
+                using var conn = new SqlConnection(coreConnectionString);
+                await conn.OpenAsync();
+
+                const string sql = @"
+                    SELECT 
+                        LTRIM(RTRIM(UNITCOD)) AS UNITCOD,
+                        LTRIM(RTRIM(ISNULL(UNITNAM, ''))) AS UNITNAM,
+                        LTRIM(RTRIM(ISNULL(UNITTYPE, ''))) AS UNITTYPE,
+                        LTRIM(RTRIM(ISNULL(RESANUM, ''))) AS RESANUM
+                    FROM dbo.AREAINF
+                    WHERE COMCOD = @comCod OR COMCOD = '0000'
+                    ORDER BY UNITCOD;";
+
+                using var cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@comCod", comCod);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    list.Add(new AreaHierarchyItem
+                    {
+                        UnitCod  = reader.GetString(0),
+                        UnitNam  = reader.GetString(1),
+                        UnitType = reader.GetString(2),
+                        ResaNum  = reader.GetString(3)
+                    });
+                }
+
+                return list;
+            });
         }
 
         /// <summary>
@@ -120,30 +123,33 @@ namespace LandPressDataMigrationDesktopApp
             string? currentKhatian = null,
             string? ownerName = null)
         {
-            var ds = new DataSet();
-            using var conn = new SqlConnection(coreConnectionString);
-            await conn.OpenAsync();
-
-            using var cmd = new SqlCommand(SpFullName, conn)
+            return await Task.Run(async () =>
             {
-                CommandType = CommandType.StoredProcedure,
-                CommandTimeout = 300
-            };
+                var ds = new DataSet();
+                using var conn = new SqlConnection(coreConnectionString);
+                await conn.OpenAsync();
 
-            cmd.Parameters.Add(new SqlParameter("@ComCod", SqlDbType.NVarChar, 10) { Value = string.IsNullOrWhiteSpace(comCod) ? "4103" : comCod });
-            cmd.Parameters.Add(new SqlParameter("@RsNum", SqlDbType.NVarChar, 20) { Value = string.IsNullOrWhiteSpace(rsNum) ? "201901" : rsNum });
-            cmd.Parameters.Add(new SqlParameter("@UnitCod", SqlDbType.NVarChar, 20) { Value = unitCod ?? string.Empty });
-            cmd.Parameters.Add(new SqlParameter("@CurrentKhatian", SqlDbType.NVarChar, 50) { Value = (object?)currentKhatian ?? DBNull.Value });
-            cmd.Parameters.Add(new SqlParameter("@OwnerName", SqlDbType.NVarChar, 200) { Value = (object?)ownerName ?? DBNull.Value });
+                using var cmd = new SqlCommand(SpFullName, conn)
+                {
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 300
+                };
 
-            using var adapter = new SqlDataAdapter(cmd);
-            adapter.Fill(ds);
+                cmd.Parameters.Add(new SqlParameter("@ComCod", SqlDbType.NVarChar, 10) { Value = string.IsNullOrWhiteSpace(comCod) ? "4103" : comCod });
+                cmd.Parameters.Add(new SqlParameter("@RsNum", SqlDbType.NVarChar, 20) { Value = string.IsNullOrWhiteSpace(rsNum) ? "201901" : rsNum });
+                cmd.Parameters.Add(new SqlParameter("@UnitCod", SqlDbType.NVarChar, 20) { Value = unitCod ?? string.Empty });
+                cmd.Parameters.Add(new SqlParameter("@CurrentKhatian", SqlDbType.NVarChar, 50) { Value = (object?)currentKhatian ?? DBNull.Value });
+                cmd.Parameters.Add(new SqlParameter("@OwnerName", SqlDbType.NVarChar, 200) { Value = (object?)ownerName ?? DBNull.Value });
 
-            if (ds.Tables.Count > 0) ds.Tables[0].TableName = "Khatians";
-            if (ds.Tables.Count > 1) ds.Tables[1].TableName = "Owners";
-            if (ds.Tables.Count > 2) ds.Tables[2].TableName = "Plots";
+                using var adapter = new SqlDataAdapter(cmd);
+                adapter.Fill(ds);
 
-            return ds;
+                if (ds.Tables.Count > 0) ds.Tables[0].TableName = "Khatians";
+                if (ds.Tables.Count > 1) ds.Tables[1].TableName = "Owners";
+                if (ds.Tables.Count > 2) ds.Tables[2].TableName = "Plots";
+
+                return ds;
+            });
         }
     }
 }

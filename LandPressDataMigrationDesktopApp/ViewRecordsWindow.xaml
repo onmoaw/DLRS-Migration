@@ -19,6 +19,9 @@
         TextOptions.TextRenderingMode="ClearType">
 
     <Window.Resources>
+        <!-- Bangla Number Converter Resource -->
+        <local:BanglaNumberConverter x:Key="BanglaNumConverter"/>
+
         <!-- Field Label Style (15px Semi-Bold) -->
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondary}"/>
@@ -97,6 +100,30 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- High-Visibility Selected Khatian Row Style (Master List) -->
+        <Style x:Key="KhatianRowStyle" TargetType="DataGridRow">
+            <Setter Property="BorderThickness" Value="4,0,0,1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Style.Resources>
+                <!-- Keep vibrant selection highlight even when focus moves to right preview panel -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#0284C7"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#0284C7"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#FFFFFF"/>
+            </Style.Resources>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#0284C7"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="BorderBrush" Value="#F59E0B"/> <!-- 4px golden accent bar on left -->
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ThemeInsetBg}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- DataGrid Modern Style with Proper Spacing and Scaled Typography -->
@@ -290,13 +317,13 @@
                             <StackPanel Grid.Column="0" Margin="0,0,5,0">
                                 <TextBlock Text="জরিপ:" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox x:Name="cmbSurvey" Style="{StaticResource SearchComboBox}">
-                                    <ComboBoxItem Content="201901 - বিডিএস (BDS)" Tag="201901" IsSelected="True"/>
+                                    <ComboBoxItem Content="২০১৯০১ - বিডিএস (BDS)" Tag="201901" IsSelected="True"/>
                                     <ComboBoxItem Content="সব জরিপ / All Surveys" Tag="%"/>
                                 </ComboBox>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="5,0,0,0">
                                 <TextBlock Text="বর্তমান খতিয়ান:" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="txtCurrentKhatian" Style="{StaticResource SearchTextBox}" ToolTip="নির্দিষ্ট খতিয়ান নম্বর দিয়ে খুঁজতে পারেন"/>
+                                <TextBox x:Name="txtCurrentKhatian" Style="{StaticResource SearchTextBox}" ToolTip="নির্দিষ্ট খতিয়ান নম্বর দিয়ে খুঁজতে পারেন (বাংলা বা ইংরেজি সংখ্যা)"/>
                             </StackPanel>
                         </Grid>
 
@@ -317,6 +344,11 @@
                             <Button Grid.Column="1" x:Name="btnReset" Content="🔄 রিসেট" Style="{StaticResource ActionBtn}"
                                     Background="#64748B" Padding="14,8" Click="BtnReset_Click"/>
                         </Grid>
+
+                        <!-- Sleek Search Indeterminate Progress Bar (Adjusted to Filter Card) -->
+                        <ProgressBar x:Name="searchProgressBar" Height="4" Margin="0,10,0,0" IsIndeterminate="True"
+                                     Foreground="#059669" Background="{DynamicResource ThemeInsetBg}" BorderThickness="0"
+                                     Visibility="Collapsed"/>
                     </StackPanel>
                 </Border>
 
@@ -345,23 +377,46 @@
                             </StackPanel>
 
                             <Button Grid.Column="1" x:Name="btnExportKhatiansCsv" Content="📊 CSV"
-                                    Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}"
-                                    BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
-                                    Foreground="{DynamicResource ThemeTextPrimary}" Padding="12,5" FontSize="13"
-                                    Click="BtnExportKhatiansCsv_Click"/>
+                                     Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}"
+                                     BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                     Foreground="{DynamicResource ThemeTextPrimary}" Padding="12,5" FontSize="13"
+                                     Click="BtnExportKhatiansCsv_Click"/>
                         </Grid>
 
-                        <!-- Master DataGrid: Serial Number, Current Khatian, Owners, and Status -->
-                        <DataGrid Grid.Row="1" x:Name="dgKhatians" Style="{StaticResource ModernDataGrid}"
-                                  SelectionChanged="DgKhatians_SelectionChanged">
-                            <DataGrid.Columns>
-                                <!-- Serial Number Column on Left -->
-                                <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="50"/>
-                                <DataGridTextColumn Header="বর্তমান খতিয়ান" Binding="{Binding CurrentKhatian}" Width="120" FontWeight="Bold"/>
-                                <DataGridTextColumn Header="মালিকগণ" Binding="{Binding AllOwnerNames}" Width="*"/>
-                                <DataGridTextColumn Header="অবস্থা" Binding="{Binding KhatianStatus}" Width="90"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <!-- Master DataGrid and UI-Adjusted Inline List Loader -->
+                        <Grid Grid.Row="1">
+                            <!-- Master DataGrid: Serial Number (# in Bangla), Current Khatian (Bangla), Owners, and Status -->
+                            <DataGrid x:Name="dgKhatians" Style="{StaticResource ModernDataGrid}"
+                                      RowStyle="{StaticResource KhatianRowStyle}"
+                                      SelectionChanged="DgKhatians_SelectionChanged">
+                                <DataGrid.Columns>
+                                    <!-- Serial Number Column on Left in Bangla -->
+                                    <DataGridTextColumn Header="#" Binding="{Binding SlNo, Converter={StaticResource BanglaNumConverter}}" Width="50"/>
+                                    <!-- Current Khatian in Bangla -->
+                                    <DataGridTextColumn Header="বর্তমান খতিয়ান" Binding="{Binding CurrentKhatian, Converter={StaticResource BanglaNumConverter}}" Width="120" FontWeight="Bold"/>
+                                    <DataGridTextColumn Header="মালিকগণ" Binding="{Binding AllOwnerNames}" Width="*"/>
+                                    <DataGridTextColumn Header="অবস্থা" Binding="{Binding KhatianStatus}" Width="90"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <!-- Modern UI-Adjusted Master List Inline Loading Overlay -->
+                            <Border x:Name="pnlListLoading" Background="{DynamicResource ThemeCardBg}" Opacity="0.95"
+                                    BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                    CornerRadius="6" Visibility="Collapsed" Panel.ZIndex="10">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+                                    <Border Width="50" Height="50" CornerRadius="25" Background="#E0F2FE" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                        <TextBlock Text="🔍" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ProgressBar IsIndeterminate="True" Width="200" Height="5" Foreground="#0284C7"
+                                                 Background="{DynamicResource ThemeInsetBg}" BorderThickness="0" Margin="0,0,0,12"/>
+                                    <TextBlock x:Name="txtListLoadingTitle" Text="রেকর্ড অনুসন্ধান চলছে..." FontSize="16" FontWeight="Bold"
+                                               Foreground="{DynamicResource ThemeTextPrimary}" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="txtListLoadingSub" Text="ডাটাবেজ থেকে তথ্য আনা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন..." FontSize="13"
+                                               Foreground="{DynamicResource ThemeTextSecondary}" HorizontalAlignment="Center" Margin="0,4,0,0"
+                                               TextWrapping="Wrap" TextAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>
@@ -379,22 +434,29 @@
                         <RowDefinition Height="*"/>    <!-- Scrollable Preview Content -->
                     </Grid.RowDefinitions>
 
-                    <!-- Preview Header Bar -->
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <!-- Preview Header Bar with Prominently Highlighted Khatian Banner -->
+                    <Border Grid.Row="0" Background="{DynamicResource ThemeInsetBg}" BorderBrush="#0284C7" BorderThickness="1.5" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <TextBlock x:Name="txtSelectedKhatianHeader" Text="🔍 নির্বাচিত খতিয়ানের পূর্ণাঙ্গ বিবরণী (Preview)"
-                                   Style="{StaticResource PreviewSectionHeader}" Margin="0" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="bdHeroKhatianPill" Background="#0284C7" CornerRadius="6" Padding="12,5" Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtPrevHeroKhatianBadge" Text="খতিয়ান: —" Foreground="White" FontSize="16.5" FontWeight="Bold"/>
+                                </Border>
+                                <TextBlock x:Name="txtSelectedKhatianHeader" Text="🔍 নির্বাচিত খতিয়ানের পূর্ণাঙ্গ বিবরণী (Preview)"
+                                           Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
+                            </StackPanel>
 
-                        <Button Grid.Column="1" x:Name="btnExportDetailsCsv" Content="📊 সম্পূর্ণ বিবরণী CSV এক্সপোর্ট"
-                                Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}"
-                                BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
-                                Foreground="{DynamicResource ThemeTextPrimary}" Padding="16,6" FontSize="13.5"
-                                Click="BtnExportDetailsCsv_Click"/>
-                    </Grid>
+                            <Button Grid.Column="1" x:Name="btnExportDetailsCsv" Content="📊 সম্পূর্ণ বিবরণী CSV এক্সপোর্ট"
+                                    Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeCardBg}"
+                                    BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                    Foreground="{DynamicResource ThemeTextPrimary}" Padding="16,6" FontSize="13.5"
+                                    Click="BtnExportDetailsCsv_Click"/>
+                        </Grid>
+                    </Border>
 
                     <!-- Empty State Placeholder (when no khatian is selected) -->
                     <Border Grid.Row="1" x:Name="pnlEmptyPreview" Background="{DynamicResource ThemeInsetBg}" CornerRadius="8"
@@ -422,31 +484,34 @@
                                         </Border>
                                     </StackPanel>
 
-                                    <!-- Grid Row 1 -->
+                                    <!-- Grid Row 1 with Hero Highlighted Current Khatian Card -->
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="1.2*"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="বর্তমান খতিয়ান নং:" Style="{StaticResource PropLabel}"/>
-                                            <TextBlock x:Name="txtPrevCurrentKhatian" Text="—" Style="{StaticResource PropVal}" FontSize="17" Foreground="#0284C7"/>
-                                        </StackPanel>
+                                        <!-- Highlighted Hero Card for Selected Current Khatian -->
+                                        <Border Grid.Column="0" Background="#0284C7" CornerRadius="8" Padding="12,8" Margin="0,0,10,0">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="বর্তমান খতিয়ান নং" Foreground="#E0F2FE" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="txtPrevCurrentKhatian" Text="—" Foreground="#FFFFFF" FontSize="22" FontWeight="Bold" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Border>
 
-                                        <StackPanel Grid.Column="1">
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="সাবেক খতিয়ান নং:" Style="{StaticResource PropLabel}"/>
                                             <TextBlock x:Name="txtPrevFormerKhatian" Text="—" Style="{StaticResource PropVal}"/>
                                         </StackPanel>
 
-                                        <StackPanel Grid.Column="2">
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                             <TextBlock Text="এন্ট্রি খতিয়ান নং:" Style="{StaticResource PropLabel}"/>
                                             <TextBlock x:Name="txtPrevEntryKhatian" Text="—" Style="{StaticResource PropVal}"/>
                                         </StackPanel>
 
-                                        <StackPanel Grid.Column="3">
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Center">
                                             <TextBlock Text="নকশা শিট নং:" Style="{StaticResource PropLabel}"/>
                                             <TextBlock x:Name="txtPrevSheet" Text="—" Style="{StaticResource PropVal}"/>
                                         </StackPanel>
@@ -523,18 +588,18 @@
 
                                     <DataGrid x:Name="dgOwners" Style="{StaticResource ModernDataGrid}" MaxHeight="300">
                                         <DataGrid.Columns>
-                                            <!-- Serial Number on Left -->
-                                            <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="50"/>
+                                            <!-- Serial Number in Bangla -->
+                                            <DataGridTextColumn Header="#" Binding="{Binding SlNo, Converter={StaticResource BanglaNumConverter}}" Width="50"/>
                                             <DataGridTextColumn Header="মালিকের নাম" Binding="{Binding OwnerName}" Width="190" FontWeight="Bold"/>
                                             <DataGridTextColumn Header="পিতা / স্বামীর নাম" Binding="{Binding FatherName}" Width="170"/>
                                             <DataGridTextColumn Header="মাতার নাম" Binding="{Binding MotherName}" Width="150"/>
                                             <DataGridTextColumn Header="স্বামী / স্ত্রী" Binding="{Binding SpouseName}" Width="130"/>
                                             <DataGridTextColumn Header="লিঙ্গ" Binding="{Binding Gender}" Width="75"/>
-                                            <DataGridTextColumn Header="এনআইডি নম্বর" Binding="{Binding Nid}" Width="140"/>
-                                            <DataGridTextColumn Header="জন্ম নিবন্ধন নং" Binding="{Binding BirthReg}" Width="130"/>
-                                            <DataGridTextColumn Header="মোবাইল" Binding="{Binding Phone}" Width="115"/>
+                                            <DataGridTextColumn Header="এনআইডি নম্বর" Binding="{Binding Nid, Converter={StaticResource BanglaNumConverter}}" Width="140"/>
+                                            <DataGridTextColumn Header="জন্ম নিবন্ধন নং" Binding="{Binding BirthReg, Converter={StaticResource BanglaNumConverter}}" Width="130"/>
+                                            <DataGridTextColumn Header="মোবাইল" Binding="{Binding Phone, Converter={StaticResource BanglaNumConverter}}" Width="115"/>
                                             <DataGridTextColumn Header="ঠিকানা" Binding="{Binding Address}" Width="220"/>
-                                            <DataGridTextColumn Header="অংশ / জমির পরিমাণ" Binding="{Binding OwnerShareArea, StringFormat={}{0:0.0000}}" Width="130"/>
+                                            <DataGridTextColumn Header="অংশ / জমির পরিমাণ" Binding="{Binding OwnerShareArea, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="130"/>
                                         </DataGrid.Columns>
                                     </DataGrid>
                                 </StackPanel>
@@ -555,15 +620,15 @@
 
                                     <DataGrid x:Name="dgPlots" Style="{StaticResource ModernDataGrid}" MaxHeight="320">
                                         <DataGrid.Columns>
-                                            <!-- Serial Number on Left -->
-                                            <DataGridTextColumn Header="#" Binding="{Binding SlNo}" Width="50"/>
-                                            <DataGridTextColumn Header="বর্তমান দাগ নং" Binding="{Binding CurrentPlot}" Width="120" FontWeight="Bold"/>
-                                            <DataGridTextColumn Header="সাবেক দাগ নং" Binding="{Binding FormerPlot}" Width="105"/>
-                                            <DataGridTextColumn Header="সি.এস. দাগ নং" Binding="{Binding CsPlot}" Width="100"/>
-                                            <DataGridTextColumn Header="সাবেক খতিয়ান নং" Binding="{Binding SabekKhatian}" Width="110"/>
-                                            <DataGridTextColumn Header="দাগের মোট জমি (একর)" Binding="{Binding TotalPlotArea, StringFormat={}{0:0.0000}}" Width="140"/>
-                                            <DataGridTextColumn Header="খতিয়ানের অংশ" Binding="{Binding KhatianShare, StringFormat={}{0:0.0000}}" Width="115"/>
-                                            <DataGridTextColumn Header="অত্র খতিয়ানে জমি (একর)" Binding="{Binding KhatianPlotArea, StringFormat={}{0:0.0000}}" Width="145"/>
+                                            <!-- Serial Number in Bangla -->
+                                            <DataGridTextColumn Header="#" Binding="{Binding SlNo, Converter={StaticResource BanglaNumConverter}}" Width="50"/>
+                                            <DataGridTextColumn Header="বর্তমান দাগ নং" Binding="{Binding CurrentPlot, Converter={StaticResource BanglaNumConverter}}" Width="120" FontWeight="Bold"/>
+                                            <DataGridTextColumn Header="সাবেক দাগ নং" Binding="{Binding FormerPlot, Converter={StaticResource BanglaNumConverter}}" Width="105"/>
+                                            <DataGridTextColumn Header="সি.এস. দাগ নং" Binding="{Binding CsPlot, Converter={StaticResource BanglaNumConverter}}" Width="100"/>
+                                            <DataGridTextColumn Header="সাবেক খতিয়ান নং" Binding="{Binding SabekKhatian, Converter={StaticResource BanglaNumConverter}}" Width="110"/>
+                                            <DataGridTextColumn Header="দাগের মোট জমি (একর)" Binding="{Binding TotalPlotArea, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="140"/>
+                                            <DataGridTextColumn Header="খতিয়ানের অংশ" Binding="{Binding KhatianShare, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="115"/>
+                                            <DataGridTextColumn Header="অত্র খতিয়ানে জমি (একর)" Binding="{Binding KhatianPlotArea, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="145"/>
                                             <!-- Dynamic 3-part Land Classification -->
                                             <DataGridTextColumn Header="৪(ক) কৃষি" Binding="{Binding AgriLandClass_4Ka}" Width="120"/>
                                             <DataGridTextColumn Header="৪(খ) অকৃষি" Binding="{Binding NonAgriLandClass_4Kha}" Width="120"/>
@@ -574,8 +639,8 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- ================= SECTION 4: AUDIT TRAIL & SYSTEM METADATA ================= -->
-                            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                            <!-- ================= SECTION 4: AUDIT TRAIL & SYSTEM METADATA (ADMIN ONLY) ================= -->
+                            <Border x:Name="cardAuditSection" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                                     CornerRadius="8" Padding="18,14">
                                 <StackPanel>
                                     <TextBlock Text="🛡️ সিস্টেম অডিট ও ট্রেইল (System Audit &amp; Metadata)" Style="{StaticResource PreviewSectionHeader}" Margin="0,0,0,12"/>
@@ -653,15 +718,23 @@
         </Border>
 
         <!-- ================= 3: FULL-SCREEN LOADING OVERLAY ================= -->
-        <Grid x:Name="loadingOverlay" Background="#80000000" Visibility="Collapsed" Grid.RowSpan="3">
-            <Border Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
-                    CornerRadius="10" Padding="28,24" HorizontalAlignment="Center" VerticalAlignment="Center" Width="380">
+        <Grid x:Name="loadingOverlay" Background="#66000000" Visibility="Collapsed" Grid.RowSpan="3" Panel.ZIndex="9999">
+            <Border Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5"
+                    CornerRadius="12" Padding="32,24" HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.25"/>
+                </Border.Effect>
                 <StackPanel HorizontalAlignment="Center">
-                    <ProgressBar IsIndeterminate="True" Height="6" Margin="0,0,0,18" Foreground="#059669"/>
-                    <TextBlock x:Name="txtLoadingMessage" Text="অনুগ্রহ করে অপেক্ষা করুন..." FontWeight="Bold" FontSize="16"
+                    <Border Width="52" Height="52" CornerRadius="26" Background="#ECFDF5" HorizontalAlignment="Center" Margin="0,0,0,14">
+                        <TextBlock Text="⚡" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ProgressBar IsIndeterminate="True" Height="6" Width="280" Margin="0,0,0,16" Foreground="#059669"
+                                 Background="{DynamicResource ThemeInsetBg}" BorderThickness="0"/>
+                    <TextBlock x:Name="txtLoadingMessage" Text="অনুগ্রহ করে অপেক্ষা করুন..." FontWeight="Bold" FontSize="17"
                                HorizontalAlignment="Center" Foreground="{DynamicResource ThemeTextPrimary}"/>
-                    <TextBlock Text="ডাটাবেজ থেকে ভূমি রেকর্ড সংগ্রহ ও লোড করা হচ্ছে..." FontSize="13.5"
-                               HorizontalAlignment="Center" Foreground="{DynamicResource ThemeTextSecondary}" Margin="0,8,0,0"/>
+                    <TextBlock x:Name="txtLoadingSubMessage" Text="ডাটাবেজ থেকে ভূমি রেকর্ড সংগ্রহ ও লোড করা হচ্ছে..." FontSize="13.5"
+                               HorizontalAlignment="Center" Foreground="{DynamicResource ThemeTextSecondary}" Margin="0,8,0,0"
+                               TextWrapping="Wrap" TextAlignment="Center"/>
                 </StackPanel>
             </Border>
         </Grid>
