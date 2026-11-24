@@ -178,7 +178,7 @@
             <Setter Property="CanUserDeleteRows" Value="False"/>
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="SelectionMode" Value="Single"/>
-            <Setter Property="RowHeight" Value="34"/>
+            <Setter Property="MinRowHeight" Value="34"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="ColumnHeaderStyle">
                 <Setter.Value>
@@ -439,11 +439,45 @@
                                       SelectionChanged="DgKhatians_SelectionChanged">
                                 <DataGrid.Columns>
                                     <!-- Serial Number Column on Left in Bangla -->
-                                    <DataGridTextColumn Header="#" Binding="{Binding SlNo, Converter={StaticResource BanglaNumConverter}}" Width="50"/>
+                                    <DataGridTextColumn Header="#" Binding="{Binding SlNo, Converter={StaticResource BanglaNumConverter}}" Width="50">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                     <!-- Current Khatian in Bangla -->
-                                    <DataGridTextColumn Header="বর্তমান খতিয়ান" Binding="{Binding CurrentKhatian, Converter={StaticResource BanglaNumConverter}}" Width="120" FontWeight="Bold"/>
-                                    <DataGridTextColumn Header="মালিকগণ" Binding="{Binding AllOwnerNames}" Width="*"/>
-                                    <DataGridTextColumn Header="অবস্থা" Binding="{Binding KhatianStatus}" Width="90"/>
+                                    <DataGridTextColumn Header="বর্তমান খতিয়ান" Binding="{Binding CurrentKhatian, Converter={StaticResource BanglaNumConverter}}" Width="120" FontWeight="Bold">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <!-- Owners with TextWrapping so all data is visible -->
+                                    <DataGridTextColumn Header="মালিকগণ" Binding="{Binding AllOwnerNames}" Width="*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="LineHeight" Value="18"/>
+                                                <Setter Property="Padding" Value="2,4"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <!-- Status -->
+                                    <DataGridTextColumn Header="অবস্থা" Binding="{Binding KhatianStatus}" Width="100">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
 
@@ -641,15 +675,52 @@
                                         <DataGrid.Columns>
                                             <!-- Serial Number in Bangla -->
                                             <DataGridTextColumn Header="#" Binding="{Binding SlNo, Converter={StaticResource BanglaNumConverter}}" Width="50"/>
-                                            <DataGridTextColumn Header="মালিকের নাম" Binding="{Binding OwnerName}" Width="190" FontWeight="Bold"/>
-                                            <DataGridTextColumn Header="পিতা / স্বামীর নাম" Binding="{Binding FatherName}" Width="170"/>
-                                            <DataGridTextColumn Header="মাতার নাম" Binding="{Binding MotherName}" Width="150"/>
-                                            <DataGridTextColumn Header="স্বামী / স্ত্রী" Binding="{Binding SpouseName}" Width="130"/>
+                                            <DataGridTextColumn Header="মালিকের নাম" Binding="{Binding OwnerName}" Width="190" FontWeight="Bold">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="পিতা / স্বামীর নাম" Binding="{Binding FatherName}" Width="170">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="মাতার নাম" Binding="{Binding MotherName}" Width="150">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="স্বামী / স্ত্রী" Binding="{Binding SpouseName}" Width="130">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
                                             <DataGridTextColumn Header="লিঙ্গ" Binding="{Binding Gender}" Width="75"/>
                                             <DataGridTextColumn Header="এনআইডি নম্বর" Binding="{Binding Nid, Converter={StaticResource BanglaNumConverter}}" Width="140"/>
                                             <DataGridTextColumn Header="জন্ম নিবন্ধন নং" Binding="{Binding BirthReg, Converter={StaticResource BanglaNumConverter}}" Width="130"/>
                                             <DataGridTextColumn Header="মোবাইল" Binding="{Binding Phone, Converter={StaticResource BanglaNumConverter}}" Width="115"/>
-                                            <DataGridTextColumn Header="ঠিকানা" Binding="{Binding Address}" Width="220"/>
+                                            <DataGridTextColumn Header="ঠিকানা" Binding="{Binding Address}" Width="220">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                        <Setter Property="LineHeight" Value="17"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
                                             <DataGridTextColumn Header="অংশ / জমির পরিমাণ" Binding="{Binding OwnerShareArea, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="130"/>
                                         </DataGrid.Columns>
                                     </DataGrid>
@@ -680,11 +751,40 @@
                                             <DataGridTextColumn Header="দাগের মোট জমি (একর)" Binding="{Binding TotalPlotArea, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="140"/>
                                             <DataGridTextColumn Header="খতিয়ানের অংশ" Binding="{Binding KhatianShare, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="115"/>
                                             <DataGridTextColumn Header="অত্র খতিয়ানে জমি (একর)" Binding="{Binding KhatianPlotArea, Converter={StaticResource BanglaNumConverter}, ConverterParameter='0.0000'}" Width="145"/>
-                                            <!-- Dynamic 3-part Land Classification -->
-                                            <DataGridTextColumn Header="৪(ক) কৃষি" Binding="{Binding AgriLandClass_4Ka}" Width="120"/>
-                                            <DataGridTextColumn Header="৪(খ) অকৃষি" Binding="{Binding NonAgriLandClass_4Kha}" Width="120"/>
-                                            <DataGridTextColumn Header="৪(গ) স্থানীয় নাম" Binding="{Binding LocalName_4Ga}" Width="130"/>
-                                            <DataGridTextColumn Header="দাগের মন্তব্য" Binding="{Binding PlotRemarks}" Width="*"/>
+                                            <!-- Dynamic 3-part Land Classification with TextWrapping -->
+                                            <DataGridTextColumn Header="৪(ক) কৃষি" Binding="{Binding AgriLandClass_4Ka}" Width="120">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="৪(খ) অকৃষি" Binding="{Binding NonAgriClass_4Kha}" Width="120">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="৪(গ) স্থানীয় নাম" Binding="{Binding LocalName_4Ga}" Width="130">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="দাগের মন্তব্য" Binding="{Binding PlotRemarks}" Width="*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                        <Setter Property="LineHeight" Value="17"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
                                 </StackPanel>
@@ -799,10 +899,6 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- High-Res Browser / Vector View Button (Available to all users for viewing) -->
-                                <Button x:Name="btnKhatianBrowserView" Content="🌐 ব্রাউজার ভিউ" Style="{StaticResource ActionBtn}"
-                                        Background="#0284C7" Foreground="White" Padding="12,6" FontSize="13" Margin="0,0,8,0"
-                                        Click="BtnKhatianBrowserView_Click" ToolTip="মাইক্রোসফট এজ / ডিফল্ট ব্রাউজারে সম্পূর্ণ ভেক্টর হাই-রেজোলিউশন ফরম দেখুন (শার্প ভিউ ও জুম)"/>
 
                                 <!-- Admin Print Button -->
                                 <Button x:Name="btnKhatianPrint" Content="🖨️ প্রিন্ট করুন" Style="{StaticResource ActionBtn}"
@@ -854,395 +950,459 @@
                                 </Border.Resources>
 
                                 <StackPanel>
-                                    <!-- Header Row 1: Bangladesh Form 5462 & Page Number -->
-                                    <Grid Margin="0,0,0,4">
-                                        <TextBlock Text="বাংলাদেশ ফরম নং ৫৪৬২" FontSize="11" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Left"/>
-                                        <TextBlock Text="পৃষ্ঠা নম্বরঃ ১/১" FontSize="10.5" Foreground="#64748B" HorizontalAlignment="Right"/>
-                                    </Grid>
+                                    <!-- ================= HEADER ROW: BANGLADESH FORM 5462, TITLE, SURVEY & STATUS BADGE ================= -->
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2.2*"/>
+                                            <ColumnDefinition Width="3*"/>
+                                            <ColumnDefinition Width="2.4*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <!-- Title -->
-                                    <TextBlock Text="খতিয়ান" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#0F172A" Margin="0,0,0,4"/>
+                                        <!-- Top-Left: Form 5462 -->
+                                        <TextBlock Grid.Column="0" Text="বাংলাদেশ ফরম নং ৫৪৬২ (সংশোধিত)" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="#000000" HorizontalAlignment="Left" VerticalAlignment="Top"/>
 
-                                    <!-- Survey, Khatian No & Status -->
-                                    <Grid Margin="0,0,0,8">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                            <TextBlock Text="জরিপের নাম: " FontSize="12" FontWeight="Bold" Foreground="#334155"/>
-                                            <TextBlock x:Name="rptSurveyName" Text="—" FontSize="12" FontWeight="Bold" Foreground="#0F172A"/>
+                                        <!-- Center: Khatian No & Survey Name -->
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <TextBlock Text="খতিয়ান নং - " FontSize="22" FontWeight="Bold" Foreground="#000000"/>
+                                                <TextBlock x:Name="rptKhatianNo" Text="—" FontSize="22" FontWeight="Bold" Foreground="#000000"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                                <TextBlock Text="জরিপের নাম: " FontSize="13" FontWeight="Bold" Foreground="#000000"/>
+                                                <TextBlock x:Name="rptSurveyName" Text="—" FontSize="13" FontWeight="Bold" Foreground="#000000"/>
+                                            </StackPanel>
                                         </StackPanel>
 
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                            <TextBlock Text="খতিয়ান নং: " FontSize="13" FontWeight="Bold" Foreground="#334155"/>
-                                            <TextBlock x:Name="rptKhatianNo" Text="—" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,16,0"/>
-                                            <TextBlock Text="সাবেক খতিয়ান নং: " FontSize="12" FontWeight="Bold" Foreground="#334155"/>
-                                            <TextBlock x:Name="rptFormerKhatianNo" Text="—" FontSize="12" Foreground="#0F172A"/>
+                                        <!-- Top-Right: QR Code & Status Box -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                            <!-- QR Code Vector Box -->
+                                            <Border Width="50" Height="50" BorderBrush="#000000" BorderThickness="1" Background="White" Padding="2" VerticalAlignment="Center">
+                                                <Viewbox Stretch="Uniform">
+                                                    <Canvas Width="40" Height="40">
+                                                        <Rectangle Canvas.Left="2" Canvas.Top="2" Width="12" Height="12" Stroke="#000000" StrokeThickness="2" Fill="White"/>
+                                                        <Rectangle Canvas.Left="5" Canvas.Top="5" Width="6" Height="6" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="26" Canvas.Top="2" Width="12" Height="12" Stroke="#000000" StrokeThickness="2" Fill="White"/>
+                                                        <Rectangle Canvas.Left="29" Canvas.Top="5" Width="6" Height="6" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="2" Canvas.Top="26" Width="12" Height="12" Stroke="#000000" StrokeThickness="2" Fill="White"/>
+                                                        <Rectangle Canvas.Left="5" Canvas.Top="29" Width="6" Height="6" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="17" Canvas.Top="3" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="21" Canvas.Top="3" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="17" Canvas.Top="7" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="19" Canvas.Top="11" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="3" Canvas.Top="17" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="7" Canvas.Top="17" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="11" Canvas.Top="19" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="15" Canvas.Top="16" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="19" Canvas.Top="18" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="23" Canvas.Top="16" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="27" Canvas.Top="18" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="31" Canvas.Top="16" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="35" Canvas.Top="19" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="16" Canvas.Top="23" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="21" Canvas.Top="24" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="26" Canvas.Top="22" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="32" Canvas.Top="24" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="17" Canvas.Top="28" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="23" Canvas.Top="30" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="28" Canvas.Top="28" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="34" Canvas.Top="30" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="18" Canvas.Top="34" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="24" Canvas.Top="35" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="29" Canvas.Top="34" Width="3" Height="3" Fill="#000000"/>
+                                                        <Rectangle Canvas.Left="35" Canvas.Top="35" Width="3" Height="3" Fill="#000000"/>
+                                                    </Canvas>
+                                                </Viewbox>
+                                            </Border>
+
+                                            <!-- Official Status Badge Box -->
+                                            <Border BorderBrush="#000000" BorderThickness="1.5" CornerRadius="0" Padding="8,5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock x:Name="rptKhatianStatusPill" Text="বুঝারত স্তর -এর এন্ট্রি চলমান" FontSize="12.5" FontWeight="Bold" Foreground="#000000"/>
+                                            </Border>
+                                        </StackPanel>
+
+                                        <!-- Hidden references for binding compatibility -->
+                                        <TextBlock x:Name="rptFormerKhatianNo" Visibility="Collapsed"/>
+                                    </Grid>
+
+                                    <!-- ================= ADMINISTRATIVE HIERARCHY (UNBORDERED HORIZONTAL ROW) ================= -->
+                                    <Grid Margin="0,8,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.1*"/>
+                                            <ColumnDefinition Width="1.1*"/>
+                                            <ColumnDefinition Width="1.7*"/>
+                                            <ColumnDefinition Width="2.1*"/>
+                                            <ColumnDefinition Width="1.1*"/>
+                                            <ColumnDefinition Width="1.1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="বিভাগ: " FontWeight="Bold" FontSize="11.5" Foreground="#000000"/>
+                                            <TextBlock x:Name="rptDivision" Text="—" FontSize="11.5" Foreground="#000000"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="জেলা: " FontWeight="Bold" FontSize="11.5" Foreground="#000000"/>
+                                            <TextBlock x:Name="rptDistrict" Text="—" FontSize="11.5" Foreground="#000000"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <TextBlock Text="উপজেলা/থানা: " FontWeight="Bold" FontSize="11.5" Foreground="#000000"/>
+                                            <TextBlock x:Name="rptUpazila" Text="—" FontSize="11.5" Foreground="#000000"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                            <TextBlock Text="মৌজা: " FontWeight="Bold" FontSize="11.5" Foreground="#000000"/>
+                                            <TextBlock x:Name="rptMouza" Text="—" FontSize="11.5" Foreground="#000000"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                            <TextBlock Text="জে. এল: " FontWeight="Bold" FontSize="11.5" Foreground="#000000"/>
+                                            <TextBlock x:Name="rptJLNo" Text="—" FontSize="11.5" Foreground="#000000"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="5" Orientation="Horizontal">
+                                            <TextBlock Text="শীট নং: " FontWeight="Bold" FontSize="11.5" Foreground="#000000"/>
+                                            <TextBlock x:Name="rptSheetNo" Text="—" FontSize="11.5" Foreground="#000000"/>
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- Administrative Hierarchy Box -->
-                                    <Border BorderBrush="#334155" BorderThickness="1" Padding="8,6" Margin="0,0,0,8" Background="#F8FAFC">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="1.3*"/>
-                                                <ColumnDefinition Width="1.3*"/>
-                                                <ColumnDefinition Width="1.8*"/>
-                                                <ColumnDefinition Width="2.2*"/>
-                                                <ColumnDefinition Width="1.3*"/>
-                                                <ColumnDefinition Width="1.1*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                                <TextBlock Text="বিভাগ: " FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
-                                                <TextBlock x:Name="rptDivision" Text="—" FontSize="11.5" Foreground="#0F172A"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                <TextBlock Text="জেলা: " FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
-                                                <TextBlock x:Name="rptDistrict" Text="—" FontSize="11.5" Foreground="#0F172A"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal">
-                                                <TextBlock Text="উপজেলা/থানা: " FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
-                                                <TextBlock x:Name="rptUpazila" Text="—" FontSize="11.5" Foreground="#0F172A"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                                <TextBlock Text="মৌজা: " FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
-                                                <TextBlock x:Name="rptMouza" Text="—" FontSize="11.5" Foreground="#0F172A"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Column="4" Orientation="Horizontal">
-                                                <TextBlock Text="জে. এল. নং: " FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
-                                                <TextBlock x:Name="rptJLNo" Text="—" FontSize="11.5" Foreground="#0F172A"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Column="5" Orientation="Horizontal">
-                                                <TextBlock Text="শীট নং: " FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
-                                                <TextBlock x:Name="rptSheetNo" Text="—" FontSize="11.5" Foreground="#0F172A"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- ================= 13-COLUMN OFFICIAL TABLE (Tablix1 Match) ================= -->
-                                    <Border BorderBrush="#334155" BorderThickness="1,1,1,0">
+                                    <!-- ================= 13-COLUMN OFFICIAL TABLE (DevResource\KhotiyanPdf.pdf Match) ================= -->
+                                    <Border BorderBrush="#000000" BorderThickness="1">
                                         <StackPanel>
                                             <!-- Table Header Grid -->
-                                            <Grid Background="#F1F5F9">
+                                            <Grid Background="White">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="230"/> <!-- Col 0: মালিকের নাম ও পরিচয় -->
+                                                    <ColumnDefinition Width="230"/> <!-- Col 0: মালিকের বিবরণ -->
                                                     <ColumnDefinition Width="55"/>  <!-- Col 1: অংশ -->
-                                                    <ColumnDefinition Width="75"/>  <!-- Col 2: সাবেক দাগ -->
-                                                    <ColumnDefinition Width="75"/>  <!-- Col 3: বর্তমান দাগ -->
-                                                    <ColumnDefinition Width="68"/>  <!-- Col 4: কৃষি -->
-                                                    <ColumnDefinition Width="68"/>  <!-- Col 5: অকৃষি -->
+                                                    <ColumnDefinition Width="70"/>  <!-- Col 2: সাবেক দাগ -->
+                                                    <ColumnDefinition Width="70"/>  <!-- Col 3: বর্তমান দাগ -->
+                                                    <ColumnDefinition Width="65"/>  <!-- Col 4: কৃষি -->
+                                                    <ColumnDefinition Width="65"/>  <!-- Col 5: অকৃষি -->
                                                     <ColumnDefinition Width="75"/>  <!-- Col 6: স্থানীয় নাম -->
                                                     <ColumnDefinition Width="55"/>  <!-- Col 7: মোট জমি একর -->
                                                     <ColumnDefinition Width="65"/>  <!-- Col 8: মোট জমি অযুতাংশ -->
-                                                    <ColumnDefinition Width="75"/>  <!-- Col 9: খতিয়ানের অংশ -->
-                                                    <ColumnDefinition Width="55"/>  <!-- Col 10: অংশানুযায়ী একর -->
-                                                    <ColumnDefinition Width="65"/>  <!-- Col 11: অংশানুযায়ী অযুতাংশ -->
-                                                    <ColumnDefinition Width="104"/> <!-- Col 12: মন্তব্য -->
+                                                    <ColumnDefinition Width="70"/>  <!-- Col 9: খতিয়ানের অংশ -->
+                                                    <ColumnDefinition Width="55"/>  <!-- Col 10: অংশ অনুযায়ী একর -->
+                                                    <ColumnDefinition Width="65"/>  <!-- Col 11: অংশ অনুযায়ী অযুতাংশ -->
+                                                    <ColumnDefinition Width="126"/> <!-- Col 12: মন্তব্য -->
                                                 </Grid.ColumnDefinitions>
                                                 <Grid.RowDefinitions>
-                                                    <RowDefinition Height="28"/> <!-- Main Group Header -->
+                                                    <RowDefinition Height="34"/> <!-- Main Group Header -->
                                                     <RowDefinition Height="26"/> <!-- Sub-Header -->
                                                     <RowDefinition Height="22"/> <!-- Column Number (১ to ৮) -->
                                                 </Grid.RowDefinitions>
 
                                                 <!-- Col 0: মালিকের বিবরণ (RowSpan 2) -->
-                                                <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="4,2">
-                                                    <TextBlock Text="মালিকের নাম, পিতা, মাতা, স্বামী/স্ত্রীর নাম ও ঠিকানা, NID/জন্মনিবন্ধন" FontSize="10.5" FontWeight="Bold" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="4,2">
+                                                    <TextBlock Text="মালিকের নাম, পিতা, মাতা, স্বামী /স্ত্রীর নাম(ব্যক্তি) ও&#x0a;ঠিকানা, জন্মনিবন্ধন/জাতীয় পরিচয় পত্র নম্বর(ব্যক্তি)"
+                                                               FontSize="10" FontWeight="Bold" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" LineHeight="14"/>
                                                 </Border>
 
                                                 <!-- Col 1: মালিকানা অংশ (RowSpan 2) -->
-                                                <Border Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="মালিকানা&#x0a;অংশ" FontSize="10" FontWeight="Bold" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
 
                                                 <!-- Col 2-3: সাবেক ও বর্তমান দাগ নম্বর (ColSpan 2) -->
-                                                <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
-                                                    <TextBlock Text="সাবেক ও বর্তমান দাগ নম্বর" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
+                                                    <TextBlock Text="সাবেক ও বর্তমান দাগ নম্বর" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: সাবেক দাগ -->
-                                                <Border Grid.Row="1" Grid.Column="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="সাবেক দাগ" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: বর্তমান দাগ -->
-                                                <Border Grid.Row="1" Grid.Column="3" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="3" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="বর্তমান দাগ" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
 
                                                 <!-- Col 4-6: জমির শ্রেণী (ColSpan 3) -->
-                                                <Border Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="3" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
-                                                    <TextBlock Text="জমির শ্রেণী" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="3" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
+                                                    <TextBlock Text="জমির শ্রেণী" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: কৃষি -->
-                                                <Border Grid.Row="1" Grid.Column="4" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="4" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="কৃষি" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: অকৃষি -->
-                                                <Border Grid.Row="1" Grid.Column="5" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="5" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="অকৃষি" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: স্থানীয় নাম -->
-                                                <Border Grid.Row="1" Grid.Column="6" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="6" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="স্থানীয় নাম" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
 
                                                 <!-- Col 7-8: দাগে মোট জমির পরিমাণ (ColSpan 2) -->
-                                                <Border Grid.Row="0" Grid.Column="7" Grid.ColumnSpan="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
-                                                    <TextBlock Text="দাগে মোট জমির পরিমাণ" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Row="0" Grid.Column="7" Grid.ColumnSpan="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
+                                                    <TextBlock Text="দাগে মোট জমির পরিমাণ" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: একর -->
-                                                <Border Grid.Row="1" Grid.Column="7" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="7" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="একর" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: অযুতাংশ -->
-                                                <Border Grid.Row="1" Grid.Column="8" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="8" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="অযুতাংশ" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
 
                                                 <!-- Col 9: দাগের মধ্যে এই খতিয়ানের অংশ (RowSpan 2) -->
-                                                <Border Grid.Row="0" Grid.Column="9" Grid.RowSpan="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="0" Grid.Column="9" Grid.RowSpan="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="দাগের মধ্যে এই&#x0a;খতিয়ানের অংশ" FontSize="9.5" FontWeight="Bold" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
 
                                                 <!-- Col 10-11: অংশানুযায়ী জমির পরিমাণ (ColSpan 2) -->
-                                                <Border Grid.Row="0" Grid.Column="10" Grid.ColumnSpan="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="0" Grid.Column="10" Grid.ColumnSpan="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="অংশানুযায়ী জমির পরিমাণ" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: একর -->
-                                                <Border Grid.Row="1" Grid.Column="10" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="10" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="একর" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Sub: অযুতাংশ -->
-                                                <Border Grid.Row="1" Grid.Column="11" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
+                                                <Border Grid.Row="1" Grid.Column="11" BorderBrush="#000000" BorderThickness="0,0,1,1" Padding="2">
                                                     <TextBlock Text="অযুতাংশ" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
 
                                                 <!-- Col 12: মন্তব্য (RowSpan 2) -->
-                                                <Border Grid.Row="0" Grid.Column="12" Grid.RowSpan="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2">
-                                                    <TextBlock Text="দখল বিষয়ক বা অন্যান্য&#x0a;বিশেষ মন্তব্য" FontSize="9.5" FontWeight="Bold" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Row="0" Grid.Column="12" Grid.RowSpan="2" BorderBrush="#000000" BorderThickness="0,0,0,1" Padding="2">
+                                                    <TextBlock Text="দখল বিষয়ক বা&#x0a;অন্যান্য বিশেষ মন্তব্য" FontSize="9.5" FontWeight="Bold" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
 
                                                 <!-- Row 2: Official Column Numbers (১ to ৮) -->
-                                                <Border Grid.Row="2" Grid.Column="0" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="0" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="১" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="1" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="1" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="২" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="2" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৩(ক)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="3" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="3" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৩(খ)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="4" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="4" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৪(ক)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="5" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="5" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৪(খ)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="6" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="6" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৪(গ)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="7" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="7" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৫(ক)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="8" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="8" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৫(খ)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="9" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="9" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৬" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="10" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="10" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৭(ক)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="11" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="11" BorderBrush="#000000" BorderThickness="0,0,1,1" Background="#F1F5F9">
                                                     <TextBlock Text="৭(খ)" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border Grid.Row="2" Grid.Column="12" BorderBrush="#334155" BorderThickness="0,0,1,1" Background="#E2E8F0">
+                                                <Border Grid.Row="2" Grid.Column="12" BorderBrush="#000000" BorderThickness="0,0,0,1" Background="#F1F5F9">
                                                     <TextBlock Text="৮" FontSize="10" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </Grid>
 
-                                            <!-- Dynamic Rows using ItemsControl -->
-                                            <ItemsControl x:Name="icKhatianRows">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid MinHeight="26">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="230"/>
-                                                                <ColumnDefinition Width="55"/>
-                                                                <ColumnDefinition Width="75"/>
-                                                                <ColumnDefinition Width="75"/>
-                                                                <ColumnDefinition Width="68"/>
-                                                                <ColumnDefinition Width="68"/>
-                                                                <ColumnDefinition Width="75"/>
-                                                                <ColumnDefinition Width="55"/>
-                                                                <ColumnDefinition Width="65"/>
-                                                                <ColumnDefinition Width="75"/>
-                                                                <ColumnDefinition Width="55"/>
-                                                                <ColumnDefinition Width="65"/>
-                                                                <ColumnDefinition Width="104"/>
-                                                            </Grid.ColumnDefinitions>
+                                            <!-- Table Body Area with Continuous Vertical Divider Lines, Watermark & Wrapped Rows -->
+                                            <Grid MinHeight="360">
+                                                <!-- Continuous Column Divider Vertical Lines (Spanning full height of body) -->
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="230"/>
+                                                        <ColumnDefinition Width="55"/>
+                                                        <ColumnDefinition Width="70"/>
+                                                        <ColumnDefinition Width="70"/>
+                                                        <ColumnDefinition Width="65"/>
+                                                        <ColumnDefinition Width="65"/>
+                                                        <ColumnDefinition Width="75"/>
+                                                        <ColumnDefinition Width="55"/>
+                                                        <ColumnDefinition Width="65"/>
+                                                        <ColumnDefinition Width="70"/>
+                                                        <ColumnDefinition Width="55"/>
+                                                        <ColumnDefinition Width="65"/>
+                                                        <ColumnDefinition Width="126"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="1" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="2" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="3" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="4" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="5" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="6" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="7" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="8" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="9" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="10" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                    <Border Grid.Column="11" BorderBrush="#000000" BorderThickness="0,0,1,0"/>
+                                                </Grid>
 
-                                                            <Border Grid.Column="0" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="4,4">
-                                                                <TextBlock Text="{Binding OwnerDetails}" FontSize="10.5" TextWrapping="Wrap" LineHeight="16"/>
-                                                            </Border>
-                                                            <Border Grid.Column="1" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding OwnerShare}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="2" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding FormerPlot}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="3" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding CurrentPlot}" FontSize="10.5" FontWeight="SemiBold" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="4" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding AgriClass_4Ka}" FontSize="10" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="5" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding NonAgriClass_4Kha}" FontSize="10" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="6" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding LocalName_4Ga}" FontSize="10" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="7" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding TotalPlotAcre}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="8" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding TotalPlotAjutangsho}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="9" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding KhatianShare}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="10" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding KhatianPlotAcre}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="11" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
-                                                                <TextBlock Text="{Binding KhatianPlotAjutangsho}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <Border Grid.Column="12" BorderBrush="#334155" BorderThickness="0,0,0,0" Padding="3">
-                                                                <TextBlock Text="{Binding Remarks}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                                <!-- Diagonal Watermark Behind Body Rows -->
+                                                <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620" IsHitTestVisible="False">
+                                                    <TextBlock x:Name="txtKhatianWatermark" Text="বুঝারত স্তর চলমান"
+                                                               FontSize="54" FontWeight="Bold" Foreground="#000000" Opacity="0.08"
+                                                               RenderTransformOrigin="0.5,0.5">
+                                                        <TextBlock.RenderTransform>
+                                                            <RotateTransform Angle="-18"/>
+                                                        </TextBlock.RenderTransform>
+                                                    </TextBlock>
+                                                </Viewbox>
 
-                                            <!-- Table Totals Row -->
-                                            <Grid Background="#F8FAFC" MinHeight="26">
+                                                <!-- Dynamic Rows using ItemsControl (No horizontal dividers; full text wrapping) -->
+                                                <ItemsControl x:Name="icKhatianRows" VerticalAlignment="Top">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid MinHeight="26">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="230"/>
+                                                                    <ColumnDefinition Width="55"/>
+                                                                    <ColumnDefinition Width="70"/>
+                                                                    <ColumnDefinition Width="70"/>
+                                                                    <ColumnDefinition Width="65"/>
+                                                                    <ColumnDefinition Width="65"/>
+                                                                    <ColumnDefinition Width="75"/>
+                                                                    <ColumnDefinition Width="55"/>
+                                                                    <ColumnDefinition Width="65"/>
+                                                                    <ColumnDefinition Width="70"/>
+                                                                    <ColumnDefinition Width="55"/>
+                                                                    <ColumnDefinition Width="65"/>
+                                                                    <ColumnDefinition Width="126"/>
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <!-- Col 0: মালিকের বিবরণ (আংশিক/পূর্ণাঙ্গ) -->
+                                                                <Border Grid.Column="0" Padding="5,4">
+                                                                    <TextBlock Text="{Binding OwnerDetails}" FontSize="10.5" TextWrapping="Wrap" LineHeight="16" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 1: অংশ -->
+                                                                <Border Grid.Column="1" Padding="2,4">
+                                                                    <TextBlock Text="{Binding OwnerShare}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 2: সাবেক দাগ -->
+                                                                <Border Grid.Column="2" Padding="2,4">
+                                                                    <TextBlock Text="{Binding FormerPlot}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 3: বর্তমান দাগ -->
+                                                                <Border Grid.Column="3" Padding="2,4">
+                                                                    <TextBlock Text="{Binding CurrentPlot}" FontSize="10.5" FontWeight="SemiBold" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 4: কৃষি -->
+                                                                <Border Grid.Column="4" Padding="2,4">
+                                                                    <TextBlock Text="{Binding AgriClass_4Ka}" FontSize="10" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 5: অকৃষি -->
+                                                                <Border Grid.Column="5" Padding="2,4">
+                                                                    <TextBlock Text="{Binding NonAgriClass_4Kha}" FontSize="10" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 6: স্থানীয় নাম -->
+                                                                <Border Grid.Column="6" Padding="2,4">
+                                                                    <TextBlock Text="{Binding LocalName_4Ga}" FontSize="10" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 7: দাগের মোট একর -->
+                                                                <Border Grid.Column="7" Padding="2,4">
+                                                                    <TextBlock Text="{Binding TotalPlotAcre}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 8: দাগের মোট অযুতাংশ -->
+                                                                <Border Grid.Column="8" Padding="2,4">
+                                                                    <TextBlock Text="{Binding TotalPlotAjutangsho}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 9: খতিয়ানের অংশ -->
+                                                                <Border Grid.Column="9" Padding="2,4">
+                                                                    <TextBlock Text="{Binding KhatianShare}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 10: অংশ অনুযায়ী একর -->
+                                                                <Border Grid.Column="10" Padding="2,4">
+                                                                    <TextBlock Text="{Binding KhatianPlotAcre}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 11: অংশ অনুযায়ী অযুতাংশ -->
+                                                                <Border Grid.Column="11" Padding="2,4">
+                                                                    <TextBlock Text="{Binding KhatianPlotAjutangsho}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="#000000"/>
+                                                                </Border>
+                                                                <!-- Col 12: মন্তব্য -->
+                                                                <Border Grid.Column="12" Padding="4,4">
+                                                                    <TextBlock Text="{Binding Remarks}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Top" Foreground="#000000"/>
+                                                                </Border>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
+
+                                            <!-- Table Totals Row (Matching KhotiyanPdf.pdf) -->
+                                            <Grid MinHeight="32">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="230"/>
                                                     <ColumnDefinition Width="55"/>
-                                                    <ColumnDefinition Width="75"/>
-                                                    <ColumnDefinition Width="75"/>
-                                                    <ColumnDefinition Width="68"/>
-                                                    <ColumnDefinition Width="68"/>
-                                                    <ColumnDefinition Width="75"/>
-                                                    <ColumnDefinition Width="55"/>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="65"/>
                                                     <ColumnDefinition Width="65"/>
                                                     <ColumnDefinition Width="75"/>
                                                     <ColumnDefinition Width="55"/>
                                                     <ColumnDefinition Width="65"/>
-                                                    <ColumnDefinition Width="104"/>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="55"/>
+                                                    <ColumnDefinition Width="65"/>
+                                                    <ColumnDefinition Width="126"/>
                                                 </Grid.ColumnDefinitions>
 
-                                                <!-- Col 0: মোট অংশ = -->
-                                                <Border Grid.Column="0" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="4,3">
-                                                    <TextBlock Text="মোট অংশ =" FontSize="10.5" FontWeight="Bold" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                <!-- Col 0: বিধি মতে নোট বা পরিবর্তন -->
+                                                <Border Grid.Column="0" BorderBrush="#000000" BorderThickness="0,1,1,0" Padding="4,2">
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text=".................... বিধি মতে নোট বা পরিবর্তন" FontSize="9" Foreground="#000000"/>
+                                                        <TextBlock Text="বিবিধ কেস নম্বর . . . . . . . . এবং সন . . . . . . . ।" FontSize="9" Foreground="#000000" Margin="0,2,0,0"/>
+                                                    </StackPanel>
                                                 </Border>
+
                                                 <!-- Col 1: Total Owner Share -->
-                                                <Border Grid.Column="1" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
-                                                    <TextBlock x:Name="rptTotalOwnerShare" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="1" BorderBrush="#000000" BorderThickness="0,1,1,0" Padding="2,3">
+                                                    <TextBlock x:Name="rptTotalOwnerShare" Text="—" FontSize="11" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center" Foreground="#000000"/>
                                                 </Border>
-                                                <!-- Col 2-6: মোট জমি: (ColSpan 5) -->
-                                                <Border Grid.Column="2" Grid.ColumnSpan="5" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="4,3">
-                                                    <TextBlock Text="মোট জমি:" FontSize="10.5" FontWeight="Bold" TextAlignment="Right" VerticalAlignment="Center"/>
+
+                                                <!-- Col 2-9: মোট জমি (ColSpan 8) -->
+                                                <Border Grid.Column="2" Grid.ColumnSpan="8" BorderBrush="#000000" BorderThickness="0,1,1,0" Padding="4,3">
+                                                    <TextBlock Text="মোট জমি" FontSize="11" FontWeight="Bold" TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#000000"/>
                                                 </Border>
-                                                <!-- Col 7: Total Plot Acre -->
-                                                <Border Grid.Column="7" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
-                                                    <TextBlock x:Name="rptTotalPlotAcre" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <!-- Col 8: Total Plot Ajutangsho -->
-                                                <Border Grid.Column="8" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
-                                                    <TextBlock x:Name="rptTotalPlotAjutangsho" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <!-- Col 9: blank -->
-                                                <Border Grid.Column="9" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
-                                                    <TextBlock Text="—" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8"/>
-                                                </Border>
+
                                                 <!-- Col 10: Total Khatian Acre -->
-                                                <Border Grid.Column="10" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
-                                                    <TextBlock x:Name="rptTotalKhatianAcre" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="10" BorderBrush="#000000" BorderThickness="0,1,1,0" Padding="2,3">
+                                                    <TextBlock x:Name="rptTotalKhatianAcre" Text="" FontSize="11" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center" Foreground="#000000"/>
                                                 </Border>
+
                                                 <!-- Col 11: Total Khatian Ajutangsho -->
-                                                <Border Grid.Column="11" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
-                                                    <TextBlock x:Name="rptTotalKhatianAjutangsho" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="11" BorderBrush="#000000" BorderThickness="0,1,1,0" Padding="2,3">
+                                                    <TextBlock x:Name="rptTotalKhatianAjutangsho" Text="—" FontSize="11" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center" Foreground="#000000"/>
                                                 </Border>
-                                                <!-- Col 12: blank -->
-                                                <Border Grid.Column="12" BorderBrush="#334155" BorderThickness="0,1,0,1" Padding="2,3">
-                                                    <TextBlock Text="—" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8"/>
+
+                                                <!-- Col 12: Blank -->
+                                                <Border Grid.Column="12" BorderBrush="#000000" BorderThickness="0,1,0,0" Padding="2,3">
+                                                    <TextBlock Text="" FontSize="11" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
+
+                                                <!-- Hidden fields for code compatibility -->
+                                                <TextBlock x:Name="rptTotalPlotAcre" Visibility="Collapsed"/>
+                                                <TextBlock x:Name="rptTotalPlotAjutangsho" Visibility="Collapsed"/>
                                             </Grid>
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- ================= 5 OFFICIAL SIGNATURES ================= -->
-                                    <Grid Margin="0,32,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Signature 1 -->
-                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                            <TextBlock Text="........................................." FontSize="11" HorizontalAlignment="Center" Foreground="#475569"/>
-                                            <TextBlock Text="বুঝারত স্তরের এন্ট্রি সম্পন্নকারক" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/>
-                                            <TextBlock Text="তারিখ: ....................." FontSize="10.5" HorizontalAlignment="Center" Foreground="#64748B"/>
-                                        </StackPanel>
-
-                                        <!-- Signature 2 -->
-                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                            <TextBlock Text="........................................." FontSize="11" HorizontalAlignment="Center" Foreground="#475569"/>
-                                            <TextBlock Text="তসদিক স্তর সম্পন্নকারক" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/>
-                                            <TextBlock Text="তারিখ: ....................." FontSize="10.5" HorizontalAlignment="Center" Foreground="#64748B"/>
-                                        </StackPanel>
-
-                                        <!-- Signature 3 -->
-                                        <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                            <TextBlock Text="........................................." FontSize="11" HorizontalAlignment="Center" Foreground="#475569"/>
-                                            <TextBlock Text="আপত্তি স্তর সম্পন্নকারক" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/>
-                                            <TextBlock Text="তারিখ: ....................." FontSize="10.5" HorizontalAlignment="Center" Foreground="#64748B"/>
-                                        </StackPanel>
-
-                                        <!-- Signature 4 -->
-                                        <StackPanel Grid.Column="3" HorizontalAlignment="Center">
-                                            <TextBlock Text="........................................." FontSize="11" HorizontalAlignment="Center" Foreground="#475569"/>
-                                            <TextBlock Text="আপিল স্তর সম্পন্নকারক" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/>
-                                            <TextBlock Text="তারিখ: ....................." FontSize="10.5" HorizontalAlignment="Center" Foreground="#64748B"/>
-                                        </StackPanel>
-
-                                        <!-- Signature 5 -->
-                                        <StackPanel Grid.Column="4" HorizontalAlignment="Center">
-                                            <TextBlock Text="........................................." FontSize="11" HorizontalAlignment="Center" Foreground="#475569"/>
-                                            <TextBlock Text="চূড়ান্ত যাঁচ স্তর সম্পন্নকারক" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/>
-                                            <TextBlock Text="তারিখ: ....................." FontSize="10.5" HorizontalAlignment="Center" Foreground="#64748B"/>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Official Footer -->
-                                    <Border BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="0,6,0,0" Margin="0,8,0,0">
+                                    <!-- ================= OFFICIAL FOOTER MATCHING KhotiyanPdf.pdf ================= -->
+                                    <StackPanel Margin="0,12,0,0">
                                         <Grid>
-                                            <TextBlock Text="সেটেলমেন্ট প্রেস, ফরম শাখা/২০১৯" FontSize="10.5" Foreground="#64748B" HorizontalAlignment="Left"/>
-                                            <TextBlock Text="www.settlement.gov.bd" FontSize="10.5" FontWeight="SemiBold" Foreground="#0284C7" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="পৃষ্ঠা ১/১" FontSize="10.5" Foreground="#64748B" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="সেটেলমেন্ট প্রেস, ফরম শাখা/২০১৯" FontSize="10.5" Foreground="#000000" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="rptPrintSource" Text="Print Source: ..." FontSize="9.5" Foreground="#000000" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                         </Grid>
-                                    </Border>
+
+                                        <TextBlock Text="বিঃ দ্রঃ - এই খতিয়ানটি খসড়া খতিয়ান অর্থাৎ চূড়ান্ত খতিয়ান নয়। জরিপের যেকোন স্তরেই এর যে কোন তথ্য পরিবর্তন হতে পারে। এখানে শুধু চলমান ভূমি জরিপের স্তর ভিত্তিক (খসড়া প্রকাশনা স্তর থেকে চূড়ান্ত প্রকাশনা স্তর পর্যন্ত) তথ্য প্রদর্শন করা হয়েছে।"
+                                                   FontSize="10" Foreground="#DC2626" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="15"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -1270,26 +1430,5 @@
             </Grid>
         </Border>
 
-        <!-- ================= 3: FULL-SCREEN LOADING OVERLAY ================= -->
-        <Grid x:Name="loadingOverlay" Background="#66000000" Visibility="Collapsed" Grid.RowSpan="3" Panel.ZIndex="9999">
-            <Border Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1.5"
-                    CornerRadius="12" Padding="32,24" HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.25"/>
-                </Border.Effect>
-                <StackPanel HorizontalAlignment="Center">
-                    <Border Width="52" Height="52" CornerRadius="26" Background="#ECFDF5" HorizontalAlignment="Center" Margin="0,0,0,14">
-                        <TextBlock Text="⚡" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ProgressBar IsIndeterminate="True" Height="6" Width="280" Margin="0,0,0,16" Foreground="#059669"
-                                 Background="{DynamicResource ThemeInsetBg}" BorderThickness="0"/>
-                    <TextBlock x:Name="txtLoadingMessage" Text="অনুগ্রহ করে অপেক্ষা করুন..." FontWeight="Bold" FontSize="17"
-                               HorizontalAlignment="Center" Foreground="{DynamicResource ThemeTextPrimary}"/>
-                    <TextBlock x:Name="txtLoadingSubMessage" Text="ডাটাবেজ থেকে ভূমি রেকর্ড সংগ্রহ ও লোড করা হচ্ছে..." FontSize="13.5"
-                               HorizontalAlignment="Center" Foreground="{DynamicResource ThemeTextSecondary}" Margin="0,8,0,0"
-                               TextWrapping="Wrap" TextAlignment="Center"/>
-                </StackPanel>
-            </Border>
-        </Grid>
     </Grid>
 </Window>

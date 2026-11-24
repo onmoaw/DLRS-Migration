@@ -98,24 +98,17 @@ namespace LandPressDataMigrationDesktopApp
             Close();
         }
 
-        #region ================= LOADER OVERLAY =================
+        #region ================= LOADER FEEDBACK =================
 
         private void ShowLoader(string message = "অনুগ্রহ করে অপেক্ষা করুন...", string? subMessage = null)
         {
-            txtLoadingMessage.Text = message;
-            if (!string.IsNullOrWhiteSpace(subMessage))
-            {
-                txtLoadingSubMessage.Text = subMessage;
-            }
-            loadingOverlay.Visibility = Visibility.Visible;
-
-            // UI-adjusted search controls & button feedback
+            // 1. Filter Section feedback & progress bar
             btnSearch.Content = "⏳ অনুসন্ধান হচ্ছে...";
             btnSearch.IsEnabled = false;
             btnReset.IsEnabled = false;
             searchProgressBar.Visibility = Visibility.Visible;
 
-            // Master List inline loading state
+            // 2. Master List section inline loader
             txtListLoadingTitle.Text = message;
             txtListLoadingSub.Text = subMessage ?? "ডাটাবেজ থেকে তথ্য আনা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...";
             pnlListLoading.Visibility = Visibility.Visible;
@@ -123,12 +116,14 @@ namespace LandPressDataMigrationDesktopApp
 
         private void HideLoader()
         {
-            loadingOverlay.Visibility = Visibility.Collapsed;
-            pnlListLoading.Visibility = Visibility.Collapsed;
+            // Hide filter section progress & restore buttons
             searchProgressBar.Visibility = Visibility.Collapsed;
             btnSearch.Content = "🔍 খুঁজুন / Search";
             btnSearch.IsEnabled = true;
             btnReset.IsEnabled = true;
+
+            // Hide master list section inline loader
+            pnlListLoading.Visibility = Visibility.Collapsed;
         }
 
         #endregion
@@ -998,325 +993,6 @@ namespace LandPressDataMigrationDesktopApp
             }
         }
 
-        /// <summary>
-        /// Generates a high-resolution, vector-accurate HTML view of Form 5462
-        /// and opens it in the default system browser (Microsoft Edge/Chrome).
-        /// This provides razor-sharp text, sub-pixel typography, and infinite vector zooming (up to 500%).
-        /// </summary>
-        private void BtnKhatianBrowserView_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgKhatians.SelectedItem is not DataRowView drv)
-            {
-                MessageBox.Show("অনুগ্রহ করে প্রথমে বামের তালিকা থেকে একটি খতিয়ান নির্বাচন করুন।", "খতিয়ান নির্বাচন", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            try
-            {
-                string khatianNo = rptKhatianNo.Text;
-                string surveyName = rptSurveyName.Text;
-                string formerKhatian = rptFormerKhatianNo.Text;
-                string division = rptDivision.Text;
-                string district = rptDistrict.Text;
-                string upazila = rptUpazila.Text;
-                string mouza = rptMouza.Text;
-                string jlNo = rptJLNo.Text;
-                string sheetNo = rptSheetNo.Text;
-
-                string totOwnerShare = rptTotalOwnerShare.Text;
-                string totPlotAcre = rptTotalPlotAcre.Text;
-                string totPlotAju = rptTotalPlotAjutangsho.Text;
-                string totKhtAcre = rptTotalKhatianAcre.Text;
-                string totKhtAju = rptTotalKhatianAjutangsho.Text;
-
-                var sbRows = new StringBuilder();
-                foreach (var row in _currentKhatianReportRows)
-                {
-                    sbRows.Append("<tr>");
-                    sbRows.Append($"<td class=\"text-left\">{System.Net.WebUtility.HtmlEncode(row.OwnerDetails)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.OwnerShare)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.FormerPlot)}</td>");
-                    sbRows.Append($"<td class=\"text-center font-bold\">{System.Net.WebUtility.HtmlEncode(row.CurrentPlot)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.AgriClass_4Ka)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.NonAgriClass_4Kha)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.LocalName_4Ga)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.TotalPlotAcre)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.TotalPlotAjutangsho)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.KhatianShare)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.KhatianPlotAcre)}</td>");
-                    sbRows.Append($"<td class=\"text-center\">{System.Net.WebUtility.HtmlEncode(row.KhatianPlotAjutangsho)}</td>");
-                    sbRows.Append($"<td class=\"text-left\">{System.Net.WebUtility.HtmlEncode(row.Remarks)}</td>");
-                    sbRows.Append("</tr>\n");
-                }
-
-                string printBtnHtml = UserSession.IsAdmin
-                    ? "<button class=\"btn\" onclick=\"window.print()\">🖨️ প্রিন্ট করুন (Ctrl + P)</button>"
-                    : "<span style=\"color:#64748b; font-size:13px; font-weight:bold;\">🔒 ভিউ মোড (শুধুমাত্র পরিদর্শন)</span>";
-
-                string html = $@"<!DOCTYPE html>
-<html lang=""bn"">
-<head>
-    <meta charset=""UTF-8"">
-    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>খতিয়ান নং {khatianNo} — বাংলাদেশ ফরম নং ৫৪৬২</title>
-    <style>
-        @page {{
-            size: A4 landscape;
-            margin: 10mm;
-        }}
-        body {{
-            font-family: 'Kalpurush', 'SolaimanLipi', 'Nirmala UI', 'Vrinda', 'Segoe UI', Arial, sans-serif;
-            background-color: #cbd5e1;
-            margin: 0;
-            padding: 20px;
-            color: #0f172a;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }}
-        .no-print {{
-            width: 277mm;
-            margin: 0 auto 12px auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #ffffff;
-            padding: 10px 18px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            border: 1px solid #94a3b8;
-        }}
-        .btn {{
-            background-color: #047857;
-            color: #ffffff;
-            border: none;
-            padding: 8px 18px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }}
-        .btn:hover {{ background-color: #065f46; }}
-        .sheet {{
-            background: #ffffff;
-            width: 277mm;
-            min-height: 190mm;
-            margin: 0 auto;
-            padding: 12mm 15mm;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            box-sizing: border-box;
-            border: 1px solid #475569;
-        }}
-        @media print {{
-            body {{
-                background: none;
-                padding: 0;
-            }}
-            .sheet {{
-                box-shadow: none;
-                border: none;
-                width: 100%;
-                min-height: auto;
-                padding: 0;
-                margin: 0;
-            }}
-            .no-print {{
-                display: none !important;
-            }}
-        }}
-        .hdr-top {{
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            font-weight: bold;
-            color: #334155;
-            margin-bottom: 2px;
-        }}
-        .title {{
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            margin: 2px 0 6px 0;
-            letter-spacing: 1px;
-        }}
-        .survey-kht {{
-            display: flex;
-            justify-content: space-between;
-            font-size: 13.5px;
-            font-weight: bold;
-            margin-bottom: 6px;
-        }}
-        .admin-box {{
-            border: 1px solid #334155;
-            background: #f8fafc;
-            display: grid;
-            grid-template-columns: 1.3fr 1.3fr 1.8fr 2.2fr 1.3fr 1.1fr;
-            padding: 5px 8px;
-            font-size: 12px;
-            margin-bottom: 6px;
-        }}
-        .tbl {{
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #334155;
-            font-size: 11px;
-            table-layout: fixed;
-        }}
-        .tbl th, .tbl td {{
-            border-right: 1px solid #334155;
-            border-bottom: 0px solid transparent;
-            padding: 4px 3px;
-            word-wrap: break-word;
-        }}
-        .tbl th {{
-            background-color: #f1f5f9;
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 1px solid #334155;
-            vertical-align: middle;
-        }}
-        .tbl .col-num th {{
-            background-color: #e2e8f0;
-            font-size: 10.5px;
-            padding: 2px;
-            border-bottom: 1px solid #334155;
-        }}
-        .tbl tr.total-row td {{
-            background-color: #f8fafc;
-            border-top: 1px solid #334155;
-            border-bottom: 1px solid #334155;
-            font-weight: bold;
-        }}
-        .text-center {{ text-align: center; }}
-        .text-left {{ text-align: left; }}
-        .font-bold {{ font-weight: bold; }}
-    </style>
-</head>
-<body>
-    <div class=""no-print"">
-        <div>
-            <span style=""font-size: 16px; font-weight: bold; color: #0284c7;"">📜 বাংলাদেশ ফরম নং ৫৪৬২</span>
-            <span style=""font-size: 14px; color: #334155; margin-left: 10px;"">খতিয়ান নং: <b>{khatianNo}</b> | মৌজা: <b>{mouza}</b></span>
-        </div>
-        <div>
-            {printBtnHtml}
-        </div>
-    </div>
-
-    <div class=""sheet"">
-        <div class=""hdr-top"">
-            <div>বাংলাদেশ ফরম নং ৫৪৬২</div>
-            <div>পৃষ্ঠা নম্বরঃ ১/১</div>
-        </div>
-
-        <div class=""title"">খতিয়ান</div>
-
-        <div class=""survey-kht"">
-            <div>জরিপের নাম: <span>{surveyName}</span></div>
-            <div>
-                খতিয়ান নং: <span style=""font-size: 15px;"">{khatianNo}</span>
-                &nbsp;&nbsp;&nbsp;&nbsp;সাবেক খতিয়ান নং: <span>{formerKhatian}</span>
-            </div>
-        </div>
-
-        <div class=""admin-box"">
-            <div><b>বিভাগ:</b> {division}</div>
-            <div><b>জেলা:</b> {district}</div>
-            <div><b>উপজেলা/থানা:</b> {upazila}</div>
-            <div><b>মৌজা:</b> {mouza}</div>
-            <div><b>জে. এল. নং:</b> {jlNo}</div>
-            <div><b>শীট নং:</b> {sheetNo}</div>
-        </div>
-
-        <table class=""tbl"">
-            <colgroup>
-                <col style=""width: 230px;"">
-                <col style=""width: 55px;"">
-                <col style=""width: 75px;"">
-                <col style=""width: 75px;"">
-                <col style=""width: 68px;"">
-                <col style=""width: 68px;"">
-                <col style=""width: 75px;"">
-                <col style=""width: 55px;"">
-                <col style=""width: 65px;"">
-                <col style=""width: 75px;"">
-                <col style=""width: 55px;"">
-                <col style=""width: 65px;"">
-                <col style=""width: 104px;"">
-            </colgroup>
-            <thead>
-                <tr>
-                    <th rowspan=""2"">মালিকের নাম, পিতা, মাতা, স্বামী/স্ত্রীর নাম ও ঠিকানা, NID/জন্মনিবন্ধন</th>
-                    <th rowspan=""2"">মালিকানা<br>অংশ</th>
-                    <th colspan=""2"">সাবেক ও বর্তমান দাগ নম্বর</th>
-                    <th colspan=""3"">জমির শ্রেণি</th>
-                    <th colspan=""2"">দাগে মোট জমির পরিমাণ</th>
-                    <th rowspan=""2"">দাগের মধ্যে এই<br>খতিয়ানের অংশ</th>
-                    <th colspan=""2"">অংশানুযায়ী জমির পরিমাণ</th>
-                    <th rowspan=""2"">দখল বিষয়ক বা অন্যান্য<br>বিশেষ মন্তব্য</th>
-                </tr>
-                <tr>
-                    <th>সাবেক দাগ</th>
-                    <th>বর্তমান দাগ</th>
-                    <th>কৃষি</th>
-                    <th>অকৃষি</th>
-                    <th>স্থানীয় নাম</th>
-                    <th>একর</th>
-                    <th>অযুতাংশ</th>
-                    <th>একর</th>
-                    <th>অযুতাংশ</th>
-                </tr>
-                <tr class=""col-num"">
-                    <th>১</th>
-                    <th>২</th>
-                    <th>৩(ক)</th>
-                    <th>৩(খ)</th>
-                    <th>৪(ক)</th>
-                    <th>৪(খ)</th>
-                    <th>৪(গ)</th>
-                    <th>৫(ক)</th>
-                    <th>৫(খ)</th>
-                    <th>৬</th>
-                    <th>৭(ক)</th>
-                    <th>৭(খ)</th>
-                    <th>৮</th>
-                </tr>
-            </thead>
-            <tbody>
-                {sbRows}
-                <tr class=""total-row"">
-                    <td class=""text-center font-bold"">মোট</td>
-                    <td class=""text-center"">{totOwnerShare}</td>
-                    <td colspan=""5""></td>
-                    <td class=""text-center"">{totPlotAcre}</td>
-                    <td class=""text-center"">{totPlotAju}</td>
-                    <td></td>
-                    <td class=""text-center"">{totKhtAcre}</td>
-                    <td class=""text-center"">{totKhtAju}</td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</body>
-</html>";
-
-                string tempDir = Path.Combine(Path.GetTempPath(), "LandPressKhatianViews");
-                Directory.CreateDirectory(tempDir);
-                string tempFilePath = Path.Combine(tempDir, $"Khatian_{khatianNo}_{DateTime.Now:yyyyMMdd_HHmmss}.html");
-                File.WriteAllText(tempFilePath, html, Encoding.UTF8);
-
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = tempFilePath,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ব্রাউজার ভিউ তৈরি করার সময় ত্রুটি:\n{ex.Message}", "ব্রাউজার ভিউ ত্রুটি", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
 
         private static void SplitAcreAndAjutangsho(object? areaObj, out string acreStr, out string ajuStr)
         {
@@ -1340,24 +1016,31 @@ namespace LandPressDataMigrationDesktopApp
 
         /// <summary>
         /// Renders the official Form 5462 Bangladesh Khatian (Porcha) layout
-        /// strictly following DevResource\RptKhatian01dw - Copy.rdlc specifications.
+        /// strictly following DevResource\KhotiyanPdf.pdf specifications.
         /// </summary>
         private void RenderKhatianReportView(DataRowView drv, DataView? dvOwners, DataView? dvPlots)
         {
             string currentKhatian = drv["CurrentKhatian"]?.ToString() ?? string.Empty;
             string bnCurrentKhatian = BanglaNumberConverter.ToBanglaDigit(currentKhatian);
             string bnFormerKhatian = BanglaNumberConverter.ToBanglaDigit(drv["FormerKhatian"]);
-            string bnSheet = BanglaNumberConverter.ToBanglaDigit(drv["SheetNum"]);
             string mouzaName = drv["MouzaName"]?.ToString() ?? string.Empty;
             string surveyName = drv["SurveyName"]?.ToString() ?? string.Empty;
+            string khatianStatus = drv["KhatianStatus"]?.ToString()?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(khatianStatus))
+            {
+                khatianStatus = "বুঝারত স্তর";
+            }
 
             // Badges & Headers
             txtKhatianViewHeroBadge.Text = $"খতিয়ান: {bnCurrentKhatian}";
             rptKhatianNo.Text = bnCurrentKhatian;
             rptFormerKhatianNo.Text = !string.IsNullOrWhiteSpace(bnFormerKhatian) ? bnFormerKhatian : "—";
-            rptSheetNo.Text = !string.IsNullOrWhiteSpace(bnSheet) ? bnSheet : "১";
             rptSurveyName.Text = !string.IsNullOrWhiteSpace(surveyName) ? surveyName : "বি. এস.";
             rptMouza.Text = !string.IsNullOrWhiteSpace(mouzaName) ? mouzaName : "—";
+
+            // Status Badge & Diagonal Watermark
+            rptKhatianStatusPill.Text = $"{khatianStatus} -এর এন্ট্রি চলমান";
+            txtKhatianWatermark.Text = $"{khatianStatus} চলমান";
 
             // Administrative Hierarchy
             if (cmbDivision.SelectedItem is AreaHierarchyItem divItem && !string.IsNullOrWhiteSpace(divItem.UnitNam))
@@ -1380,14 +1063,30 @@ namespace LandPressDataMigrationDesktopApp
                 if (!string.IsNullOrWhiteSpace(mouzaItem.UnitNam))
                     rptMouza.Text = mouzaItem.UnitNam;
                 if (!string.IsNullOrWhiteSpace(mouzaItem.ResaNum))
-                    rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(mouzaItem.ResaNum);
+                {
+                    string rawJL = mouzaItem.ResaNum.Trim();
+                    if (int.TryParse(rawJL, out int jlInt))
+                        rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(jlInt.ToString("D3"));
+                    else
+                        rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(rawJL);
+                }
                 else
+                {
                     rptJLNo.Text = "—";
+                }
             }
             else
             {
                 rptJLNo.Text = "—";
             }
+
+            string rawSheet = drv["SheetNum"]?.ToString()?.Trim() ?? string.Empty;
+            if (int.TryParse(rawSheet, out int sheetInt))
+                rptSheetNo.Text = BanglaNumberConverter.ToBanglaDigit(sheetInt.ToString("D3"));
+            else if (!string.IsNullOrWhiteSpace(rawSheet))
+                rptSheetNo.Text = BanglaNumberConverter.ToBanglaDigit(rawSheet);
+            else
+                rptSheetNo.Text = "০০১";
 
             // Build Form 5462 Rows (aligning Owners Col 1-2 with Plots Col 3-8 side-by-side)
             int ownerCount = dvOwners != null ? dvOwners.Count : 0;
@@ -1417,24 +1116,42 @@ namespace LandPressDataMigrationDesktopApp
                     string br = oRow["BirthReg"]?.ToString() ?? string.Empty;
 
                     var sbOwner = new StringBuilder();
-                    sbOwner.Append(BanglaNumberConverter.ToBanglaDigit((i + 1).ToString())).Append(". ").Append(oName);
-                    if (!string.IsNullOrWhiteSpace(fName)) sbOwner.Append(", পিতা: ").Append(fName);
-                    if (!string.IsNullOrWhiteSpace(spName)) sbOwner.Append(", স্বামী/স্ত্রী: ").Append(spName);
-                    if (!string.IsNullOrWhiteSpace(mName)) sbOwner.Append(", মাতা: ").Append(mName);
-                    if (!string.IsNullOrWhiteSpace(addr)) sbOwner.Append(", ঠিকানা: ").Append(addr);
-                    if (!string.IsNullOrWhiteSpace(nid)) sbOwner.Append(", NID: ").Append(BanglaNumberConverter.ToBanglaDigit(nid));
-                    else if (!string.IsNullOrWhiteSpace(br)) sbOwner.Append(", জন্মনিবন্ধন: ").Append(BanglaNumberConverter.ToBanglaDigit(br));
+                    if (i == 0)
+                    {
+                        string grp = oRow["OwnerGroup"]?.ToString()?.Trim() ?? string.Empty;
+                        if (grp == "2" || grp == "০২" || grp == "খাস")
+                            sbOwner.AppendLine("সরকারি মালিক");
+                        else
+                            sbOwner.AppendLine("বেসরকারি মালিক");
+                    }
+
+                    string bnSerial = BanglaNumberConverter.ToBanglaDigit((i + 1).ToString());
+                    sbOwner.Append($"({bnSerial}) {oName}");
+
+                    if (!string.IsNullOrWhiteSpace(nid))
+                        sbOwner.Append($"\nজা.প.নং-{BanglaNumberConverter.ToBanglaDigit(nid)}");
+                    else if (!string.IsNullOrWhiteSpace(br))
+                        sbOwner.Append($"\nজ.নি.নং-{BanglaNumberConverter.ToBanglaDigit(br)}");
+
+                    if (!string.IsNullOrWhiteSpace(fName))
+                        sbOwner.Append($"\nপিতা: {fName}");
+                    if (!string.IsNullOrWhiteSpace(mName))
+                        sbOwner.Append($"\nমাতা: {mName}");
+                    if (!string.IsNullOrWhiteSpace(spName))
+                        sbOwner.Append($"\nস্বামী/স্ত্রী: {spName}");
+                    if (!string.IsNullOrWhiteSpace(addr))
+                        sbOwner.Append($"\nঠিকানা: {addr}");
 
                     row.OwnerDetails = sbOwner.ToString();
 
                     if (decimal.TryParse(oRow["OwnerShareArea"]?.ToString(), out decimal shareVal))
                     {
-                        row.OwnerShare = BanglaNumberConverter.FormatBanglaDecimal(shareVal, "0.0000");
+                        row.OwnerShare = BanglaNumberConverter.FormatBanglaDecimal(shareVal, "0.000");
                         sumOwnerShare += shareVal;
                     }
                     else
                     {
-                        row.OwnerShare = "০.০০০০";
+                        row.OwnerShare = "০.০০০";
                     }
                 }
 
@@ -1455,9 +1172,9 @@ namespace LandPressDataMigrationDesktopApp
                         sumTotalPlotArea += tAreaVal;
 
                     if (decimal.TryParse(pRow["KhatianShare"]?.ToString(), out decimal kShareVal))
-                        row.KhatianShare = BanglaNumberConverter.FormatBanglaDecimal(kShareVal, "0.0000");
+                        row.KhatianShare = BanglaNumberConverter.FormatBanglaDecimal(kShareVal, "0.000");
                     else
-                        row.KhatianShare = "০.০০০০";
+                        row.KhatianShare = "০.০০০";
 
                     SplitAcreAndAjutangsho(pRow["KhatianPlotArea"], out string kAcre, out string kAju);
                     row.KhatianPlotAcre = kAcre;
@@ -1474,15 +1191,21 @@ namespace LandPressDataMigrationDesktopApp
             icKhatianRows.ItemsSource = reportRows;
             _currentKhatianReportRows = reportRows;
 
-            // Totals Row
-            rptTotalOwnerShare.Text = BanglaNumberConverter.FormatBanglaDecimal(sumOwnerShare, "0.0000");
+            // Totals Row (DevResource\KhotiyanPdf.pdf format)
+            rptTotalOwnerShare.Text = BanglaNumberConverter.FormatBanglaDecimal(sumOwnerShare, "0.000");
             SplitAcreAndAjutangsho(sumTotalPlotArea, out string totPltAcre, out string totPltAju);
             rptTotalPlotAcre.Text = totPltAcre;
             rptTotalPlotAjutangsho.Text = totPltAju;
 
             SplitAcreAndAjutangsho(sumKhatianPlotArea, out string totKhtAcre, out string totKhtAju);
-            rptTotalKhatianAcre.Text = totKhtAcre;
+            rptTotalKhatianAcre.Text = totKhtAcre == "০" ? "" : totKhtAcre;
             rptTotalKhatianAjutangsho.Text = totKhtAju;
+
+            // Print Source (Terminal, User, Session, Time)
+            string machineName = Environment.MachineName;
+            string userName = UserSession.CurrentUsername ?? Environment.UserName;
+            string printTime = DateTime.Now.ToString("dd-MMM-yyyy hh:mm:ss tt", System.Globalization.CultureInfo.InvariantCulture);
+            rptPrintSource.Text = $"Print Source: {machineName}, {userName}, {printTime}";
         }
 
         #endregion
