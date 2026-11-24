@@ -784,21 +784,29 @@
                                         <Button x:Name="btnZoomOut" Content="➖" Width="28" Height="26" Padding="0" Margin="0,0,4,0"
                                                 Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                                                 Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomOut_Click" ToolTip="জুম আউট (Ctrl + মাউস স্ক্রোল ডাউন)"/>
-                                        <Slider x:Name="slKhatianZoom" Minimum="0.5" Maximum="2.0" Value="1.0" SmallChange="0.05" LargeChange="0.1" Width="100" VerticalAlignment="Center"
-                                                ValueChanged="SlKhatianZoom_ValueChanged" ToolTip="জুম স্লাইডার (৫০% - ২০০%)"/>
+                                        <Slider x:Name="slKhatianZoom" Minimum="0.5" Maximum="2.5" Value="1.0" SmallChange="0.05" LargeChange="0.1" Width="100" VerticalAlignment="Center"
+                                                ValueChanged="SlKhatianZoom_ValueChanged" ToolTip="জুম স্লাইডার (৫০% - ২৫০%)"/>
                                         <Button x:Name="btnZoomIn" Content="➕" Width="28" Height="26" Padding="0" Margin="4,0,8,0"
                                                 Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                                                 Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomIn_Click" ToolTip="জুম ইন (Ctrl + মাউস স্ক্রোল আপ)"/>
                                         <TextBlock x:Name="txtKhatianZoomLevel" Text="১০০%" Width="46" TextAlignment="Center" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
-                                        <Button x:Name="btnZoomReset" Content="🔄 ১০০%" Style="{StaticResource ActionBtn}" Padding="8,3" Margin="6,0,0,0"
+                                        <Button x:Name="btnZoomFitWidth" Content="📐 প্রস্থে মিলান" Style="{StaticResource ActionBtn}" Padding="8,3" Margin="6,0,0,0"
                                                 Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
-                                                Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomReset_Click" ToolTip="মূল আকারে রিসেট"/>
+                                                Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomFitWidth_Click" ToolTip="উইন্ডোর মাপ অনুযায়ী পর্চার সম্পূর্ণ প্রস্থ দেখতে ক্লিক করুন"/>
+                                        <Button x:Name="btnZoomReset" Content="🔄 ১০০%" Style="{StaticResource ActionBtn}" Padding="8,3" Margin="4,0,0,0"
+                                                Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                                Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomReset_Click" ToolTip="প্রকৃত আকারে রিসেট"/>
                                     </StackPanel>
                                 </Border>
 
+                                <!-- High-Res Browser / Vector View Button (Available to all users for viewing) -->
+                                <Button x:Name="btnKhatianBrowserView" Content="🌐 ব্রাউজার ভিউ" Style="{StaticResource ActionBtn}"
+                                        Background="#0284C7" Foreground="White" Padding="12,6" FontSize="13" Margin="0,0,8,0"
+                                        Click="BtnKhatianBrowserView_Click" ToolTip="মাইক্রোসফট এজ / ডিফল্ট ব্রাউজারে সম্পূর্ণ ভেক্টর হাই-রেজোলিউশন ফরম দেখুন (শার্প ভিউ ও জুম)"/>
+
                                 <!-- Admin Print Button -->
                                 <Button x:Name="btnKhatianPrint" Content="🖨️ প্রিন্ট করুন" Style="{StaticResource ActionBtn}"
-                                        Background="#047857" Foreground="White" Padding="16,6" FontSize="13.5"
+                                        Background="#047857" Foreground="White" Padding="14,6" FontSize="13"
                                         Click="BtnKhatianPrint_Click" ToolTip="খতিয়ান প্রিন্ট করুন (Admin Only)"/>
                             </StackPanel>
                         </Grid>
@@ -817,17 +825,33 @@
 
                     <!-- Zoomable Document Viewer -->
                     <ScrollViewer Grid.Row="1" x:Name="svKhatianDoc" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                  Background="#CBD5E1" Visibility="Collapsed" PreviewMouseWheel="SvKhatianDoc_PreviewMouseWheel">
-                        <Grid HorizontalAlignment="Center" Margin="20">
-                            <!-- Printable Document Paper (White Sheet) -->
-                            <Border x:Name="pnlKhatianDocSheet" Background="White" BorderBrush="#94A3B8" BorderThickness="1"
-                                    Width="1110" Padding="22,18,22,22" TextElement.Foreground="#0F172A">
-                                <Border.LayoutTransform>
-                                    <ScaleTransform x:Name="stKhatianZoom" ScaleX="1.0" ScaleY="1.0"/>
-                                </Border.LayoutTransform>
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.18"/>
-                                </Border.Effect>
+                                  Background="#94A3B8" Visibility="Collapsed" PreviewMouseWheel="SvKhatianDoc_PreviewMouseWheel">
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,18">
+                            <Grid.LayoutTransform>
+                                <ScaleTransform x:Name="stKhatianZoom" ScaleX="1.0" ScaleY="1.0"/>
+                            </Grid.LayoutTransform>
+
+                            <!-- Vector Paper Outline Layer -->
+                            <Border Background="#64748B" Opacity="0.3" CornerRadius="2" Margin="3,3,-3,-3"/>
+
+                            <!-- Printable Document Paper (A4 Landscape Form: 1122 x 794 px) -->
+                            <Border x:Name="pnlKhatianDocSheet" Background="White" BorderBrush="#475569" BorderThickness="1"
+                                    Width="1122" MinHeight="794" Padding="28,22,28,26" TextElement.Foreground="#0F172A"
+                                    UseLayoutRounding="True" SnapsToDevicePixels="True"
+                                    TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType"
+                                    TextOptions.TextHintingMode="Auto" RenderOptions.ClearTypeHint="Enabled"
+                                    TextElement.FontFamily="Kalpurush, SolaimanLipi, Nirmala UI, Vrinda, Segoe UI">
+                                <Border.Resources>
+                                    <!-- High-Resolution DirectWrite Vector Text Typography Style -->
+                                    <Style TargetType="{x:Type TextBlock}">
+                                        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                                        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                                        <Setter Property="TextOptions.TextHintingMode" Value="Auto"/>
+                                        <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
+                                        <Setter Property="FontFamily" Value="Kalpurush, SolaimanLipi, Nirmala UI, Vrinda, Segoe UI"/>
+                                        <Setter Property="SnapsToDevicePixels" Value="False"/>
+                                    </Style>
+                                </Border.Resources>
 
                                 <StackPanel>
                                     <!-- Header Row 1: Bangladesh Form 5462 & Page Number -->
@@ -899,7 +923,7 @@
                                     </Border>
 
                                     <!-- ================= 13-COLUMN OFFICIAL TABLE (Tablix1 Match) ================= -->
-                                    <Border BorderBrush="#334155" BorderThickness="1,1,0,0">
+                                    <Border BorderBrush="#334155" BorderThickness="1,1,1,0">
                                         <StackPanel>
                                             <!-- Table Header Grid -->
                                             <Grid Background="#F1F5F9">
@@ -1063,43 +1087,43 @@
                                                                 <ColumnDefinition Width="104"/>
                                                             </Grid.ColumnDefinitions>
 
-                                                            <Border Grid.Column="0" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="4,3">
-                                                                <TextBlock Text="{Binding OwnerDetails}" FontSize="10.5" TextWrapping="Wrap" LineHeight="14"/>
+                                                            <Border Grid.Column="0" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="4,4">
+                                                                <TextBlock Text="{Binding OwnerDetails}" FontSize="10.5" TextWrapping="Wrap" LineHeight="16"/>
                                                             </Border>
-                                                            <Border Grid.Column="1" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="1" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding OwnerShare}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="2" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="2" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding FormerPlot}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="3" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="3" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding CurrentPlot}" FontSize="10.5" FontWeight="SemiBold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="4" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="4" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding AgriClass_4Ka}" FontSize="10" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="5" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="5" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding NonAgriClass_4Kha}" FontSize="10" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="6" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="6" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding LocalName_4Ga}" FontSize="10" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="7" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="7" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding TotalPlotAcre}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="8" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="8" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding TotalPlotAjutangsho}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="9" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="9" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding KhatianShare}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="10" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="10" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding KhatianPlotAcre}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="11" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                            <Border Grid.Column="11" BorderBrush="#334155" BorderThickness="0,0,1,0" Padding="2,3">
                                                                 <TextBlock Text="{Binding KhatianPlotAjutangsho}" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
-                                                            <Border Grid.Column="12" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="3">
+                                                            <Border Grid.Column="12" BorderBrush="#334155" BorderThickness="0,0,0,0" Padding="3">
                                                                 <TextBlock Text="{Binding Remarks}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                                             </Border>
                                                         </Grid>
@@ -1126,39 +1150,39 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- Col 0: মোট অংশ = -->
-                                                <Border Grid.Column="0" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="4,3">
+                                                <Border Grid.Column="0" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="4,3">
                                                     <TextBlock Text="মোট অংশ =" FontSize="10.5" FontWeight="Bold" TextAlignment="Right" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Col 1: Total Owner Share -->
-                                                <Border Grid.Column="1" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                <Border Grid.Column="1" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
                                                     <TextBlock x:Name="rptTotalOwnerShare" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Col 2-6: মোট জমি: (ColSpan 5) -->
-                                                <Border Grid.Column="2" Grid.ColumnSpan="5" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="4,3">
+                                                <Border Grid.Column="2" Grid.ColumnSpan="5" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="4,3">
                                                     <TextBlock Text="মোট জমি:" FontSize="10.5" FontWeight="Bold" TextAlignment="Right" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Col 7: Total Plot Acre -->
-                                                <Border Grid.Column="7" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                <Border Grid.Column="7" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
                                                     <TextBlock x:Name="rptTotalPlotAcre" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Col 8: Total Plot Ajutangsho -->
-                                                <Border Grid.Column="8" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                <Border Grid.Column="8" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
                                                     <TextBlock x:Name="rptTotalPlotAjutangsho" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Col 9: blank -->
-                                                <Border Grid.Column="9" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                <Border Grid.Column="9" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
                                                     <TextBlock Text="—" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8"/>
                                                 </Border>
                                                 <!-- Col 10: Total Khatian Acre -->
-                                                <Border Grid.Column="10" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                <Border Grid.Column="10" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
                                                     <TextBlock x:Name="rptTotalKhatianAcre" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Col 11: Total Khatian Ajutangsho -->
-                                                <Border Grid.Column="11" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                <Border Grid.Column="11" BorderBrush="#334155" BorderThickness="0,1,1,1" Padding="2,3">
                                                     <TextBlock x:Name="rptTotalKhatianAjutangsho" Text="—" FontSize="10.5" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <!-- Col 12: blank -->
-                                                <Border Grid.Column="12" BorderBrush="#334155" BorderThickness="0,0,1,1" Padding="2,3">
+                                                <Border Grid.Column="12" BorderBrush="#334155" BorderThickness="0,1,0,1" Padding="2,3">
                                                     <TextBlock Text="—" FontSize="10.5" TextAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8"/>
                                                 </Border>
                                             </Grid>

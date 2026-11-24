@@ -103,14 +103,14 @@ BEGIN
         ISNULL(lf01.CPLTNUM, '') AS CsPlot,
         lf01.SLNUM AS PlotSerial,
         lf01.LUCODE AS LuCode,
-        -- ৪(ক) কৃষি: populated when specific LUTYPE = 'কৃষি'
+        -- ৪(ক) কৃষি: broad category from parentLu.LUNAME when specific LUTYPE = 'কৃষি'
         CASE WHEN specLu.LUTYPE = N'কৃষি' OR (specLu.LUTYPE LIKE N'%কৃষি%' AND specLu.LUTYPE NOT LIKE N'%অকৃষি%')
-             THEN ISNULL(specLu.LUNAME, '') ELSE N'' END AS AgriLandClass_4Ka,
-        -- ৪(খ) অকৃষি: populated when specific LUTYPE = 'অকৃষি'
+             THEN ISNULL(parentLu.LUNAME, '') ELSE N'' END AS AgriLandClass_4Ka,
+        -- ৪(খ) অকৃষি: broad category from parentLu.LUNAME when specific LUTYPE = 'অকৃষি'
         CASE WHEN specLu.LUTYPE = N'অকৃষি' OR specLu.LUTYPE LIKE N'%অকৃষি%'
-             THEN ISNULL(specLu.LUNAME, '') ELSE N'' END AS NonAgriLandClass_4Kha,
-        -- ৪(গ) স্থানীয় নাম: parent group (first 2 digits + '000')
-        ISNULL(parentLu.LUNAME, '') AS LocalName_4Ga,
+             THEN ISNULL(parentLu.LUNAME, '') ELSE N'' END AS NonAgriLandClass_4Kha,
+        -- ৪(গ) স্থানীয় নাম: specific local use name from specLu.LUNAME
+        ISNULL(specLu.LUNAME, '') AS LocalName_4Ga,
         ISNULL(lf01.TPLTAREA, 0) AS TotalPlotArea,
         ISNULL(lf01.KHTSHARE, 0) AS KhatianShare,
         ISNULL(lf01.KPLTAREA, 0) AS KhatianPlotArea,
