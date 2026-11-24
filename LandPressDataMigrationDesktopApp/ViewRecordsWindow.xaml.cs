@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using ComboBox = System.Windows.Controls.ComboBox;
 using MessageBox = System.Windows.MessageBox;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
@@ -51,8 +52,8 @@ namespace LandPressDataMigrationDesktopApp
             ThemeManager.ThemeChanged += OnThemeChanged;
             UpdateThemeButton();
 
-            // System Audit section visibility: ONLY for Admin users
-            cardAuditSection.Visibility = UserSession.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
+            // Apply strict role-based access permissions (Normal users: view only, no exports/print)
+            ApplyUserRolePermissions();
 
             if (!string.IsNullOrWhiteSpace(_coreConnectionString))
             {
@@ -545,10 +546,11 @@ namespace LandPressDataMigrationDesktopApp
             txtPrevKhatianRemarks.Text = drv["KhatianRemarks"]?.ToString() ?? "—";
 
             // Section 2: Synchronize Owners Table
+            DataView? dvOwners = null;
             if (_dsRecords != null && _dsRecords.Tables.Contains("Owners"))
             {
                 DataTable dtOwners = _dsRecords.Tables["Owners"];
-                var dvOwners = new DataView(dtOwners)
+                dvOwners = new DataView(dtOwners)
                 {
                     RowFilter = $"CurrentKhatian = '{currentKhatian.Replace("'", "''")}'"
                 };
@@ -557,16 +559,22 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             // Section 3: Synchronize Plots Table (with dynamic 4-Ka, 4-Kha, 4-Ga)
+            DataView? dvPlots = null;
             if (_dsRecords != null && _dsRecords.Tables.Contains("Plots"))
             {
                 DataTable dtPlots = _dsRecords.Tables["Plots"];
-                var dvPlots = new DataView(dtPlots)
+                dvPlots = new DataView(dtPlots)
                 {
                     RowFilter = $"CurrentKhatian = '{currentKhatian.Replace("'", "''")}'"
                 };
                 dgPlots.ItemsSource = dvPlots;
                 txtPlotCount.Text = $"দাগ সংখ্যা: {BanglaNumberConverter.ToBanglaDigit(dvPlots.Count)}টি";
             }
+
+            // Synchronize Khatian View (Official Form 5462 RDLC Document)
+            pnlKhatianEmpty.Visibility = Visibility.Collapsed;
+            svKhatianDoc.Visibility = Visibility.Visible;
+            RenderKhatianReportView(drv, dvOwners, dvPlots);
 
             // Section 4: System Audit & Metadata Card (ADMIN ONLY)
             if (UserSession.IsAdmin)
@@ -625,6 +633,19 @@ namespace LandPressDataMigrationDesktopApp
             txtAuditTime.Text = "—";
 
             cardAuditSection.Visibility = UserSession.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
+
+            // Clear Khatian View
+            pnlKhatianEmpty.Visibility = Visibility.Visible;
+            svKhatianDoc.Visibility = Visibility.Collapsed;
+            icKhatianRows.ItemsSource = null;
+            txtKhatianViewHeroBadge.Text = "খতিয়ান: —";
+            rptKhatianNo.Text = "—";
+            rptFormerKhatianNo.Text = "—";
+            rptTotalOwnerShare.Text = "—";
+            rptTotalPlotAcre.Text = "—";
+            rptTotalPlotAjutangsho.Text = "—";
+            rptTotalKhatianAcre.Text = "—";
+            rptTotalKhatianAjutangsho.Text = "—";
         }
 
         /// <summary>
@@ -657,6 +678,11 @@ namespace LandPressDataMigrationDesktopApp
         /// </summary>
         private void BtnExportKhatiansCsv_Click(object sender, RoutedEventArgs e)
         {
+            if (!UserSession.IsAdmin)
+            {
+                MessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য এই সুবিধাটি অনুমোদিত।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             if (_dsRecords == null || !_dsRecords.Tables.Contains("Khatians") || _dsRecords.Tables["Khatians"].Rows.Count == 0)
             {
                 MessageBox.Show("এক্সপোর্ট করার মতো কোনো খতিয়ান ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -717,6 +743,11 @@ namespace LandPressDataMigrationDesktopApp
         /// </summary>
         private void BtnExportDetailsCsv_Click(object sender, RoutedEventArgs e)
         {
+            if (!UserSession.IsAdmin)
+            {
+                MessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য এই সুবিধাটি অনুমোদিত।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             if (_dsRecords == null || !_dsRecords.Tables.Contains("Khatians") || _dsRecords.Tables["Khatians"].Rows.Count == 0)
             {
                 MessageBox.Show("এক্সপোর্ট করার মতো কোনো বিস্তারিত ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -818,5 +849,323 @@ namespace LandPressDataMigrationDesktopApp
         }
 
         #endregion
+
+        #region ================= ROLE PERMISSIONS & VIEW SWITCHER =================
+
+        /// <summary>
+        /// Applies role-based access control:
+        ///   - Normal users can ONLY view reports (Software View & Khatian View), search, zoom, and close.
+        ///   - Normal users have CSV exports, admin print, and audit trails completely hidden.
+        /// </summary>
+        private void ApplyUserRolePermissions()
+        {
+            bool isAdmin = UserSession.IsAdmin;
+            btnExportKhatiansCsv.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            btnExportDetailsCsv.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            btnKhatianPrint.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            cardAuditSection.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// Handles switching between '💻 সফটওয়্যার ভিউ' and '📜 খতিয়ান ভিউ (পর্চা)'.
+        /// </summary>
+        private void ViewTab_Checked(object sender, RoutedEventArgs e)
+        {
+            if (pnlSoftwareView == null || pnlKhatianView == null) return;
+
+            if (rbSoftwareView?.IsChecked == true)
+            {
+                pnlSoftwareView.Visibility = Visibility.Visible;
+                pnlKhatianView.Visibility = Visibility.Collapsed;
+            }
+            else if (rbKhatianView?.IsChecked == true)
+            {
+                pnlSoftwareView.Visibility = Visibility.Collapsed;
+                pnlKhatianView.Visibility = Visibility.Visible;
+            }
+        }
+
+        #endregion
+
+        #region ================= KHATIAN VIEW (FORM 5462) RENDERING & ZOOM =================
+
+        private void SetZoom(double zoom)
+        {
+            zoom = Math.Clamp(zoom, 0.5, 2.0);
+            if (stKhatianZoom != null)
+            {
+                stKhatianZoom.ScaleX = zoom;
+                stKhatianZoom.ScaleY = zoom;
+            }
+            if (txtKhatianZoomLevel != null)
+            {
+                txtKhatianZoomLevel.Text = $"{(int)Math.Round(zoom * 100)}%";
+                txtKhatianZoomLevel.Text = BanglaNumberConverter.ToBanglaDigit(txtKhatianZoomLevel.Text);
+            }
+            if (slKhatianZoom != null && Math.Abs(slKhatianZoom.Value - zoom) > 0.01)
+            {
+                slKhatianZoom.Value = zoom;
+            }
+        }
+
+        private void BtnZoomIn_Click(object sender, RoutedEventArgs e)
+        {
+            SetZoom((stKhatianZoom?.ScaleX ?? 1.0) + 0.1);
+        }
+
+        private void BtnZoomOut_Click(object sender, RoutedEventArgs e)
+        {
+            SetZoom((stKhatianZoom?.ScaleX ?? 1.0) - 0.1);
+        }
+
+        private void BtnZoomReset_Click(object sender, RoutedEventArgs e)
+        {
+            SetZoom(1.0);
+        }
+
+        private void SlKhatianZoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            SetZoom(e.NewValue);
+        }
+
+        private void SvKhatianDoc_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                e.Handled = true;
+                double currentZoom = stKhatianZoom?.ScaleX ?? 1.0;
+                double delta = e.Delta > 0 ? 0.1 : -0.1;
+                SetZoom(currentZoom + delta);
+            }
+        }
+
+        private void BtnKhatianPrint_Click(object sender, RoutedEventArgs e)
+        {
+            if (!UserSession.IsAdmin)
+            {
+                MessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য প্রিন্ট সুবিধা প্রযোজ্য।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                var printDlg = new System.Windows.Controls.PrintDialog();
+                if (printDlg.ShowDialog() == true)
+                {
+                    double prevScale = stKhatianZoom?.ScaleX ?? 1.0;
+                    if (stKhatianZoom != null)
+                    {
+                        stKhatianZoom.ScaleX = 1.0;
+                        stKhatianZoom.ScaleY = 1.0;
+                    }
+
+                    if (printDlg.PrintTicket != null)
+                    {
+                        printDlg.PrintTicket.PageOrientation = System.Printing.PageOrientation.Landscape;
+                    }
+
+                    printDlg.PrintVisual(pnlKhatianDocSheet, $"Khatian_{rptKhatianNo.Text}");
+
+                    if (stKhatianZoom != null)
+                    {
+                        stKhatianZoom.ScaleX = prevScale;
+                        stKhatianZoom.ScaleY = prevScale;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"প্রিন্ট করার সময় সমস্যা হয়েছে:\n{ex.Message}", "প্রিন্ট ত্রুটি", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static void SplitAcreAndAjutangsho(object? areaObj, out string acreStr, out string ajuStr)
+        {
+            acreStr = "০";
+            ajuStr = "০০০০";
+            if (areaObj == null || areaObj == DBNull.Value) return;
+
+            string s = areaObj.ToString()?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(s)) return;
+
+            if (decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal val) ||
+                decimal.TryParse(s, out val))
+            {
+                long acre = (long)Math.Truncate(val);
+                decimal remainder = Math.Abs(val - acre);
+                long ajutangsho = (long)Math.Round(remainder * 10000m);
+                acreStr = BanglaNumberConverter.ToBanglaDigit(acre.ToString());
+                ajuStr = BanglaNumberConverter.ToBanglaDigit(ajutangsho.ToString("D4"));
+            }
+        }
+
+        /// <summary>
+        /// Renders the official Form 5462 Bangladesh Khatian (Porcha) layout
+        /// strictly following DevResource\RptKhatian01dw - Copy.rdlc specifications.
+        /// </summary>
+        private void RenderKhatianReportView(DataRowView drv, DataView? dvOwners, DataView? dvPlots)
+        {
+            string currentKhatian = drv["CurrentKhatian"]?.ToString() ?? string.Empty;
+            string bnCurrentKhatian = BanglaNumberConverter.ToBanglaDigit(currentKhatian);
+            string bnFormerKhatian = BanglaNumberConverter.ToBanglaDigit(drv["FormerKhatian"]);
+            string bnSheet = BanglaNumberConverter.ToBanglaDigit(drv["SheetNum"]);
+            string mouzaName = drv["MouzaName"]?.ToString() ?? string.Empty;
+            string surveyName = drv["SurveyName"]?.ToString() ?? string.Empty;
+
+            // Badges & Headers
+            txtKhatianViewHeroBadge.Text = $"খতিয়ান: {bnCurrentKhatian}";
+            rptKhatianNo.Text = bnCurrentKhatian;
+            rptFormerKhatianNo.Text = !string.IsNullOrWhiteSpace(bnFormerKhatian) ? bnFormerKhatian : "—";
+            rptSheetNo.Text = !string.IsNullOrWhiteSpace(bnSheet) ? bnSheet : "১";
+            rptSurveyName.Text = !string.IsNullOrWhiteSpace(surveyName) ? surveyName : "বি. এস.";
+            rptMouza.Text = !string.IsNullOrWhiteSpace(mouzaName) ? mouzaName : "—";
+
+            // Administrative Hierarchy
+            if (cmbDivision.SelectedItem is AreaHierarchyItem divItem && !string.IsNullOrWhiteSpace(divItem.UnitNam))
+                rptDivision.Text = divItem.UnitNam;
+            else
+                rptDivision.Text = "—";
+
+            if (cmbDistrict.SelectedItem is AreaHierarchyItem distItem && !string.IsNullOrWhiteSpace(distItem.UnitNam))
+                rptDistrict.Text = distItem.UnitNam;
+            else
+                rptDistrict.Text = "—";
+
+            if (cmbUpazila.SelectedItem is AreaHierarchyItem upaItem && !string.IsNullOrWhiteSpace(upaItem.UnitNam))
+                rptUpazila.Text = upaItem.UnitNam;
+            else
+                rptUpazila.Text = "—";
+
+            if (cmbMouza.SelectedItem is AreaHierarchyItem mouzaItem)
+            {
+                if (!string.IsNullOrWhiteSpace(mouzaItem.UnitNam))
+                    rptMouza.Text = mouzaItem.UnitNam;
+                if (!string.IsNullOrWhiteSpace(mouzaItem.ResaNum))
+                    rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(mouzaItem.ResaNum);
+                else
+                    rptJLNo.Text = "—";
+            }
+            else
+            {
+                rptJLNo.Text = "—";
+            }
+
+            // Build Form 5462 Rows (aligning Owners Col 1-2 with Plots Col 3-8 side-by-side)
+            int ownerCount = dvOwners != null ? dvOwners.Count : 0;
+            int plotCount = dvPlots != null ? dvPlots.Count : 0;
+            int maxRows = Math.Max(ownerCount, plotCount);
+            if (maxRows == 0) maxRows = 1;
+
+            var reportRows = new List<KhatianReportRow>();
+            decimal sumOwnerShare = 0m;
+            decimal sumTotalPlotArea = 0m;
+            decimal sumKhatianPlotArea = 0m;
+
+            for (int i = 0; i < maxRows; i++)
+            {
+                var row = new KhatianReportRow();
+
+                // Owner Info (Col 0 & 1)
+                if (dvOwners != null && i < ownerCount)
+                {
+                    var oRow = dvOwners[i];
+                    string oName = oRow["OwnerName"]?.ToString() ?? string.Empty;
+                    string fName = oRow["FatherName"]?.ToString() ?? string.Empty;
+                    string mName = oRow["MotherName"]?.ToString() ?? string.Empty;
+                    string spName = oRow["SpouseName"]?.ToString() ?? string.Empty;
+                    string addr = oRow["Address"]?.ToString() ?? string.Empty;
+                    string nid = oRow["Nid"]?.ToString() ?? string.Empty;
+                    string br = oRow["BirthReg"]?.ToString() ?? string.Empty;
+
+                    var sbOwner = new StringBuilder();
+                    sbOwner.Append(BanglaNumberConverter.ToBanglaDigit((i + 1).ToString())).Append(". ").Append(oName);
+                    if (!string.IsNullOrWhiteSpace(fName)) sbOwner.Append(", পিতা: ").Append(fName);
+                    if (!string.IsNullOrWhiteSpace(spName)) sbOwner.Append(", স্বামী/স্ত্রী: ").Append(spName);
+                    if (!string.IsNullOrWhiteSpace(mName)) sbOwner.Append(", মাতা: ").Append(mName);
+                    if (!string.IsNullOrWhiteSpace(addr)) sbOwner.Append(", ঠিকানা: ").Append(addr);
+                    if (!string.IsNullOrWhiteSpace(nid)) sbOwner.Append(", NID: ").Append(BanglaNumberConverter.ToBanglaDigit(nid));
+                    else if (!string.IsNullOrWhiteSpace(br)) sbOwner.Append(", জন্মনিবন্ধন: ").Append(BanglaNumberConverter.ToBanglaDigit(br));
+
+                    row.OwnerDetails = sbOwner.ToString();
+
+                    if (decimal.TryParse(oRow["OwnerShareArea"]?.ToString(), out decimal shareVal))
+                    {
+                        row.OwnerShare = BanglaNumberConverter.FormatBanglaDecimal(shareVal, "0.0000");
+                        sumOwnerShare += shareVal;
+                    }
+                    else
+                    {
+                        row.OwnerShare = "০.০০০০";
+                    }
+                }
+
+                // Plot Info (Col 2 to 12)
+                if (dvPlots != null && i < plotCount)
+                {
+                    var pRow = dvPlots[i];
+                    row.FormerPlot = BanglaNumberConverter.ToBanglaDigit(pRow["FormerPlot"]);
+                    row.CurrentPlot = BanglaNumberConverter.ToBanglaDigit(pRow["CurrentPlot"]);
+                    row.AgriClass_4Ka = pRow["AgriLandClass_4Ka"]?.ToString() ?? string.Empty;
+                    row.NonAgriClass_4Kha = pRow["NonAgriLandClass_4Kha"]?.ToString() ?? string.Empty;
+                    row.LocalName_4Ga = pRow["LocalName_4Ga"]?.ToString() ?? string.Empty;
+
+                    SplitAcreAndAjutangsho(pRow["TotalPlotArea"], out string tAcre, out string tAju);
+                    row.TotalPlotAcre = tAcre;
+                    row.TotalPlotAjutangsho = tAju;
+                    if (decimal.TryParse(pRow["TotalPlotArea"]?.ToString(), out decimal tAreaVal))
+                        sumTotalPlotArea += tAreaVal;
+
+                    if (decimal.TryParse(pRow["KhatianShare"]?.ToString(), out decimal kShareVal))
+                        row.KhatianShare = BanglaNumberConverter.FormatBanglaDecimal(kShareVal, "0.0000");
+                    else
+                        row.KhatianShare = "০.০০০০";
+
+                    SplitAcreAndAjutangsho(pRow["KhatianPlotArea"], out string kAcre, out string kAju);
+                    row.KhatianPlotAcre = kAcre;
+                    row.KhatianPlotAjutangsho = kAju;
+                    if (decimal.TryParse(pRow["KhatianPlotArea"]?.ToString(), out decimal kAreaVal))
+                        sumKhatianPlotArea += kAreaVal;
+
+                    row.Remarks = pRow["PlotRemarks"]?.ToString() ?? string.Empty;
+                }
+
+                reportRows.Add(row);
+            }
+
+            icKhatianRows.ItemsSource = reportRows;
+
+            // Totals Row
+            rptTotalOwnerShare.Text = BanglaNumberConverter.FormatBanglaDecimal(sumOwnerShare, "0.0000");
+            SplitAcreAndAjutangsho(sumTotalPlotArea, out string totPltAcre, out string totPltAju);
+            rptTotalPlotAcre.Text = totPltAcre;
+            rptTotalPlotAjutangsho.Text = totPltAju;
+
+            SplitAcreAndAjutangsho(sumKhatianPlotArea, out string totKhtAcre, out string totKhtAju);
+            rptTotalKhatianAcre.Text = totKhtAcre;
+            rptTotalKhatianAjutangsho.Text = totKhtAju;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Data model representing a single combined row of Bangladesh Form 5462
+    /// (DevResource\RptKhatian01dw - Copy.rdlc specification).
+    /// </summary>
+    public class KhatianReportRow
+    {
+        public string OwnerDetails { get; set; } = string.Empty;
+        public string OwnerShare { get; set; } = string.Empty;
+        public string FormerPlot { get; set; } = string.Empty;
+        public string CurrentPlot { get; set; } = string.Empty;
+        public string AgriClass_4Ka { get; set; } = string.Empty;
+        public string NonAgriClass_4Kha { get; set; } = string.Empty;
+        public string LocalName_4Ga { get; set; } = string.Empty;
+        public string TotalPlotAcre { get; set; } = string.Empty;
+        public string TotalPlotAjutangsho { get; set; } = string.Empty;
+        public string KhatianShare { get; set; } = string.Empty;
+        public string KhatianPlotAcre { get; set; } = string.Empty;
+        public string KhatianPlotAjutangsho { get; set; } = string.Empty;
+        public string Remarks { get; set; } = string.Empty;
     }
 }
