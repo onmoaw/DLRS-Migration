@@ -364,10 +364,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Margin="0,0,5,0">
                                 <TextBlock Text="জরিপ:" Style="{StaticResource FieldLabel}"/>
-                                <ComboBox x:Name="cmbSurvey" Style="{StaticResource SearchComboBox}">
-                                    <ComboBoxItem Content="২০১৯০১ - বিডিএস (BDS)" Tag="201901" IsSelected="True"/>
-                                    <ComboBoxItem Content="সব জরিপ / All Surveys" Tag="%"/>
-                                </ComboBox>
+                                <ComboBox x:Name="cmbSurvey" Style="{StaticResource SearchComboBox}"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="5,0,0,0">
                                 <TextBlock Text="বর্তমান খতিয়ান:" Style="{StaticResource FieldLabel}"/>

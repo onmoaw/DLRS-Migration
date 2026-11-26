@@ -32,6 +32,7 @@ namespace LandPressDataMigrationDesktopApp
     {
         private readonly string? _coreConnectionString;
         private List<AreaHierarchyItem> _allAreaItems = new();
+        private List<SurveyItem> _allSurveyItems = new();
         private DataSet? _dsRecords;
         private bool _isPopulatingDropdowns = false;
         private List<KhatianReportRow> _currentKhatianReportRows = new();
@@ -143,6 +144,16 @@ namespace LandPressDataMigrationDesktopApp
 
                 _allAreaItems = await LandRecordsViewerService.LoadAreaHierarchyAsync(_coreConnectionString!);
 
+                try
+                {
+                    _allSurveyItems = await LandRecordsViewerService.LoadSurveysAsync(_coreConnectionString!);
+                }
+                catch
+                {
+                    _allSurveyItems = new List<SurveyItem>();
+                }
+                PopulateSurveys();
+
                 if (_allAreaItems.Count == 0)
                 {
                     txtStatus.Text = "AREAINF টেবিলে কোনো এলাকা পাওয়া যায়নি। ডেমো এলাকা ব্যবহার করা হচ্ছে।";
@@ -176,6 +187,37 @@ namespace LandPressDataMigrationDesktopApp
             };
 
             PopulateDivisions();
+            PopulateSurveys();
+        }
+
+        private void PopulateSurveys()
+        {
+            var items = new List<SurveyItem>();
+            if (_allSurveyItems != null && _allSurveyItems.Count > 0)
+            {
+                items.AddRange(_allSurveyItems);
+            }
+            else
+            {
+                items.Add(new SurveyItem { RsNum = "201801", RsName = "বিডিএস (BDS)" });
+            }
+
+            if (!items.Any(s => s.RsNum == "%"))
+            {
+                items.Add(new SurveyItem { RsNum = "%", RsName = "সব জরিপ / All Surveys" });
+            }
+
+            cmbSurvey.ItemsSource = items;
+            SelectDefaultSurvey(items);
+        }
+
+        private void SelectDefaultSurvey(List<SurveyItem>? items = null)
+        {
+            var list = items ?? (cmbSurvey.ItemsSource as IEnumerable<SurveyItem>)?.ToList();
+            if (list == null || list.Count == 0) return;
+
+            var preferred = list.FirstOrDefault(s => s.RsNum == "201801") ?? list.First();
+            cmbSurvey.SelectedItem = preferred;
         }
 
         /// <summary>
@@ -440,10 +482,14 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             string unitCod = selectedMouza.UnitCod;
-            string rsNum = "201901";
-            if (cmbSurvey.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            string rsNum = "201801";
+            if (cmbSurvey.SelectedItem is SurveyItem selectedSurvey && !string.IsNullOrWhiteSpace(selectedSurvey.RsNum))
             {
-                rsNum = cbi.Tag.ToString() ?? "201901";
+                rsNum = selectedSurvey.RsNum;
+            }
+            else if (cmbSurvey.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            {
+                rsNum = cbi.Tag.ToString() ?? "201801";
             }
 
             // Normalize input so that search works with both Bangla and English digits
@@ -652,7 +698,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             txtCurrentKhatian.Text = string.Empty;
             txtOwner.Text = string.Empty;
-            cmbSurvey.SelectedIndex = 0;
+            SelectDefaultSurvey();
 
             if (cmbDivision.Items.Count > 0)
             {

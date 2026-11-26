@@ -180,7 +180,7 @@ namespace LandPressDataMigrationDesktopApp
                 _steps.Add(new StepState
                 {
                     Config = cfg,
-                    CustomRsNumber = txtGlobalDesc02?.Text?.Trim() ?? "201901"
+                    CustomRsNumber = txtGlobalDesc02?.Text?.Trim() ?? "201801"
                 });
             }
 
@@ -384,7 +384,7 @@ namespace LandPressDataMigrationDesktopApp
                 panelParamRs.Visibility = Visibility.Visible;
                 txtStepRsNumber.Text = !string.IsNullOrEmpty(step.CustomRsNumber)
                     ? step.CustomRsNumber
-                    : (txtGlobalDesc02?.Text?.Trim() ?? "201901");
+                    : (txtGlobalDesc02?.Text?.Trim() ?? "201801");
                 if (lblParamRs != null)
                 {
                     lblParamRs.Text = isAdmin ? "RS Number (@Desc02):" : "RS Number:";
@@ -725,7 +725,7 @@ namespace LandPressDataMigrationDesktopApp
             try
             {
                 string rsNum = cfg.RequiresRsNumber
-                    ? (!string.IsNullOrEmpty(step.CustomRsNumber) ? step.CustomRsNumber : (txtGlobalDesc02?.Text?.Trim() ?? "201901"))
+                    ? (!string.IsNullOrEmpty(step.CustomRsNumber) ? step.CustomRsNumber : (txtGlobalDesc02?.Text?.Trim() ?? "201801"))
                     : "";
 
                 var ds = await Task.Run(() =>

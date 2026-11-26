@@ -294,7 +294,7 @@
                                             <Border Background="#BE185D" CornerRadius="4" Padding="5,2" Margin="0,0,6,0">
                                                 <TextBlock Text="CORE" Foreground="White" FontWeight="Bold" FontSize="10"/>
                                             </Border>
-                                            <TextBlock Text="Mother DB: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Main DB: " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                             <TextBlock x:Name="txtCoreDbStatus" Text="⚪ Waiting for Server Connection" Foreground="#F59E0B" FontWeight="Bold" FontSize="12.5" VerticalAlignment="Center"/>
                                         </StackPanel>
 
@@ -748,7 +748,7 @@
                                         <TextBlock Grid.Column="1" Text="Step 1 ➔ Step 2 ➔ Step 3" Foreground="#38BDF8" FontWeight="Bold" FontSize="12.5" VerticalAlignment="Center"/>
                                     </Grid>
 
-                                    <TextBlock Text="Executes the full migration hands-free sequentially in Mother Database Database."
+                                    <TextBlock Text="Executes the full migration hands-free sequentially in Main Database."
                                                Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,14"/>
 
                                     <!-- Visual 3-Phase Strip -->

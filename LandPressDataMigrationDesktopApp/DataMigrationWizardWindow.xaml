@@ -191,7 +191,7 @@
                 <!-- Center: Global RS Number -->
                 <StackPanel x:Name="panelGlobalDesc02" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Column="1">
                     <TextBlock Text="Default RS / Session Number (@Desc02): " Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBox x:Name="txtGlobalDesc02" Text="201901" Width="95" Height="28" Style="{StaticResource InputBox}"
+                    <TextBox x:Name="txtGlobalDesc02" Text="201801" Width="95" Height="28" Style="{StaticResource InputBox}"
                              TextChanged="TxtGlobalDesc02_TextChanged" ToolTip="Settlement Register Number (applied to Khatian and Plot migration steps)"/>
                 </StackPanel>
 
@@ -365,7 +365,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="lblParamRs" Text="RS Number (@Desc02):" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" VerticalAlignment="Center"/>
                                     <StackPanel Orientation="Horizontal" Grid.Column="1">
-                                        <TextBox x:Name="txtStepRsNumber" Text="201901" Width="140" Height="30" FontSize="13.5" Style="{StaticResource InputBox}"/>
+                                        <TextBox x:Name="txtStepRsNumber" Text="201801" Width="140" Height="30" FontSize="13.5" Style="{StaticResource InputBox}"/>
                                         <TextBlock Text="(Applied to target khatian/plot tables)" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                     </StackPanel>
                                 </Grid>

@@ -58,9 +58,32 @@ namespace LandPressDataMigrationDesktopApp
     }
 
     /// <summary>
+    /// Represents a survey entry from dbo_lis.LRSINF01 in the Main DB.
+    /// </summary>
+    public class SurveyItem
+    {
+        public string RsNum { get; set; } = string.Empty;
+        public string RsName { get; set; } = string.Empty;
+        public string RsDesc { get; set; } = string.Empty;
+
+        public string DisplayName
+        {
+            get
+            {
+                if (RsNum == "%")
+                    return !string.IsNullOrWhiteSpace(RsName) ? RsName : "সব জরিপ / All Surveys";
+
+                string bnRs = BanglaNumberConverter.ToBanglaDigit(RsNum);
+                return !string.IsNullOrWhiteSpace(RsName) ? $"{bnRs} - {RsName}" : bnRs;
+            }
+        }
+
+        public override string ToString() => DisplayName;
+    }
+
+    /// <summary>
     /// Service to manage AREAINF hierarchical queries and execute the dedicated
     /// land records retrieval stored procedure [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS].
-    /// NOTE: Auto-deployment has been completely removed as the SP is maintained in the database properly.
     /// </summary>
     public static class LandRecordsViewerService
     {
@@ -75,7 +98,7 @@ namespace LandPressDataMigrationDesktopApp
                 const string ddl = @"
 CREATE OR ALTER PROCEDURE [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]
     @ComCod         NVARCHAR(10)  = '4103',
-    @RsNum          NVARCHAR(20)  = '201901',
+    @RsNum          NVARCHAR(20)  = '201801',
     @UnitCod        NVARCHAR(20),
     @CurrentKhatian NVARCHAR(50)  = NULL,
     @OwnerName      NVARCHAR(200) = NULL
@@ -84,7 +107,7 @@ BEGIN
     SET NOCOUNT ON;
 
     SET @ComCod = ISNULL(NULLIF(LTRIM(RTRIM(@ComCod)), ''), '4103');
-    SET @RsNum = ISNULL(NULLIF(LTRIM(RTRIM(@RsNum)), ''), '201901');
+    SET @RsNum = ISNULL(NULLIF(LTRIM(RTRIM(@RsNum)), ''), '201801');
     SET @UnitCod = LTRIM(RTRIM(ISNULL(@UnitCod, '')));
     SET @CurrentKhatian = NULLIF(LTRIM(RTRIM(@CurrentKhatian)), '');
     SET @OwnerName = NULLIF(LTRIM(RTRIM(@OwnerName)), '');
@@ -94,7 +117,7 @@ BEGIN
         lf00.RSNUM,
         lf00.UNITCOD,
         ISNULL(a.UNITNAM, lf00.UNITCOD) AS MouzaName,
-        CASE WHEN lf00.RSNUM = '201901' THEN N'বিডিএস (BDS)' ELSE lf00.RSNUM END AS SurveyName,
+        ISNULL(NULLIF(LTRIM(RTRIM(rs.RSNAME)), ''), lf00.RSNUM) AS SurveyName,
         lf00.KHTNUM AS CurrentKhatian,
         ISNULL(lf00.PKHTNUM, '') AS FormerKhatian,
         ISNULL(lf00.EKHTNUM, '') AS EntryKhatian,
@@ -113,6 +136,7 @@ BEGIN
     INTO #tblKhatian
     FROM dbo_lis.LINFO00 lf00
     LEFT JOIN dbo.AREAINF a ON lf00.COMCOD = a.COMCOD AND lf00.UNITCOD = a.UNITCOD
+    LEFT JOIN dbo_lis.LRSINF01 rs ON lf00.COMCOD = rs.COMCOD AND lf00.RSNUM = rs.RSNUM
     LEFT JOIN dbo.LANDTYPE lt ON lf00.LTCODE = lt.LTCODE
     WHERE lf00.COMCOD = @ComCod
       AND (@RsNum = '%' OR lf00.RSNUM = @RsNum)
@@ -339,6 +363,44 @@ END;";
         }
 
         /// <summary>
+        /// Loads survey records from dbo_lis.LRSINF01 in the Main DB.
+        /// </summary>
+        public static async Task<List<SurveyItem>> LoadSurveysAsync(string coreConnectionString, string comCod = "4103")
+        {
+            return await Task.Run(async () =>
+            {
+                var list = new List<SurveyItem>();
+                using var conn = new SqlConnection(coreConnectionString);
+                await conn.OpenAsync();
+
+                const string sql = @"
+                    SELECT 
+                        LTRIM(RTRIM(RSNUM)) AS RSNUM,
+                        LTRIM(RTRIM(ISNULL(RSNAME, ''))) AS RSNAME,
+                        LTRIM(RTRIM(ISNULL(RSDESC, ''))) AS RSDESC
+                    FROM dbo_lis.LRSINF01
+                    WHERE COMCOD = @comCod OR COMCOD = '0000'
+                    ORDER BY RSNUM;";
+
+                using var cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@comCod", string.IsNullOrWhiteSpace(comCod) ? "4103" : comCod);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    list.Add(new SurveyItem
+                    {
+                        RsNum  = reader.GetString(0),
+                        RsName = reader.GetString(1),
+                        RsDesc = reader.GetString(2)
+                    });
+                }
+
+                return list;
+            });
+        }
+
+        /// <summary>
         /// Directly executes the dedicated stored procedure [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS]
         /// against the core database and returns a DataSet containing 3 tables:
         ///   - Table[0]: Khatians (LINFO00 + LANDTYPE + AREAINF + Plot Aggregates)
@@ -367,7 +429,7 @@ END;";
                 };
 
                 cmd.Parameters.Add(new SqlParameter("@ComCod", SqlDbType.NVarChar, 10) { Value = string.IsNullOrWhiteSpace(comCod) ? "4103" : comCod });
-                cmd.Parameters.Add(new SqlParameter("@RsNum", SqlDbType.NVarChar, 20) { Value = string.IsNullOrWhiteSpace(rsNum) ? "201901" : rsNum });
+                cmd.Parameters.Add(new SqlParameter("@RsNum", SqlDbType.NVarChar, 20) { Value = string.IsNullOrWhiteSpace(rsNum) ? "201801" : rsNum });
                 cmd.Parameters.Add(new SqlParameter("@UnitCod", SqlDbType.NVarChar, 20) { Value = unitCod ?? string.Empty });
                 cmd.Parameters.Add(new SqlParameter("@CurrentKhatian", SqlDbType.NVarChar, 50) { Value = (object?)currentKhatian ?? DBNull.Value });
                 cmd.Parameters.Add(new SqlParameter("@OwnerName", SqlDbType.NVarChar, 200) { Value = (object?)ownerName ?? DBNull.Value });

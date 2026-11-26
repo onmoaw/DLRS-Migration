@@ -3168,7 +3168,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (cfg.RequiresRsNumber)
                 {
-                    cmd.Parameters.Add(new SqlParameter("@Desc02", SqlDbType.NVarChar, 2500) { Value = "201901" });
+                    cmd.Parameters.Add(new SqlParameter("@Desc02", SqlDbType.NVarChar, 2500) { Value = "201801" });
                 }
 
                 cmd.ExecuteNonQuery();
