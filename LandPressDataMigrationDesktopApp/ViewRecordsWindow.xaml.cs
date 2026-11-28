@@ -35,6 +35,9 @@ namespace LandPressDataMigrationDesktopApp
         private List<SurveyItem> _allSurveyItems = new();
         private DataSet? _dsRecords;
         private bool _isPopulatingDropdowns = false;
+        private bool _isFullscreenMode = false;
+        private bool _isSyncingFsSelection = false;
+        private double _savedLeftColWidth = 490;
         private List<KhatianReportRow> _currentKhatianReportRows = new();
 
         public ViewRecordsWindow() : this(null)
@@ -518,6 +521,7 @@ namespace LandPressDataMigrationDesktopApp
                 DataTable dtKhatians = _dsRecords.Tables["Khatians"];
                 dgKhatians.ItemsSource = dtKhatians.DefaultView;
                 txtKhatianCount.Text = $"{BanglaNumberConverter.ToBanglaDigit(dtKhatians.Rows.Count)}টি";
+                PopulateFullscreenKhatianDropdown(dtKhatians);
 
                 if (dtKhatians.Rows.Count > 0)
                 {
@@ -554,8 +558,11 @@ namespace LandPressDataMigrationDesktopApp
             if (dgKhatians.SelectedItem is not DataRowView drv)
             {
                 ClearPreview();
+                SyncFullscreenSelectionFromGrid();
                 return;
             }
+
+            SyncFullscreenSelectionFromGrid();
 
             // Show preview content, hide empty state
             pnlEmptyPreview.Visibility = Visibility.Collapsed;
@@ -706,6 +713,8 @@ namespace LandPressDataMigrationDesktopApp
             }
 
             dgKhatians.ItemsSource = null;
+            cmbFsKhatianList.ItemsSource = null;
+            UpdateFullscreenNavState();
             txtKhatianCount.Text = "০টি";
             ClearPreview();
 
@@ -906,6 +915,10 @@ namespace LandPressDataMigrationDesktopApp
             btnExportKhatiansCsv.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
             btnExportDetailsCsv.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
             btnKhatianPrint.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            if (btnFsPrint != null)
+            {
+                btnFsPrint.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            }
             cardAuditSection.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
         }
 
@@ -959,8 +972,11 @@ namespace LandPressDataMigrationDesktopApp
             }
             if (txtKhatianZoomLevel != null)
             {
-                txtKhatianZoomLevel.Text = $"{(int)Math.Round(zoom * 100)}%";
-                txtKhatianZoomLevel.Text = BanglaNumberConverter.ToBanglaDigit(txtKhatianZoomLevel.Text);
+                txtKhatianZoomLevel.Text = BanglaNumberConverter.ToBanglaDigit($"{(int)Math.Round(zoom * 100)}%");
+            }
+            if (txtFsZoomLevel != null)
+            {
+                txtFsZoomLevel.Text = BanglaNumberConverter.ToBanglaDigit($"{(int)Math.Round(zoom * 100)}%");
             }
             if (slKhatianZoom != null && Math.Abs(slKhatianZoom.Value - zoom) > 0.01)
             {
@@ -1252,6 +1268,211 @@ namespace LandPressDataMigrationDesktopApp
             string userName = UserSession.CurrentUsername ?? Environment.UserName;
             string printTime = DateTime.Now.ToString("dd-MMM-yyyy hh:mm:ss tt", System.Globalization.CultureInfo.InvariantCulture);
             rptPrintSource.Text = $"Print Source: {machineName}, {userName}, {printTime}";
+        }
+
+        #endregion
+
+        #region ================= FULLSCREEN KHATIAN VIEW & NAVIGATION =================
+
+        private sealed class FsKhatianOption
+        {
+            public int Index { get; set; }
+            public string CurrentKhatian { get; set; } = string.Empty;
+            public string DisplayText { get; set; } = string.Empty;
+        }
+
+        private void PopulateFullscreenKhatianDropdown(DataTable dtKhatians)
+        {
+            var options = new List<FsKhatianOption>(dtKhatians.Rows.Count);
+            for (int i = 0; i < dtKhatians.Rows.Count; i++)
+            {
+                string kht = dtKhatians.Rows[i]["CurrentKhatian"]?.ToString() ?? string.Empty;
+                options.Add(new FsKhatianOption
+                {
+                    Index = i,
+                    CurrentKhatian = kht,
+                    DisplayText = $"খতিয়ান নং {BanglaNumberConverter.ToBanglaDigit(kht)}"
+                });
+            }
+
+            _isSyncingFsSelection = true;
+            try
+            {
+                cmbFsKhatianList.ItemsSource = options;
+            }
+            finally
+            {
+                _isSyncingFsSelection = false;
+            }
+
+            UpdateFullscreenNavState();
+        }
+
+        private void SyncFullscreenSelectionFromGrid()
+        {
+            if (cmbFsKhatianList == null) return;
+
+            _isSyncingFsSelection = true;
+            try
+            {
+                int idx = dgKhatians.SelectedIndex;
+                if (idx >= 0 && idx < cmbFsKhatianList.Items.Count)
+                {
+                    cmbFsKhatianList.SelectedIndex = idx;
+                }
+                else
+                {
+                    cmbFsKhatianList.SelectedIndex = -1;
+                }
+            }
+            finally
+            {
+                _isSyncingFsSelection = false;
+            }
+
+            UpdateFullscreenNavState();
+        }
+
+        private void UpdateFullscreenNavState()
+        {
+            if (txtFsKhatianPosition == null || btnFsPrevKhatian == null || btnFsNextKhatian == null) return;
+
+            int total = dgKhatians.Items.Count;
+            int idx = dgKhatians.SelectedIndex;
+
+            if (total <= 0 || idx < 0)
+            {
+                txtFsKhatianPosition.Text = "০ / ০";
+                btnFsPrevKhatian.IsEnabled = false;
+                btnFsNextKhatian.IsEnabled = false;
+                return;
+            }
+
+            txtFsKhatianPosition.Text = $"{BanglaNumberConverter.ToBanglaDigit(idx + 1)} / {BanglaNumberConverter.ToBanglaDigit(total)}";
+            btnFsPrevKhatian.IsEnabled = idx > 0;
+            btnFsNextKhatian.IsEnabled = idx < total - 1;
+        }
+
+        private void BtnEnterFullscreen_Click(object sender, RoutedEventArgs e)
+        {
+            EnterFullscreenMode();
+        }
+
+        private void BtnExitFullscreen_Click(object sender, RoutedEventArgs e)
+        {
+            ExitFullscreenMode();
+        }
+
+        private void EnterFullscreenMode()
+        {
+            if (_isFullscreenMode) return;
+            _isFullscreenMode = true;
+
+            if (rbKhatianView != null && rbKhatianView.IsChecked != true)
+            {
+                rbKhatianView.IsChecked = true;
+            }
+
+            if (colLeftMaster.Width.IsAbsolute && colLeftMaster.Width.Value > 0)
+            {
+                _savedLeftColWidth = colLeftMaster.Width.Value;
+            }
+
+            topHeaderBorder.Visibility = Visibility.Collapsed;
+            bottomStatusBorder.Visibility = Visibility.Collapsed;
+            leftMasterPane.Visibility = Visibility.Collapsed;
+            mainGridSplitter.Visibility = Visibility.Collapsed;
+
+            colLeftMaster.MinWidth = 0;
+            colLeftMaster.Width = new GridLength(0);
+            colSplitter.Width = new GridLength(0);
+
+            pnlKhatianView.Margin = new Thickness(0);
+            pnlKhatianView.CornerRadius = new CornerRadius(0);
+            pnlKhatianView.BorderThickness = new Thickness(0);
+            pnlKhatianView.Padding = new Thickness(8);
+
+            pnlKhatianNormalToolbar.Visibility = Visibility.Collapsed;
+            pnlFullscreenTopBar.Visibility = Visibility.Visible;
+
+            WindowState = WindowState.Maximized;
+
+            SyncFullscreenSelectionFromGrid();
+            Dispatcher.BeginInvoke(new Action(FitKhatianToWidth), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void ExitFullscreenMode()
+        {
+            if (!_isFullscreenMode) return;
+            _isFullscreenMode = false;
+
+            pnlFullscreenTopBar.Visibility = Visibility.Collapsed;
+            pnlKhatianNormalToolbar.Visibility = Visibility.Visible;
+
+            pnlKhatianView.Margin = new Thickness(0, 12, 12, 12);
+            pnlKhatianView.CornerRadius = new CornerRadius(8);
+            pnlKhatianView.BorderThickness = new Thickness(1);
+            pnlKhatianView.Padding = new Thickness(14);
+
+            colLeftMaster.MinWidth = 420;
+            colLeftMaster.Width = new GridLength(_savedLeftColWidth > 0 ? _savedLeftColWidth : 490);
+            colSplitter.Width = new GridLength(6);
+
+            leftMasterPane.Visibility = Visibility.Visible;
+            mainGridSplitter.Visibility = Visibility.Visible;
+            topHeaderBorder.Visibility = Visibility.Visible;
+            bottomStatusBorder.Visibility = Visibility.Visible;
+
+            Dispatcher.BeginInvoke(new Action(FitKhatianToWidth), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void BtnFsPrevKhatian_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgKhatians.SelectedIndex > 0)
+            {
+                dgKhatians.SelectedIndex--;
+                dgKhatians.ScrollIntoView(dgKhatians.SelectedItem);
+            }
+        }
+
+        private void BtnFsNextKhatian_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgKhatians.SelectedIndex >= 0 && dgKhatians.SelectedIndex < dgKhatians.Items.Count - 1)
+            {
+                dgKhatians.SelectedIndex++;
+                dgKhatians.ScrollIntoView(dgKhatians.SelectedItem);
+            }
+        }
+
+        private void CmbFsKhatianList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isSyncingFsSelection) return;
+            if (cmbFsKhatianList.SelectedItem is FsKhatianOption opt && opt.Index >= 0 && opt.Index < dgKhatians.Items.Count)
+            {
+                dgKhatians.SelectedIndex = opt.Index;
+                dgKhatians.ScrollIntoView(dgKhatians.SelectedItem);
+            }
+        }
+
+        private void ViewRecordsWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (!_isFullscreenMode) return;
+
+            if (e.Key == Key.Escape)
+            {
+                ExitFullscreenMode();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Left && cmbFsKhatianList?.IsDropDownOpen != true)
+            {
+                BtnFsPrevKhatian_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Right && cmbFsKhatianList?.IsDropDownOpen != true)
+            {
+                BtnFsNextKhatian_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
         }
 
         #endregion

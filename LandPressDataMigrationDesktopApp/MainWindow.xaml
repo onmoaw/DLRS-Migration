@@ -84,19 +84,17 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource ThemeTextMuted}"
-                           Text="{x:Static local:AppConfig.AppTitleWithVersion}"/>
+                           Text="{x:Static local:AppConfig.FooterLeftText}"/>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock FontSize="11" Foreground="{DynamicResource ThemeTextSecondary}" Text="Powered by "/>
-                    <TextBlock FontSize="11" FontWeight="Bold" Foreground="#F97316" Text="Pirthe Limited"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock FontSize="11" Foreground="{DynamicResource ThemeTextSecondary}"
+                               Text="{x:Static local:AppConfig.FooterRightPrefix}" VerticalAlignment="Center"/>
+                    <TextBlock FontSize="11" FontWeight="Bold" Foreground="#F97316"
+                               Text="{x:Static local:AppConfig.FooterRightBrand}" VerticalAlignment="Center"/>
                 </StackPanel>
-
-                <TextBlock Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource ThemeTextMuted}"
-                           Text="© 2026 Pirthe Limited. All rights reserved."/>
             </Grid>
         </Border>
 

@@ -16,7 +16,8 @@
         FontFamily="{StaticResource AppFontPrimary}"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
-        TextOptions.TextRenderingMode="ClearType">
+        TextOptions.TextRenderingMode="ClearType"
+        PreviewKeyDown="ViewRecordsWindow_PreviewKeyDown">
 
     <Window.Resources>
         <!-- Bangla Number Converter Resource -->
@@ -247,7 +248,7 @@
         </Grid.RowDefinitions>
 
         <!-- ================= 0: TOP HEADER ================= -->
-        <Border Grid.Row="0" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Padding="20,12">
+        <Border x:Name="topHeaderBorder" Grid.Row="0" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,0,0,1" Padding="20,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -287,6 +288,10 @@
                         </StackPanel>
                     </Border>
 
+                    <Button x:Name="btnFullscreenMode" Content="⛶ ফুলস্ক্রিন" Style="{StaticResource ActionBtn}"
+                            Background="#0284C7" Foreground="White" Padding="14,6" Margin="0,0,10,0" FontSize="13.5"
+                            Click="BtnEnterFullscreen_Click" ToolTip="খতিয়ান ভিউ পূর্ণ পর্দায় (Fullscreen) দেখুন"/>
+
                     <Button x:Name="btnThemeToggle" Style="{StaticResource ActionBtn}" Padding="14,6" Margin="0,0,10,0"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                             Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnThemeToggle_Click">
@@ -304,13 +309,13 @@
         <!-- ================= 1: FULL-HEIGHT SIDE-BY-SIDE MASTER-DETAIL AREA ================= -->
         <Grid Grid.Row="1" Background="{DynamicResource ThemeInsetBg}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="490" MinWidth="420" MaxWidth="750"/> <!-- Col 0: Left Pane (Filters Top + Master List) -->
-                <ColumnDefinition Width="6"/>                                   <!-- Col 1: Vertical GridSplitter -->
+                <ColumnDefinition x:Name="colLeftMaster" Width="490" MinWidth="420" MaxWidth="750"/> <!-- Col 0: Left Pane (Filters Top + Master List) -->
+                <ColumnDefinition x:Name="colSplitter" Width="6"/>                                   <!-- Col 1: Vertical GridSplitter -->
                 <ColumnDefinition Width="*"/>                                   <!-- Col 2: Right Pane (Full Height Preview) -->
             </Grid.ColumnDefinitions>
 
             <!-- ── LEFT PANE: FILTERS (AT TOP) + MASTER KHATIAN LIST ── -->
-            <Grid Grid.Column="0" Margin="12,12,0,12">
+            <Grid x:Name="leftMasterPane" Grid.Column="0" Margin="12,12,0,12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/> <!-- Top: 7 Search Filters Card -->
                     <RowDefinition Height="*"/>    <!-- Bottom: Master Khatian List DataGrid -->
@@ -501,7 +506,7 @@
             </Grid>
 
             <!-- ── RESIZABLE VERTICAL SPLITTER ── -->
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+            <GridSplitter x:Name="mainGridSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
                           Background="{DynamicResource ThemeCardBorder}" Cursor="SizeWE" ToolTip="ড্র্যাগ করে দুই পাশের আকার পরিবর্তন করুন"/>
 
             <!-- ── RIGHT PANE: DUAL VIEW (SOFTWARE VIEW / KHATIAN VIEW) ── -->
@@ -856,8 +861,8 @@
                         <RowDefinition Height="*"/>    <!-- Scrollable & Zoomable Document Container -->
                     </Grid.RowDefinitions>
 
-                    <!-- Top Toolbar / Zoom Controls -->
-                    <Border Grid.Row="0" Background="{DynamicResource ThemeInsetBg}" BorderBrush="#0284C7" BorderThickness="1.5" CornerRadius="8" Padding="12,8" Margin="0,0,0,10">
+                    <!-- Top Toolbar / Zoom Controls (Normal Mode) -->
+                    <Border x:Name="pnlKhatianNormalToolbar" Grid.Row="0" Background="{DynamicResource ThemeInsetBg}" BorderBrush="#0284C7" BorderThickness="1.5" CornerRadius="8" Padding="12,8" Margin="0,0,0,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -872,7 +877,7 @@
                                 <TextBlock Text="📜 বাংলাদেশ ফরম নং ৫৪৬২ — খতিয়ান ফরম (পর্চা)" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center"/>
                             </StackPanel>
 
-                            <!-- Right: Zoom Controls & Admin Print Button -->
+                            <!-- Right: Zoom Controls, Fullscreen & Admin Print Button -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <!-- Zoom Controls -->
                                 <Border Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="6,3" Margin="0,0,10,0">
@@ -896,11 +901,76 @@
                                     </StackPanel>
                                 </Border>
 
+                                <!-- Fullscreen Button -->
+                                <Button x:Name="btnKhatianFullscreen" Content="⛶ ফুলস্ক্রিন" Style="{StaticResource ActionBtn}"
+                                        Background="#0284C7" Foreground="White" Padding="12,6" FontSize="13" Margin="0,0,8,0"
+                                        Click="BtnEnterFullscreen_Click" ToolTip="পূর্ণ পর্দায় খতিয়ান দেখুন"/>
 
                                 <!-- Admin Print Button -->
                                 <Button x:Name="btnKhatianPrint" Content="🖨️ প্রিন্ট করুন" Style="{StaticResource ActionBtn}"
                                         Background="#047857" Foreground="White" Padding="14,6" FontSize="13"
                                         Click="BtnKhatianPrint_Click" ToolTip="খতিয়ান প্রিন্ট করুন (Admin Only)"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Fullscreen Top Navigation Bar (Shown only in Fullscreen Mode) -->
+                    <Border x:Name="pnlFullscreenTopBar" Grid.Row="0" Background="{DynamicResource ThemeHeaderBg}" BorderBrush="#0284C7" BorderThickness="0,0,0,2"
+                            Padding="14,8" Margin="0,0,0,8" Visibility="Collapsed">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left: Left/Right Arrows + Khatian Number Dropdown -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="btnFsPrevKhatian" Content="◀" Width="38" Height="34" Padding="0" Margin="0,0,6,0"
+                                        Style="{StaticResource ActionBtn}" Background="#0284C7" Foreground="White" FontSize="14" FontWeight="Bold"
+                                        Click="BtnFsPrevKhatian_Click" ToolTip="পূর্ববর্তী খতিয়ান (Left Arrow)"/>
+
+                                <ComboBox x:Name="cmbFsKhatianList" Width="230" Height="34" Style="{StaticResource SearchComboBox}"
+                                          DisplayMemberPath="DisplayText" SelectionChanged="CmbFsKhatianList_SelectionChanged"
+                                          ToolTip="নির্বাচিত ফিল্টারের খতিয়ান নম্বর তালিকা"/>
+
+                                <Button x:Name="btnFsNextKhatian" Content="▶" Width="38" Height="34" Padding="0" Margin="6,0,12,0"
+                                        Style="{StaticResource ActionBtn}" Background="#0284C7" Foreground="White" FontSize="14" FontWeight="Bold"
+                                        Click="BtnFsNextKhatian_Click" ToolTip="পরবর্তী খতিয়ান (Right Arrow)"/>
+
+                                <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                        CornerRadius="6" Padding="10,5" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtFsKhatianPosition" Text="০ / ০" FontSize="13" FontWeight="Bold"
+                                               Foreground="{DynamicResource ThemeTextPrimary}" VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Right: Zoom Controls, Print & Exit Fullscreen -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="6" Padding="6,3" Margin="0,0,10,0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="➖" Width="28" Height="26" Padding="0" Margin="0,0,4,0"
+                                                Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                                Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomOut_Click" ToolTip="জুম আউট"/>
+                                        <TextBlock x:Name="txtFsZoomLevel" Text="১০০%" Width="46" TextAlignment="Center" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                                        <Button Content="➕" Width="28" Height="26" Padding="0" Margin="4,0,6,0"
+                                                Style="{StaticResource ActionBtn}" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                                Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomIn_Click" ToolTip="জুম ইন"/>
+                                        <Button Content="📐 প্রস্থে মিলান" Style="{StaticResource ActionBtn}" Padding="8,3" Margin="4,0,0,0"
+                                                Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                                Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomFitWidth_Click"/>
+                                        <Button Content="🔄 ১০০%" Style="{StaticResource ActionBtn}" Padding="8,3" Margin="4,0,0,0"
+                                                Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
+                                                Foreground="{DynamicResource ThemeTextPrimary}" FontSize="12" Click="BtnZoomReset_Click"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Button x:Name="btnFsPrint" Content="🖨️ প্রিন্ট করুন" Style="{StaticResource ActionBtn}"
+                                        Background="#047857" Foreground="White" Padding="12,6" FontSize="13" Margin="0,0,8,0"
+                                        Click="BtnKhatianPrint_Click" ToolTip="খতিয়ান প্রিন্ট করুন (Admin Only)"/>
+
+                                <Button x:Name="btnExitFullscreen" Content="✖ সাধারণ ভিউ" Style="{StaticResource ActionBtn}"
+                                        Background="#DC2626" Foreground="White" Padding="14,6" FontSize="13"
+                                        Click="BtnExitFullscreen_Click" ToolTip="ফুলস্ক্রিন বন্ধ করে সাধারণ ভিউতে ফিরে যান (Esc)"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -1410,7 +1480,7 @@
     </Grid>
 
         <!-- ================= 2: BOTTOM STATUS & DETAIL BANNER ================= -->
-        <Border Grid.Row="2" Background="{DynamicResource ThemeFooterBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,1,0,0" Padding="20,10">
+        <Border x:Name="bottomStatusBorder" Grid.Row="2" Background="{DynamicResource ThemeFooterBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="0,1,0,0" Padding="20,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

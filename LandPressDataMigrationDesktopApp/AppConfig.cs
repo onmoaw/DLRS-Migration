@@ -36,7 +36,7 @@ namespace LandPressDataMigrationDesktopApp
         // =====================================================================
         // EDIT THIS VERSION NUMBER TO REPLICATE ACROSS THE ENTIRE APPLICATION:
         // =====================================================================
-        public const string Version = "v1.04d";
+        public const string Version = "v1.05b";
 
         /// <summary>
         /// Permanent intermediate staging database required on the connected SQL Server instance.
@@ -57,6 +57,13 @@ namespace LandPressDataMigrationDesktopApp
 
         /// <summary>Format: "Data Migration Wizard  v1.0"</summary>
         public static string MigrationWizardTitle => $"Data Migration Wizard  {Version}";
+
+        // =====================================================================
+        // CENTRALIZED FOOTER CONFIGURATION (Update here to apply everywhere):
+        // =====================================================================
+        public const string FooterLeftText = "©  Directorate of Land Records and Surveys";
+        public const string FooterRightPrefix = "Powered By ";
+        public const string FooterRightBrand = "Pirthe Limited";
 
         // =====================================================================
         // CENTRALIZED PERFORMANCE & DELAY CONFIGURATION:
