@@ -1460,7 +1460,7 @@ namespace LandPressDataMigrationDesktopApp
                     await refreshConn.OpenAsync();
                     LoadDatabases(refreshConn);
 
-                    // Allow the ListBox to render before selecting
+                    // Allow the ComboBox to render before selecting
                     await Task.Delay(100);
 
                     // Clear previous selection first so setting SelectedItem always triggers SelectionChanged even if previously pointing to same name
@@ -1469,8 +1469,8 @@ namespace LandPressDataMigrationDesktopApp
                     object? itemToSelect = null;
                     foreach (var item in lstDatabases.Items)
                     {
-                        string name = (item is ListBoxItem lbi)
-                            ? (lbi.Tag?.ToString() ?? lbi.Content?.ToString() ?? string.Empty)
+                        string name = (item is ComboBoxItem cbi)
+                            ? (cbi.Tag?.ToString() ?? cbi.Content?.ToString() ?? string.Empty)
                             : item.ToString() ?? string.Empty;
                         if (string.Equals(name, dbName, StringComparison.OrdinalIgnoreCase))
                         {
@@ -1482,7 +1482,6 @@ namespace LandPressDataMigrationDesktopApp
                     if (itemToSelect != null)
                     {
                         lstDatabases.SelectedItem = itemToSelect;
-                        lstDatabases.ScrollIntoView(itemToSelect);
                     }
                     else
                     {
@@ -1772,12 +1771,12 @@ namespace LandPressDataMigrationDesktopApp
             lstDatabases.Items.Clear();
 
             var allDbs = new List<string>();
-            string sql = @"
+            string sql = $@"
                 SELECT d.name, mf.physical_name
                 FROM sys.databases d
                 JOIN sys.master_files mf ON d.database_id = mf.database_id AND mf.file_id = 1
                 WHERE d.state_desc = 'ONLINE'
-                  AND d.name NOT IN ('master', 'tempdb', 'model', 'msdb', 'DLRS_Migration_Intrm', 'DLRSLSINF_4103PRSDB')
+                  AND d.name NOT IN ('master', 'tempdb', 'model', 'msdb', '{AppConfig.IntermediateDbName}', 'DLRSLSINF_4103PRSDB')
                 ORDER BY d.name";
 
             using (var cmd = new SqlCommand(sql, conn))
@@ -1846,7 +1845,7 @@ namespace LandPressDataMigrationDesktopApp
                 {
                     if (showMigrated)
                     {
-                        var item = new ListBoxItem
+                        var item = new ComboBoxItem
                         {
                             Content = $"{db}  ✔ Migrated",
                             Foreground = System.Windows.Media.Brushes.Gray,
@@ -1967,7 +1966,7 @@ namespace LandPressDataMigrationDesktopApp
                 if (btnCopyToIntrmDb != null)
                 {
                     btnCopyToIntrmDb.IsEnabled = true;
-                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "Copy Source Data to DLRS_Migration_Intrm (Single Step)";
+                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "Copy Source Data to DLRS_MIGRATIONLOGTBL (Single Step)";
                 }
             }
 
@@ -1979,7 +1978,7 @@ namespace LandPressDataMigrationDesktopApp
                     btnStartFullAuto.IsEnabled = false;
                     if (txtFullAutoStatus != null)
                     {
-                        txtFullAutoStatus.Text = "Waiting: Initialize [DLRS_Migration_Intrm] before starting.";
+                        txtFullAutoStatus.Text = "Waiting: Initialize [DLRS_MIGRATIONLOGTBL] before starting.";
                         txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
                     }
                 }
@@ -2455,7 +2454,7 @@ namespace LandPressDataMigrationDesktopApp
                     "Migration Blocked: Unit Already Migrated",
                     "Pre-Check (tblUnitMigrationLog)",
                     $"Unit code(s) in database [{_DbName}] have already been migrated and recorded as COMPLETED in tblUnitMigrationLog.\n\nAutomated pipeline will NOT proceed for this unit code to prevent duplicate data insertion.",
-                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_Migration_Intrm].dbo.tblUnitMigrationLog.",
+                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_MIGRATIONLOGTBL].dbo.tblUnitMigrationLog.",
                     allowSkip: false);
                 PipelineExecutionLogger.LogError("Pre-Check", $"Automated pipeline blocked: Unit code(s) in [{_DbName}] already migrated.");
                 return;
@@ -2501,7 +2500,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (txtFullAutoStatus != null)
                 {
-                    txtFullAutoStatus.Text = "Phase 1/3: Staging tables from source into DLRS_Migration_Intrm...";
+                    txtFullAutoStatus.Text = "Phase 1/3: Staging tables from source into DLRS_MIGRATIONLOGTBL...";
                     txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
                 }
                 if (txtFullAutoDetail != null)
@@ -2562,7 +2561,7 @@ namespace LandPressDataMigrationDesktopApp
                 UpdateWorkflowState();
 
                 if (txtFullAutoStatus != null)
-                    txtFullAutoStatus.Text = "Phase 2/3: Fetching staged records from DLRS_Migration_Intrm...";
+                    txtFullAutoStatus.Text = "Phase 2/3: Fetching staged records from DLRS_MIGRATIONLOGTBL...";
                 if (txtFullAutoDetail != null)
                     txtFullAutoDetail.Text = "Loading tblLinfo01 and tblLinfo02 for Unicode font conversion...";
                 if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 35;
@@ -2616,7 +2615,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 // Commit Unicode updates to DLRS_Migration_Intrm
                 if (txtFullAutoStatus != null)
-                    txtFullAutoStatus.Text = "Phase 2/3: Writing converted Unicode records to DLRS_Migration_Intrm...";
+                    txtFullAutoStatus.Text = "Phase 2/3: Writing converted Unicode records to DLRS_MIGRATIONLOGTBL...";
                 if (txtFullAutoDetail != null)
                     txtFullAutoDetail.Text = "Committing batch updates via SQL JSON chunks...";
 
@@ -3223,7 +3222,7 @@ namespace LandPressDataMigrationDesktopApp
                     "Migration Blocked: Unit Already Migrated",
                     "Pre-Check (tblUnitMigrationLog)",
                     $"Unit code(s) in database [{_DbName}] have already been migrated and recorded as COMPLETED in tblUnitMigrationLog.\n\nStaging data is blocked for this unit code to prevent duplicate data insertion.",
-                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_Migration_Intrm].dbo.tblUnitMigrationLog.",
+                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_MIGRATIONLOGTBL].dbo.tblUnitMigrationLog.",
                     allowSkip: false);
                 return;
             }
@@ -3346,7 +3345,7 @@ namespace LandPressDataMigrationDesktopApp
 
             try
             {
-                if (lstDatabases.SelectedItem is ListBoxItem lbi && !lbi.IsEnabled)
+                if (lstDatabases.SelectedItem is ComboBoxItem cbi && !cbi.IsEnabled)
                 {
                     lstDatabases.SelectionChanged -= Databases_SelectionChanged;
                     lstDatabases.SelectedItem = null;
@@ -3354,7 +3353,7 @@ namespace LandPressDataMigrationDesktopApp
                     return;
                 }
 
-                string dbName = (lstDatabases.SelectedItem is ListBoxItem item)
+                string dbName = (lstDatabases.SelectedItem is ComboBoxItem item)
                     ? (item.Tag?.ToString() ?? item.Content?.ToString() ?? string.Empty)
                     : lstDatabases.SelectedItem.ToString()!;
 
@@ -3424,29 +3423,6 @@ namespace LandPressDataMigrationDesktopApp
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show(ex.Message, "Error");
-            }
-        }
-
-        private void LstDatabases_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            if (sender is System.Windows.Controls.ListBox lb && lb.SelectedItem != null)
-            {
-                var dep = e.OriginalSource as DependencyObject;
-                while (dep != null && dep != lb && !(dep is System.Windows.Controls.ListBoxItem))
-                {
-                    dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
-                }
-
-                if (dep is System.Windows.Controls.ListBoxItem lbi && lbi.IsSelected)
-                {
-                    // User clicked on the ALREADY-SELECTED item.
-                    // WPF will not fire SelectionChanged. Force re-evaluation of workflow state and migration check.
-                    Dispatcher.BeginInvoke(new Action(async () =>
-                    {
-                        UpdateWorkflowState();
-                        await CheckSelectedDatabaseMigrationStatusAsync();
-                    }));
-                }
             }
         }
 

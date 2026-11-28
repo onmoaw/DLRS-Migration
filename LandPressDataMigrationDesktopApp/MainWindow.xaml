@@ -74,6 +74,22 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Identical Format for Top Bar Action Buttons -->
+        <Style x:Key="TopBarBtn" TargetType="Button" BasedOn="{StaticResource AppBtn}">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- Identical Format for Compact Card Action Buttons (Main DB & Intermediate DB) -->
+        <Style x:Key="CompactCardBtn" TargetType="Button" BasedOn="{StaticResource AppBtn}">
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
@@ -121,7 +137,7 @@
                 <!-- Right: Mode Control Toggle, Log Viewer, Theme Toggle Button -->
                 <StackPanel Orientation="Horizontal" Grid.Column="1" VerticalAlignment="Center">
                     <!-- Top-Right Corner Manual / Auto Control Button -->
-                    <Button x:Name="btnToggleControlMode" Style="{StaticResource AppBtn}" Padding="12,6" Margin="0,0,10,0"
+                    <Button x:Name="btnToggleControlMode" Style="{StaticResource TopBarBtn}" Margin="0,0,10,0"
                             Background="{DynamicResource ThemeInsetBg}" BorderBrush="#3B82F6" BorderThickness="1.5"
                             Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnToggleControlMode_Click"
                             ToolTip="Click to toggle between 1-Click Automated Pipeline and Manual Step-by-Step Execution.">
@@ -132,7 +148,7 @@
                     </Button>
 
                     <!-- View Pipeline & Mapping Logs Button -->
-                    <Button x:Name="btnOpenPipelineLogs" Style="{StaticResource AppBtn}" Padding="10,6" Margin="0,0,10,0"
+                    <Button x:Name="btnOpenPipelineLogs" Style="{StaticResource TopBarBtn}" Margin="0,0,10,0"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1"
                             Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnOpenPipelineLogs_Click"
                             ToolTip="Open live Pipeline Execution &amp; Value Mapping Logs viewer.">
@@ -143,17 +159,17 @@
                     </Button>
 
                     <!-- View Records Search & Filter Screen Button -->
-                    <Button x:Name="btnViewRecords" Style="{StaticResource AppBtn}" Padding="12,6" Margin="0,0,10,0"
+                    <Button x:Name="btnViewRecords" Style="{StaticResource TopBarBtn}" Margin="0,0,10,0"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="#0D9488" BorderThickness="1.5"
                             Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnViewRecords_Click"
                             ToolTip="Open Land Records Search and Viewer.">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="🔎" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="View Records" FontSize="12.5" FontWeight="Bold" Foreground="#0D9488" VerticalAlignment="Center"/>
+                            <TextBlock Text="View Records" FontSize="12" FontWeight="Bold" Foreground="#0D9488" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="btnThemeToggle" Style="{StaticResource AppBtn}" Padding="12,6"
+                    <Button x:Name="btnThemeToggle" Style="{StaticResource TopBarBtn}"
                             Background="{DynamicResource ThemeCardBg}" BorderBrush="{DynamicResource ThemeCardBorder}"
                             BorderThickness="1" Foreground="{DynamicResource ThemeTextPrimary}" Click="BtnThemeToggle_Click">
                         <StackPanel Orientation="Horizontal">
@@ -258,9 +274,9 @@
                                 <PasswordBox x:Name="txtPassword" Width="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}" Height="30" FontSize="13" Visibility="Collapsed"/>
                             </StackPanel>
 
-                            <!-- Connect Button & Status -->
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <Button Content="Connect" Width="105" Height="34" Padding="14,6" Style="{StaticResource AppBtn}" FontSize="13" FontWeight="Bold" Click="Connect_Click">
+                            <!-- Connect Button (Full Width) & Status -->
+                            <StackPanel Margin="0,0,0,8">
+                                <Button Content="Connect" HorizontalAlignment="Stretch" Height="36" Style="{StaticResource AppBtn}" FontSize="13.5" FontWeight="Bold" Click="Connect_Click">
                                     <Button.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                             <GradientStop Color="#3B82F6" Offset="0"/>
@@ -269,7 +285,7 @@
                                     </Button.Background>
                                 </Button>
                                 <TextBlock x:Name="txtConnectError" Visibility="Collapsed" VerticalAlignment="Center"
-                                           Margin="10,0,0,0" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/>
+                                           Margin="0,6,0,0" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/>
                             </StackPanel>
 
                             <!-- Server Status Indicator Banner -->
@@ -299,7 +315,7 @@
                                         <!-- Core DB Action Buttons -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <Button x:Name="btnRestoreCoreDb" Content="📥 Restore to Folder" Visibility="Collapsed"
-                                                    Style="{StaticResource AppBtn}" Padding="10,4" MinHeight="26" FontSize="11.5" FontWeight="Bold"
+                                                    Style="{StaticResource CompactCardBtn}"
                                                     Margin="0,0,6,0" Click="BtnRestoreCoreDb_Click">
                                                 <Button.Background>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -309,7 +325,7 @@
                                                 </Button.Background>
                                             </Button>
                                             <Button x:Name="btnRelocateCoreDb" Content="🔄 Move to Folder" Visibility="Collapsed"
-                                                    Style="{StaticResource AppBtn}" Padding="10,4" MinHeight="26" FontSize="11.5" FontWeight="Bold"
+                                                    Style="{StaticResource CompactCardBtn}"
                                                     Margin="0,0,6,0" Click="BtnRelocateCoreDb_Click">
                                                 <Button.Background>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -319,7 +335,7 @@
                                                 </Button.Background>
                                             </Button>
                                             <Button x:Name="btnBackupCoreDb" Content="💾 Backup" Visibility="Collapsed"
-                                                    Style="{StaticResource AppBtn}" Padding="8,4" MinHeight="26" FontSize="11.5" FontWeight="SemiBold"
+                                                    Style="{StaticResource CompactCardBtn}"
                                                     Click="BtnBackupCoreDb_Click">
                                                 <Button.Background>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -349,11 +365,11 @@
                                             <TextBlock x:Name="txtIntrmDbStatus" Text="⚪ Waiting for Server Connection" Foreground="#F59E0B" FontWeight="Bold" FontSize="12.5" VerticalAlignment="Center"/>
                                         </StackPanel>
 
-                                        <!-- Action Buttons: Migration Logs & Create/Repair DLRS_Migration_Intrm -->
+                                        <!-- Action Buttons: Migration Logs & Create/Repair DLRS_MIGRATIONLOGTBL -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <!-- View Migration Logs Button -->
                                             <Button x:Name="btnViewIntrmLogs" Visibility="Collapsed"
-                                                    Style="{StaticResource AppBtn}" Padding="10,5" MinHeight="28" FontSize="12" FontWeight="SemiBold"
+                                                    Style="{StaticResource CompactCardBtn}"
                                                     Margin="0,0,6,0" Click="BtnViewIntrmLogs_Click">
                                                 <Button.Background>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -366,7 +382,7 @@
 
                                             <!-- Move Staging DB to Folder Button -->
                                             <Button x:Name="btnRelocateIntrmDb" Visibility="Collapsed"
-                                                    Style="{StaticResource AppBtn}" Padding="10,5" MinHeight="28" FontSize="12" FontWeight="Bold"
+                                                    Style="{StaticResource CompactCardBtn}"
                                                     Margin="0,0,6,0" Click="BtnRelocateIntrmDb_Click">
                                                 <Button.Background>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -379,7 +395,7 @@
 
                                             <!-- Create or Repair Button -->
                                             <Button x:Name="btnCreateOrRepairIntrmDb" Visibility="Collapsed"
-                                                    Style="{StaticResource AppBtn}" Padding="12,5" MinHeight="28" FontSize="12" FontWeight="Bold"
+                                                    Style="{StaticResource CompactCardBtn}"
                                                     Click="BtnCreateOrRepairIntrmDb_Click">
                                                 <Button.Background>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -406,15 +422,14 @@
                             <Border x:Name="borderIntrmBlockedNotice" Visibility="Collapsed" Background="#450A0A" BorderBrush="#EF4444" BorderThickness="1.5" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⛔" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="txtIntrmBlockedReason" Text="Access blocked: Create/Validate DLRS_Migration_Intrm before proceeding." Foreground="#FCA5A5" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="txtIntrmBlockedReason" Text="Access blocked: Create/Validate DLRS_MIGRATIONLOGTBL before proceeding." Foreground="#FCA5A5" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
 
-                            <!-- Databases List -->
+                            <!-- Databases Dropdown -->
                             <TextBlock x:Name="txtFolderFilterCaption" Text="Available Source Databases in dedicated folder:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ListBox x:Name="lstDatabases" Height="140" Background="{DynamicResource ThemeInputBg}" Foreground="{DynamicResource ThemeTextPrimary}" BorderBrush="{DynamicResource ThemeInputBorder}" FontSize="13"
-                                     SelectionChanged="Databases_SelectionChanged"
-                                     PreviewMouseLeftButtonDown="LstDatabases_PreviewMouseLeftButtonDown"/>
+                            <ComboBox x:Name="lstDatabases" Height="36" FontSize="13.5" FontWeight="SemiBold"
+                                      SelectionChanged="Databases_SelectionChanged"/>
 
                             <!-- Migrated Databases Hidden Info & Admin Toggle -->
                             <Grid Margin="0,4,0,0">
@@ -871,7 +886,7 @@
                             <StackPanel x:Name="panelManualStep1">
                                 <TextBlock Text="— OR EXECUTE STEP 1 MANUALLY (SINGLE STEP) —" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" FontWeight="Bold" Margin="0,0,0,8" HorizontalAlignment="Center"/>
 
-                                <TextBlock x:Name="txtStep1Desc" Text="Copies tblHalsabek, tblLinfo01, and tblLinfo02 from the selected source database into [DLRS_Migration_Intrm]. Automatically converts columns to Unicode NVARCHAR, sets initial tracking columns, and assigns sequential RowIds. The source database is NOT modified."
+                                <TextBlock x:Name="txtStep1Desc" Text="Copies tblHalsabek, tblLinfo01, and tblLinfo02 from the selected source database into [DLRS_MIGRATIONLOGTBL]. Automatically converts columns to Unicode NVARCHAR, sets initial tracking columns, and assigns sequential RowIds. The source database is NOT modified."
                                            Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                                 <!-- Lock Banner for Step 1 (Shown when no DB selected) -->
@@ -896,7 +911,7 @@
                                         <TextBlock Text="✅" FontSize="22" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="STEP 1 COMPLETED — DATA STAGED IN INTERMEDIATE DB" Foreground="{DynamicResource ThemeSuccessText}" FontWeight="Bold" FontSize="13"/>
-                                            <TextBlock x:Name="txtStep1CompletedDetail" Text="All records copied to [DLRS_Migration_Intrm] with Unicode schema and tracking columns." Foreground="{DynamicResource ThemeSuccessText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                            <TextBlock x:Name="txtStep1CompletedDetail" Text="All records copied to [DLRS_MIGRATIONLOGTBL] with Unicode schema and tracking columns." Foreground="{DynamicResource ThemeSuccessText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                         </StackPanel>
                                         <Button Grid.Column="2" Content="➔ Go to Step 2" Style="{StaticResource AppBtn}" Padding="14,8" Margin="10,0,0,0" VerticalAlignment="Center" Click="BtnGoToStep2_Click">
                                             <Button.Background>
@@ -928,7 +943,7 @@
                                     </Button.Background>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="📥" Margin="0,0,8,0" FontSize="16" VerticalAlignment="Center"/>
-                                        <TextBlock x:Name="txtBtnCopyToIntrm" Text="Copy Source Data to DLRS_Migration_Intrm (Single Step)" FontSize="14.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="txtBtnCopyToIntrm" Text="Copy Source Data to DLRS_MIGRATIONLOGTBL (Single Step)" FontSize="14.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -975,7 +990,7 @@
                                 </StackPanel>
                             </Grid>
 
-                            <TextBlock x:Name="txtStage3Desc" Text="Select staged tables from [DLRS_Migration_Intrm], fetch records, convert ANSI (Adarshalipi) text to Unicode with real-time ETA tracking, and write the converted data back to [DLRS_Migration_Intrm]."
+                            <TextBlock x:Name="txtStage3Desc" Text="Select staged tables from [DLRS_MIGRATIONLOGTBL], fetch records, convert ANSI (Adarshalipi) text to Unicode with real-time ETA tracking, and write the converted data back to [DLRS_MIGRATIONLOGTBL]."
                                        Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                             <!-- Lock Banner for Step 2 (Shown when Step 1 not complete) -->
@@ -984,7 +999,7 @@
                                     <TextBlock Text="🔒" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="STEP 2 IS LOCKED — Complete Step 1 First" Foreground="{DynamicResource ThemeLockText}" FontSize="13" FontWeight="Bold"/>
-                                        <TextBlock Text="Copy source data to [DLRS_Migration_Intrm] first before running font conversion." Foreground="{DynamicResource ThemeLockText}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Text="Copy source data to [DLRS_MIGRATIONLOGTBL] first before running font conversion." Foreground="{DynamicResource ThemeLockText}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -993,7 +1008,7 @@
                             <Border x:Name="borderStage3UnlockedBanner" Visibility="Collapsed" Background="{DynamicResource ThemeSuccessBg}" BorderBrush="{DynamicResource ThemeSuccessBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="✅" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Step 1 completed! Data is staged in [DLRS_Migration_Intrm]. Ready for font conversion." Foreground="{DynamicResource ThemeSuccessText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Step 1 completed! Data is staged in [DLRS_MIGRATIONLOGTBL]. Ready for font conversion." Foreground="{DynamicResource ThemeSuccessText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
 
@@ -1014,7 +1029,7 @@
                             <!-- SECTION 2A: TABLE SELECTION & FETCH -->
                             <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#0284C7" BorderThickness="1.5" CornerRadius="8" Padding="14" Margin="0,0,0,12">
                                 <StackPanel>
-                                    <TextBlock Text="1. Table Selection &amp; Data Fetch (from DLRS_Migration_Intrm)" Foreground="#38BDF8" FontWeight="Bold" FontSize="14.5" Margin="0,0,0,8"/>
+                                    <TextBlock Text="1. Table Selection &amp; Data Fetch (from DLRS_MIGRATIONLOGTBL)" Foreground="#38BDF8" FontWeight="Bold" FontSize="14.5" Margin="0,0,0,8"/>
 
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -1201,7 +1216,7 @@
                                 </Button>
                             </Grid>
 
-                            <TextBlock x:Name="txtStage4Desc" Text="Executes the 7-step stored procedure (SP_LIS_DATA_MIGRATION) in [DLRSLSINF_4103PRSDB] to migrate Khatians, plots, owners, maps, and boundary data directly from [DLRS_Migration_Intrm] into the core production database."
+                            <TextBlock x:Name="txtStage4Desc" Text="Executes the 7-step stored procedure (SP_LIS_DATA_MIGRATION) in [DLRSLSINF_4103PRSDB] to migrate Khatians, plots, owners, maps, and boundary data directly from [DLRS_MIGRATIONLOGTBL] into the core production database."
                                        Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                             <!-- Lock Banner for Step 3 -->
