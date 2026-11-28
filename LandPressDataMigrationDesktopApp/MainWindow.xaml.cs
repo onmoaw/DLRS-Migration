@@ -541,6 +541,16 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (chkShowMigratedDbs != null)
                     chkShowMigratedDbs.Visibility = Visibility.Visible;
+
+                if (lstTables != null)
+                    lstTables.Visibility = Visibility.Visible;
+                if (fetchDataForSelectedTables != null)
+                {
+                    Grid.SetColumn(fetchDataForSelectedTables, 1);
+                    Grid.SetColumnSpan(fetchDataForSelectedTables, 1);
+                    fetchDataForSelectedTables.Width = 210;
+                    fetchDataForSelectedTables.Margin = new Thickness(12, 0, 0, 0);
+                }
             }
             else
             {
@@ -559,6 +569,17 @@ namespace LandPressDataMigrationDesktopApp
                 {
                     chkShowMigratedDbs.Visibility = Visibility.Collapsed;
                     chkShowMigratedDbs.IsChecked = false;
+                }
+
+                // Standard User view: Remove table selection entry list in conversion step and use pre-selected tables
+                if (lstTables != null)
+                    lstTables.Visibility = Visibility.Collapsed;
+                if (fetchDataForSelectedTables != null)
+                {
+                    Grid.SetColumn(fetchDataForSelectedTables, 0);
+                    Grid.SetColumnSpan(fetchDataForSelectedTables, 2);
+                    fetchDataForSelectedTables.Width = double.NaN;
+                    fetchDataForSelectedTables.Margin = new Thickness(0);
                 }
 
                 // Standard User view: Remove remaining time (ETA), speed, and record counts.

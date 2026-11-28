@@ -370,16 +370,16 @@ namespace LandPressDataMigrationDesktopApp
 
             if (borderParametersPanel != null)
             {
-                // Only show parameters panel for standard users if this step requires input (e.g. RS number)
-                borderParametersPanel.Visibility = (isAdmin || cfg.RequiresRsNumber) ? Visibility.Visible : Visibility.Collapsed;
+                // Completely hide parameter entry fields for standard users; use pre-configured/default values
+                borderParametersPanel.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
                 if (txtExecutionParamsHeader != null)
                 {
-                    txtExecutionParamsHeader.Text = isAdmin ? "Execution Parameters:" : "Step Configuration:";
+                    txtExecutionParamsHeader.Text = "Execution Parameters:";
                 }
             }
 
-            // RS Number panel
-            if (cfg.RequiresRsNumber)
+            // RS Number panel (only shown to Admin; standard users use pre-configured value)
+            if (isAdmin && cfg.RequiresRsNumber)
             {
                 panelParamRs.Visibility = Visibility.Visible;
                 txtStepRsNumber.Text = !string.IsNullOrEmpty(step.CustomRsNumber)
@@ -387,7 +387,7 @@ namespace LandPressDataMigrationDesktopApp
                     : (txtGlobalDesc02?.Text?.Trim() ?? "201801");
                 if (lblParamRs != null)
                 {
-                    lblParamRs.Text = isAdmin ? "RS Number (@Desc02):" : "RS Number:";
+                    lblParamRs.Text = "RS Number (@Desc02):";
                 }
             }
             else
@@ -466,7 +466,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (_steps.Count == 0) return;
             var step = CurrentStep;
-            if (step.Config.RequiresRsNumber && txtStepRsNumber != null)
+            if (UserSession.IsAdmin && step.Config.RequiresRsNumber && txtStepRsNumber != null)
             {
                 step.CustomRsNumber = txtStepRsNumber.Text.Trim();
             }
