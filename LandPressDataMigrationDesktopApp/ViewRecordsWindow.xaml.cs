@@ -37,6 +37,8 @@ namespace LandPressDataMigrationDesktopApp
         private bool _isPopulatingDropdowns = false;
         private bool _isFullscreenMode = false;
         private bool _isSyncingFsSelection = false;
+        private bool _isSyncingPlotsSlider = false;
+        private System.Windows.Controls.ScrollViewer? _dgPlotsScrollViewer;
         private double _savedLeftColWidth = 490;
         private List<KhatianReportRow> _currentKhatianReportRows = new();
 
@@ -100,6 +102,79 @@ namespace LandPressDataMigrationDesktopApp
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void DgPlots_Loaded(object sender, RoutedEventArgs e)
+        {
+            HookPlotsScrollViewer();
+        }
+
+        private void DgPlots_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdatePlotsHorizontalSliderRange();
+        }
+
+        private void HookPlotsScrollViewer()
+        {
+            if (_dgPlotsScrollViewer != null) return;
+            _dgPlotsScrollViewer = FindVisualChild<System.Windows.Controls.ScrollViewer>(dgPlots);
+            if (_dgPlotsScrollViewer != null)
+            {
+                _dgPlotsScrollViewer.ScrollChanged += DgPlotsScrollViewer_ScrollChanged;
+                UpdatePlotsHorizontalSliderRange();
+            }
+        }
+
+        private void DgPlotsScrollViewer_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+        {
+            UpdatePlotsHorizontalSliderRange();
+        }
+
+        private void UpdatePlotsHorizontalSliderRange()
+        {
+            if (_dgPlotsScrollViewer == null || slPlotsHorizontalScroll == null || pnlPlotsHorizontalSlider == null) return;
+
+            double max = _dgPlotsScrollViewer.ScrollableWidth;
+            if (max <= 1)
+            {
+                slPlotsHorizontalScroll.IsEnabled = false;
+                slPlotsHorizontalScroll.Maximum = 1;
+                slPlotsHorizontalScroll.Value = 0;
+                return;
+            }
+
+            _isSyncingPlotsSlider = true;
+            try
+            {
+                slPlotsHorizontalScroll.IsEnabled = true;
+                slPlotsHorizontalScroll.Maximum = max;
+                slPlotsHorizontalScroll.Value = _dgPlotsScrollViewer.HorizontalOffset;
+            }
+            finally
+            {
+                _isSyncingPlotsSlider = false;
+            }
+        }
+
+        private void SlPlotsHorizontalScroll_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isSyncingPlotsSlider) return;
+            if (_dgPlotsScrollViewer == null) HookPlotsScrollViewer();
+            _dgPlotsScrollViewer?.ScrollToHorizontalOffset(e.NewValue);
+        }
+
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild) return typedChild;
+                var nested = FindVisualChild<T>(child);
+                if (nested != null) return nested;
+            }
+            return null;
         }
 
         #region ================= LOADER FEEDBACK =================

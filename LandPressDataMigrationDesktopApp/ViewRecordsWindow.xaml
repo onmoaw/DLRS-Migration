@@ -44,23 +44,16 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
-        <!-- Search ComboBox Style (16px, dropdown values 16px bold) -->
-        <Style x:Key="SearchComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource ThemeInputBg}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+        <!-- Search ComboBox Style (16px, dropdown values 16px bold, inherits global Dark/Light template) -->
+        <Style x:Key="SearchComboBox" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Height" Value="38"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
-                    <Style TargetType="ComboBoxItem">
+                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                         <Setter Property="FontSize" Value="16"/>
                         <Setter Property="FontWeight" Value="Bold"/>
-                        <Setter Property="Padding" Value="10,6"/>
-                        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
                     </Style>
                 </Setter.Value>
             </Setter>
@@ -742,7 +735,9 @@
                                         <TextBlock Grid.Column="1" x:Name="txtPlotCount" Text="দাগ সংখ্যা: ০টি" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     </Grid>
 
-                                    <DataGrid x:Name="dgPlots" Style="{StaticResource ModernDataGrid}" MaxHeight="320">
+                                    <DataGrid x:Name="dgPlots" Style="{StaticResource ModernDataGrid}" MaxHeight="320"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                              Loaded="DgPlots_Loaded" SizeChanged="DgPlots_SizeChanged">
                                         <DataGrid.Columns>
                                             <!-- Serial Number in Bangla -->
                                             <DataGridTextColumn Header="#" Binding="{Binding SlNo, Converter={StaticResource BanglaNumConverter}}" Width="50"/>
@@ -778,7 +773,7 @@
                                                     </Style>
                                                 </DataGridTextColumn.ElementStyle>
                                             </DataGridTextColumn>
-                                            <DataGridTextColumn Header="দাগের মন্তব্য" Binding="{Binding PlotRemarks}" Width="*">
+                                            <DataGridTextColumn Header="দাগের মন্তব্য" Binding="{Binding PlotRemarks}" Width="220">
                                                 <DataGridTextColumn.ElementStyle>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="TextWrapping" Value="Wrap"/>
@@ -789,6 +784,19 @@
                                             </DataGridTextColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
+
+                                    <!-- Horizontal Scroll Slider for Plots & Land Classification Table -->
+                                    <Grid x:Name="pnlPlotsHorizontalSlider" Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="↔️ অনুভূমিক স্ক্রল:" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <Slider x:Name="slPlotsHorizontalScroll" Grid.Column="1" Minimum="0" Maximum="100" Value="0"
+                                                SmallChange="20" LargeChange="80" VerticalAlignment="Center"
+                                                ValueChanged="SlPlotsHorizontalScroll_ValueChanged"
+                                                ToolTip="দাগ ও জমির শ্রেণী টেবিল ডানে-বামে দেখতে স্লাইডারটি টানুন"/>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
 

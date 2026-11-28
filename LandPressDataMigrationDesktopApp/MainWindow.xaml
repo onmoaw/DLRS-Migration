@@ -1107,9 +1107,10 @@
                                             <TextBlock x:Name="lblConversionSpeed" Text="" Foreground="{DynamicResource ThemeTextMuted}" FontSize="13" Margin="10,0,0,0"/>
                                         </StackPanel>
 
-                                        <!-- Remaining Time & Percentage -->
+                                        <!-- Remaining Time, Elapsed Time & Percentage -->
                                         <StackPanel Orientation="Horizontal" Grid.Column="1">
                                             <TextBlock x:Name="lblConversionEta" Text="⏱ Remaining: --:--" Foreground="#F59E0B" FontWeight="Bold" FontSize="13.5" Margin="0,0,14,0"/>
+                                            <TextBlock x:Name="lblConversionElapsed" Text="⏱ Elapsed: 00:00" Foreground="#38BDF8" FontWeight="Bold" FontSize="13.5" Margin="0,0,14,0"/>
                                             <TextBlock x:Name="lblConversionPercent" Text="0.0%" Foreground="#10B981" FontWeight="Bold" FontSize="14.5"/>
                                         </StackPanel>
                                     </Grid>

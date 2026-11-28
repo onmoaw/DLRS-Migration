@@ -515,7 +515,8 @@ namespace LandPressDataMigrationDesktopApp
                 _overallTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
                 _overallTimer.Tick += (s, ev) =>
                 {
-                    lblOverallTimer.Text = $"Total Elapsed: {_overallStopwatch.Elapsed:mm\\:ss}";
+                    int overallPct = _steps.Count > 0 ? (int)Math.Round((double)_steps.Count(x => x.IsCompleted || x.IsSkipped || x.IsBypassedDueToDb) / _steps.Count * 100.0) : 0;
+                    lblOverallTimer.Text = $"Total Elapsed: {_overallStopwatch.Elapsed:mm\\:ss}  •  {overallPct}%";
                 };
                 _overallTimer.Start();
             }
@@ -706,17 +707,19 @@ namespace LandPressDataMigrationDesktopApp
             string procId = cfg.ProcId;
             string spName = cfg.SpName;
             bool isAdmin = UserSession.IsAdmin;
+            int initPct = _steps.Count > 0 ? (int)Math.Round((double)_steps.Count(x => x.IsCompleted || x.IsSkipped || x.IsBypassedDueToDb) / _steps.Count * 100.0) : 0;
             lblTimer.Text = isAdmin
-                ? $"⏳ Executing {procId} on SQL Server... Elapsed: 00:00"
-                : $"⏳ Executing Step {_currentStepIndex}... Elapsed: 00:00";
+                ? $"⏳ Executing {procId} on SQL Server... Elapsed: 00:00 ({initPct}% complete)"
+                : $"⏳ Executing Step {_currentStepIndex}... Elapsed: 00:00 ({initPct}% complete)";
 
             var sw = Stopwatch.StartNew();
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             timer.Tick += (s, e) =>
             {
+                int pct = _steps.Count > 0 ? (int)Math.Round((double)_steps.Count(x => x.IsCompleted || x.IsSkipped || x.IsBypassedDueToDb) / _steps.Count * 100.0) : 0;
                 lblTimer.Text = isAdmin
-                    ? $"⏳ Executing {procId} on SQL Server... Elapsed: {sw.Elapsed:mm\\:ss}"
-                    : $"⏳ Executing Step {_currentStepIndex}... Elapsed: {sw.Elapsed:mm\\:ss}";
+                    ? $"⏳ Executing {procId} on SQL Server... Elapsed: {sw.Elapsed:mm\\:ss} ({pct}% complete)"
+                    : $"⏳ Executing Step {_currentStepIndex}... Elapsed: {sw.Elapsed:mm\\:ss} ({pct}% complete)";
             };
             timer.Start();
 

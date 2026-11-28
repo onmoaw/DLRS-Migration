@@ -842,9 +842,23 @@ namespace LandPressDataMigrationDesktopApp
             if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
                 return;
 
+            if (btnBackupCoreDb != null) btnBackupCoreDb.IsEnabled = false;
             try
             {
-                string targetBak = System.IO.Path.Combine(_selectedWorkspaceFolder, $"{_BaseDbName}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
+                string backupFolder = System.IO.Path.Combine(_selectedWorkspaceFolder, "Backup");
+                if (!System.IO.Directory.Exists(backupFolder))
+                {
+                    System.IO.Directory.CreateDirectory(backupFolder);
+                }
+
+                string rawDevice = Environment.MachineName ?? "DEVICE";
+                foreach (char invalidChar in System.IO.Path.GetInvalidFileNameChars())
+                {
+                    rawDevice = rawDevice.Replace(invalidChar, '_');
+                }
+
+                string timestampSuffix = DateTime.Now.ToString("yyMMddHHmm");
+                string targetBak = System.IO.Path.Combine(backupFolder, $"{_BaseDbName}-{timestampSuffix}-{rawDevice}.bak");
                 string sql = $"BACKUP DATABASE [{_BaseDbName}] TO DISK = N'{targetBak.Replace("'", "''")}' WITH STATS = 10, INIT, FORMAT;";
 
                 using var conn = new SqlConnection(_baseConnectionString);
@@ -852,12 +866,16 @@ namespace LandPressDataMigrationDesktopApp
                 using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 600 };
                 await cmd.ExecuteNonQueryAsync();
 
-                System.Windows.MessageBox.Show($"Core database [{_BaseDbName}] backed up successfully to:\n\n{targetBak}", "Backup Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+                System.Windows.MessageBox.Show($"Main database [{_BaseDbName}] backed up successfully to:\n\n{targetBak}", "Backup Completed", MessageBoxButton.OK, MessageBoxImage.Information);
                 UpdateWorkspaceStatusUI();
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Core database backup failed:\n\n{ex.Message}", "Backup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Main database backup failed:\n\n{ex.Message}", "Backup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                if (btnBackupCoreDb != null) btnBackupCoreDb.IsEnabled = true;
             }
         }
 
@@ -2466,7 +2484,10 @@ namespace LandPressDataMigrationDesktopApp
             _autoPipelineTimer.Tick += (s, e) =>
             {
                 if (txtFullAutoTimer != null)
-                    txtFullAutoTimer.Text = $"⏱ {_autoPipelineStopwatch.Elapsed:mm\\:ss}";
+                {
+                    double pct = pbFullAutoPipeline?.Value ?? 0;
+                    txtFullAutoTimer.Text = $"⏱ {_autoPipelineStopwatch.Elapsed:mm\\:ss}  •  {pct:F0}%";
+                }
             };
             _autoPipelineTimer.Start();
 
@@ -3046,6 +3067,7 @@ namespace LandPressDataMigrationDesktopApp
                                 if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
                                 if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
                                 if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+                                if (lblConversionElapsed != null) lblConversionElapsed.Text = $"⏱ Elapsed: {sw.Elapsed:mm\\:ss}";
 
                                 if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
                             });
@@ -3103,6 +3125,7 @@ namespace LandPressDataMigrationDesktopApp
                                 if (lblConversionCount != null) lblConversionCount.Text = $"{curr:N0} / {totalToConvert:N0} records";
                                 if (lblConversionSpeed != null) lblConversionSpeed.Text = $"Speed: {spd:N0} rec/s";
                                 if (lblConversionEta != null) lblConversionEta.Text = $"⏱ Remaining: {TimeSpan.FromSeconds(Math.Max(0, rem)):mm\\:ss}";
+                                if (lblConversionElapsed != null) lblConversionElapsed.Text = $"⏱ Elapsed: {sw.Elapsed:mm\\:ss}";
 
                                 if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 45.0 + (pct * 0.15);
                             });
@@ -3123,6 +3146,7 @@ namespace LandPressDataMigrationDesktopApp
                 if (pbConversion != null) pbConversion.Value = 100;
                 if (lblConversionPercent != null) lblConversionPercent.Text = "100%";
                 if (lblConversionEta != null) lblConversionEta.Text = "⏱ Finished";
+                if (lblConversionElapsed != null) lblConversionElapsed.Text = $"⏱ Elapsed: {sw.Elapsed:mm\\:ss}";
             });
         }
 
@@ -3528,6 +3552,7 @@ namespace LandPressDataMigrationDesktopApp
             lblConversionPercent.Text = "0.0%";
             lblConversionCount.Text = $"0 / {totalToConvert:N0} records";
             lblConversionEta.Text = "⏱ Estimating...";
+            if (lblConversionElapsed != null) lblConversionElapsed.Text = "⏱ Elapsed: 00:00";
             lblConversionSpeed.Text = "";
             FontConversionSts.Visibility = Visibility.Collapsed;
 
@@ -3557,6 +3582,7 @@ namespace LandPressDataMigrationDesktopApp
                     lblConversionCount.Text = $"{currentProcessed:N0} / {totalToConvert:N0} records ({currentTable})";
                     lblConversionSpeed.Text = $"  •  Speed: {speed:N0} rec/s";
                     lblConversionEta.Text = $"⏱ Remaining: {eta:mm\\:ss}";
+                    if (lblConversionElapsed != null) lblConversionElapsed.Text = $"⏱ Elapsed: {sw.Elapsed:mm\\:ss}";
                 });
             }
 
@@ -3704,6 +3730,7 @@ namespace LandPressDataMigrationDesktopApp
                 lblConversionPercent.Text = "100.0%";
                 lblConversionCount.Text = $"{totalToConvert:N0} / {totalToConvert:N0} records";
                 lblConversionEta.Text = $"⏱ Finished in {sw.Elapsed:mm\\:ss}";
+                if (lblConversionElapsed != null) lblConversionElapsed.Text = $"⏱ Elapsed: {sw.Elapsed:mm\\:ss}";
                 lblConversionSpeed.Text = $"  •  Avg: {(totalToConvert / Math.Max(0.1, sw.Elapsed.TotalSeconds)):N0} rec/s";
 
                 int warnCount = PipelineExecutionLogger.WarningCount;
