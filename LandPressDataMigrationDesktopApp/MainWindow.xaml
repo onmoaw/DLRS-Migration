@@ -365,7 +365,7 @@
                                             <TextBlock x:Name="txtIntrmDbStatus" Text="⚪ Waiting for Server Connection" Foreground="#F59E0B" FontWeight="Bold" FontSize="12.5" VerticalAlignment="Center"/>
                                         </StackPanel>
 
-                                        <!-- Action Buttons: Migration Logs & Create/Repair DLRS_MIGRATIONLOGTBL -->
+                                        <!-- Action Buttons: Migration Logs & Create/Repair DLRS_MIGRATIONLOGDB -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <!-- View Migration Logs Button -->
                                             <Button x:Name="btnViewIntrmLogs" Visibility="Collapsed"
@@ -422,7 +422,7 @@
                             <Border x:Name="borderIntrmBlockedNotice" Visibility="Collapsed" Background="#450A0A" BorderBrush="#EF4444" BorderThickness="1.5" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⛔" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="txtIntrmBlockedReason" Text="Access blocked: Create/Validate DLRS_MIGRATIONLOGTBL before proceeding." Foreground="#FCA5A5" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="txtIntrmBlockedReason" Text="Access blocked: Create/Validate DLRS_MIGRATIONLOGDB before proceeding." Foreground="#FCA5A5" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
 
@@ -886,7 +886,7 @@
                             <StackPanel x:Name="panelManualStep1">
                                 <TextBlock Text="— OR EXECUTE STEP 1 MANUALLY (SINGLE STEP) —" Foreground="{DynamicResource ThemeTextMuted}" FontSize="12" FontWeight="Bold" Margin="0,0,0,8" HorizontalAlignment="Center"/>
 
-                                <TextBlock x:Name="txtStep1Desc" Text="Copies tblHalsabek, tblLinfo01, and tblLinfo02 from the selected source database into [DLRS_MIGRATIONLOGTBL]. Automatically converts columns to Unicode NVARCHAR, sets initial tracking columns, and assigns sequential RowIds. The source database is NOT modified."
+                                <TextBlock x:Name="txtStep1Desc" Text="Copies tblHalsabek, tblLinfo01, and tblLinfo02 from the selected source database into [DLRS_MIGRATIONLOGDB]. Automatically converts columns to Unicode NVARCHAR, sets initial tracking columns, and assigns sequential RowIds. The source database is NOT modified."
                                            Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                                 <!-- Lock Banner for Step 1 (Shown when no DB selected) -->
@@ -911,7 +911,7 @@
                                         <TextBlock Text="✅" FontSize="22" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="STEP 1 COMPLETED — DATA STAGED IN INTERMEDIATE DB" Foreground="{DynamicResource ThemeSuccessText}" FontWeight="Bold" FontSize="13"/>
-                                            <TextBlock x:Name="txtStep1CompletedDetail" Text="All records copied to [DLRS_MIGRATIONLOGTBL] with Unicode schema and tracking columns." Foreground="{DynamicResource ThemeSuccessText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                            <TextBlock x:Name="txtStep1CompletedDetail" Text="All records copied to [DLRS_MIGRATIONLOGDB] with Unicode schema and tracking columns." Foreground="{DynamicResource ThemeSuccessText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                         </StackPanel>
                                         <Button Grid.Column="2" Content="➔ Go to Step 2" Style="{StaticResource AppBtn}" Padding="14,8" Margin="10,0,0,0" VerticalAlignment="Center" Click="BtnGoToStep2_Click">
                                             <Button.Background>
@@ -943,7 +943,7 @@
                                     </Button.Background>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="📥" Margin="0,0,8,0" FontSize="16" VerticalAlignment="Center"/>
-                                        <TextBlock x:Name="txtBtnCopyToIntrm" Text="Copy Source Data to DLRS_MIGRATIONLOGTBL (Single Step)" FontSize="14.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="txtBtnCopyToIntrm" Text="Copy Source Data to DLRS_MIGRATIONLOGDB (Single Step)" FontSize="14.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -990,7 +990,7 @@
                                 </StackPanel>
                             </Grid>
 
-                            <TextBlock x:Name="txtStage3Desc" Text="Select staged tables from [DLRS_MIGRATIONLOGTBL], fetch records, convert ANSI (Adarshalipi) text to Unicode with real-time ETA tracking, and write the converted data back to [DLRS_MIGRATIONLOGTBL]."
+                            <TextBlock x:Name="txtStage3Desc" Text="Select staged tables from [DLRS_MIGRATIONLOGDB], fetch records, convert ANSI (Adarshalipi) text to Unicode with real-time ETA tracking, and write the converted data back to [DLRS_MIGRATIONLOGDB]."
                                        Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                             <!-- Lock Banner for Step 2 (Shown when Step 1 not complete) -->
@@ -999,7 +999,7 @@
                                     <TextBlock Text="🔒" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="STEP 2 IS LOCKED — Complete Step 1 First" Foreground="{DynamicResource ThemeLockText}" FontSize="13" FontWeight="Bold"/>
-                                        <TextBlock Text="Copy source data to [DLRS_MIGRATIONLOGTBL] first before running font conversion." Foreground="{DynamicResource ThemeLockText}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Text="Copy source data to [DLRS_MIGRATIONLOGDB] first before running font conversion." Foreground="{DynamicResource ThemeLockText}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -1008,7 +1008,7 @@
                             <Border x:Name="borderStage3UnlockedBanner" Visibility="Collapsed" Background="{DynamicResource ThemeSuccessBg}" BorderBrush="{DynamicResource ThemeSuccessBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="✅" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Step 1 completed! Data is staged in [DLRS_MIGRATIONLOGTBL]. Ready for font conversion." Foreground="{DynamicResource ThemeSuccessText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Step 1 completed! Data is staged in [DLRS_MIGRATIONLOGDB]. Ready for font conversion." Foreground="{DynamicResource ThemeSuccessText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
 
@@ -1029,7 +1029,7 @@
                             <!-- SECTION 2A: TABLE SELECTION & FETCH -->
                             <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="#0284C7" BorderThickness="1.5" CornerRadius="8" Padding="14" Margin="0,0,0,12">
                                 <StackPanel>
-                                    <TextBlock Text="1. Table Selection &amp; Data Fetch (from DLRS_MIGRATIONLOGTBL)" Foreground="#38BDF8" FontWeight="Bold" FontSize="14.5" Margin="0,0,0,8"/>
+                                    <TextBlock Text="1. Table Selection &amp; Data Fetch (from DLRS_MIGRATIONLOGDB)" Foreground="#38BDF8" FontWeight="Bold" FontSize="14.5" Margin="0,0,0,8"/>
 
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -1216,7 +1216,7 @@
                                 </Button>
                             </Grid>
 
-                            <TextBlock x:Name="txtStage4Desc" Text="Executes the 7-step stored procedure (SP_LIS_DATA_MIGRATION) in [DLRSLSINF_4103PRSDB] to migrate Khatians, plots, owners, maps, and boundary data directly from [DLRS_MIGRATIONLOGTBL] into the core production database."
+                            <TextBlock x:Name="txtStage4Desc" Text="Executes the 7-step stored procedure (SP_LIS_DATA_MIGRATION) in [DLRSLSINF_4103PRSDB] to migrate Khatians, plots, owners, maps, and boundary data directly from [DLRS_MIGRATIONLOGDB] into the core production database."
                                        Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                             <!-- Lock Banner for Step 3 -->

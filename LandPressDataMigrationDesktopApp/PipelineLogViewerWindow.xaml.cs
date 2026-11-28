@@ -125,11 +125,11 @@ namespace LandPressDataMigrationDesktopApp
                 try
                 {
                     PipelineExecutionLogger.ExportToCsv(sfd.FileName);
-                    WpfMessageBox.Show($"Logs successfully exported to:\n{sfd.FileName}", "Export Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ModernMessageBox.Show($"Logs successfully exported to:\n{sfd.FileName}", "Export Successful", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    WpfMessageBox.Show($"Failed to export logs: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    ModernMessageBox.Show($"Failed to export logs: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -156,13 +156,13 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                WpfMessageBox.Show($"Could not open log file:\n{ex.Message}", "Open Log File", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show($"Could not open log file:\n{ex.Message}", "Open Log File", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
         private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
         {
-            var res = WpfMessageBox.Show("Are you sure you want to clear all log entries?", "Confirm Clear Logs", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var res = ModernMessageBox.Show("Are you sure you want to clear all log entries?", "Confirm Clear Logs", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res == MessageBoxResult.Yes)
             {
                 PipelineExecutionLogger.Clear();

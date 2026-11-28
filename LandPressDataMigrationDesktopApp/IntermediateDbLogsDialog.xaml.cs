@@ -109,7 +109,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (_logsTable == null || _logsTable.Rows.Count == 0)
             {
-                MessageBox.Show("No log entries to export.", "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("No log entries to export.", "Export", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -143,7 +143,7 @@ namespace LandPressDataMigrationDesktopApp
 
                     File.WriteAllText(sfd.FileName, sb.ToString(), Encoding.UTF8);
 
-                    MessageBox.Show(
+                    ModernMessageBox.Show(
                         $"Exported {_logsTable.Rows.Count} records successfully to:\n{sfd.FileName}",
                         "Export Successful",
                         MessageBoxButton.OK,
@@ -152,7 +152,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Export failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Export failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -178,7 +178,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not open log file:\n{ex.Message}", "Open Log File", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show($"Could not open log file:\n{ex.Message}", "Open Log File", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

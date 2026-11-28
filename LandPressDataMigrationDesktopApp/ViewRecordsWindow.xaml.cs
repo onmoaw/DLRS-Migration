@@ -541,7 +541,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (cmbMouza.SelectedItem is not AreaHierarchyItem selectedMouza)
             {
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     "অনুগ্রহ করে ড্রপডাউন থেকে একটি মৌজা নির্বাচন করুন।",
                     "মৌজা নির্বাচন আবশ্যক",
                     MessageBoxButton.OK,
@@ -551,7 +551,7 @@ namespace LandPressDataMigrationDesktopApp
 
             if (string.IsNullOrWhiteSpace(_coreConnectionString))
             {
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     "ডাটাবেজ সংযোগ সক্রিয় নয়। অনুগ্রহ করে মূল উইন্ডো থেকে ডাটাবেজ সংযোগ নিশ্চিত করুন।",
                     "ডাটাবেজ সংযোগ অনুপস্থিত",
                     MessageBoxButton.OK,
@@ -612,7 +612,7 @@ namespace LandPressDataMigrationDesktopApp
             catch (Exception ex)
             {
                 txtStatus.Text = "ডাটা সংগ্রহের সময় ত্রুটি: " + ex.Message;
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     "রেকর্ড অনুসন্ধানের সময় ডাটাবেজে ত্রুটি হয়েছে:\n\n" + ex.Message +
                     "\n\nঅনুগ্রহ করে নিশ্চিত করুন [dbo_lis].[SP_LIS_GET_MIGRATED_RECORDS] ডাটাবেজে তৈরি করা আছে।",
                     "Database Query Error",
@@ -816,12 +816,12 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!UserSession.IsAdmin)
             {
-                MessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য এই সুবিধাটি অনুমোদিত।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য এই সুবিধাটি অনুমোদিত।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (_dsRecords == null || !_dsRecords.Tables.Contains("Khatians") || _dsRecords.Tables["Khatians"].Rows.Count == 0)
             {
-                MessageBox.Show("এক্সপোর্ট করার মতো কোনো খতিয়ান ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("এক্সপোর্ট করার মতো কোনো খতিয়ান ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -862,7 +862,7 @@ namespace LandPressDataMigrationDesktopApp
                 // Write with UTF-8 BOM for proper Bengali rendering in Excel
                 File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
 
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     $"খতিয়ান তালিকা সফলভাবে এক্সপোর্ট করা হয়েছে:\n\n{sfd.FileName}",
                     "এক্সপোর্ট সম্পন্ন",
                     MessageBoxButton.OK,
@@ -870,7 +870,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show("CSV এক্সপোর্টে ত্রুটি: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show("CSV এক্সপোর্টে ত্রুটি: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -881,12 +881,12 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!UserSession.IsAdmin)
             {
-                MessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য এই সুবিধাটি অনুমোদিত।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য এই সুবিধাটি অনুমোদিত।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (_dsRecords == null || !_dsRecords.Tables.Contains("Khatians") || _dsRecords.Tables["Khatians"].Rows.Count == 0)
             {
-                MessageBox.Show("এক্সপোর্ট করার মতো কোনো বিস্তারিত ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("এক্সপোর্ট করার মতো কোনো বিস্তারিত ডাটা নেই।", "তথ্য নেই", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -965,7 +965,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
 
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     $"সম্পূর্ণ বিস্তারিত রেকর্ড সফলভাবে এক্সপোর্ট করা হয়েছে ({rowCount} সারি):\n\n{sfd.FileName}",
                     "এক্সপোর্ট সম্পন্ন",
                     MessageBoxButton.OK,
@@ -973,7 +973,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show("CSV এক্সপোর্টে ত্রুটি: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show("CSV এক্সপোর্টে ত্রুটি: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1103,7 +1103,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!UserSession.IsAdmin)
             {
-                MessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য প্রিন্ট সুবিধা প্রযোজ্য।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("শুধুমাত্র অ্যাডমিন ব্যবহারকারীদের জন্য প্রিন্ট সুবিধা প্রযোজ্য।", "অনুমতি সীমাবদ্ধ", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1135,7 +1135,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"প্রিন্ট করার সময় সমস্যা হয়েছে:\n{ex.Message}", "প্রিন্ট ত্রুটি", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"প্রিন্ট করার সময় সমস্যা হয়েছে:\n{ex.Message}", "প্রিন্ট ত্রুটি", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

@@ -187,7 +187,7 @@ namespace LandPressDataMigrationDesktopApp
                 // FAILSAFE: Cannot go back if the previous step is completed
                 if (_stepCompleted[_currentStep - 1])
                 {
-                    MessageBox.Show(
+                    ModernMessageBox.Show(
                         "Failsafe Active: The previous step has already been completed.\n\nGoing back to completed steps is disabled to prevent duplicate or conflicting modifications.",
                         "Step Locked",
                         MessageBoxButton.OK,
@@ -203,7 +203,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!_stepCompleted[_currentStep])
             {
-                System.Windows.MessageBox.Show(
+                ModernMessageBox.Show(
                     $"Please complete Step {_currentStep} before proceeding.",
                     "Step Incomplete",
                     MessageBoxButton.OK,

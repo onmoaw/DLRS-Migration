@@ -354,7 +354,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Database (@Desc01):" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="13" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="txtParamDesc01" Grid.Column="1" Text="DLRS_MIGRATIONLOGTBL" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="13.5" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="txtParamDesc01" Grid.Column="1" Text="DLRS_MIGRATIONLOGDB" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="13.5" FontWeight="SemiBold"/>
                                 </Grid>
 
                                 <!-- RS Number Input (Shown if step uses @Desc02) -->

@@ -186,7 +186,7 @@ namespace LandPressDataMigrationDesktopApp
 
             if (_steps.Count == 0)
             {
-                MessageBox.Show("No migration steps are currently enabled in AppConfig.PipelineSteps.", "Pipeline Configuration Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("No migration steps are currently enabled in AppConfig.PipelineSteps.", "Pipeline Configuration Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -575,7 +575,7 @@ namespace LandPressDataMigrationDesktopApp
                             ? $"Step {i} ({step.Config.Title})"
                             : $"Step {i} ({step.Config.GetTitle(false)})";
 
-                        var choice = MessageBox.Show(
+                        var choice = ModernMessageBox.Show(
                             $"{stepName} encountered an error:\n\n{step.StatusText}\n\nDo you want to skip this step and continue the rest of the migration sequence?",
                             "Migration Step Alert",
                             MessageBoxButton.YesNo,
@@ -693,7 +693,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (string.IsNullOrWhiteSpace(_sourceDbName))
             {
-                MessageBox.Show("Source staging database name is missing.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show("Source staging database name is missing.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
 
@@ -901,7 +901,7 @@ namespace LandPressDataMigrationDesktopApp
             {
                 if (_steps[_currentStepIndex - 2].IsCompleted)
                 {
-                    MessageBox.Show(
+                    ModernMessageBox.Show(
                         "Failsafe Active: The previous step has already been completed and committed.\n\nGoing back to completed steps is disabled to prevent duplicate operations or data conflicts.",
                         "Step Locked",
                         MessageBoxButton.OK,
@@ -916,7 +916,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (CurrentStep.Config.IsRequired && !CurrentStep.IsCompleted)
             {
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     $"Step {_currentStepIndex} is a REQUIRED step.\n\nYou must successfully execute this step before proceeding to the next step.",
                     "Required Step Incomplete",
                     MessageBoxButton.OK,
@@ -934,7 +934,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (CurrentStep.Config.IsRequired)
             {
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     $"Step {_currentStepIndex} ({CurrentStep.Config.Title}) is a REQUIRED step and cannot be skipped.",
                     "Cannot Skip Required Step",
                     MessageBoxButton.OK,
@@ -1019,7 +1019,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                var res = MessageBox.Show(
+                var res = ModernMessageBox.Show(
                     $"🎉 Sequential Migration Complete!\n\nAll required migration steps have been executed and saved into [DLRSLSINF_4103PRSDB].\n\n(Details: {ex.Message})\n\nClick OK to return to the main window.",
                     "Data Migration Complete",
                     MessageBoxButton.OK,
@@ -1047,7 +1047,7 @@ namespace LandPressDataMigrationDesktopApp
 
         private async void BtnDeploySp_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show(
+            var result = ModernMessageBox.Show(
                 "This will verify that all stored procedures used in this pipeline exist in the target database [DLRSLSINF_4103PRSDB]:\n\n" +
                 "• dbo.SP_LIS_DATA_MIGRATION\n" +
                 "• dbo.SP_LIS_DATA_MIGRATION_01\n" +
@@ -1065,7 +1065,7 @@ namespace LandPressDataMigrationDesktopApp
             try
             {
                 var (allOk, summary) = await StoredProcedureDeployer.DeployAllProceduresAsync(_targetConnectionString);
-                MessageBox.Show(
+                ModernMessageBox.Show(
                     summary,
                     allOk ? "Stored Procedures Verified" : "Verification Report",
                     MessageBoxButton.OK,
@@ -1073,7 +1073,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Verification encountered an error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Verification encountered an error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1094,7 +1094,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(
+                ModernMessageBox.Show(
                     "Error opening View Records window:\n" + ex.Message,
                     "View Records Error",
                     MessageBoxButton.OK,

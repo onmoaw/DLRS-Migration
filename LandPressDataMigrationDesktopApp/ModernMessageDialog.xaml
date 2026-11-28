@@ -1,0 +1,114 @@
+<Window x:Class="LandPressDataMigrationDesktopApp.ModernMessageDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Notification"
+        Width="490"
+        MaxWidth="600"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+    <Border x:Name="cardRoot"
+            Margin="12"
+            Background="{DynamicResource ThemeCardBg}"
+            BorderBrush="#10B981"
+            BorderThickness="1.5"
+            CornerRadius="14"
+            Padding="22">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="22" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.32"/>
+        </Border.Effect>
+
+        <StackPanel>
+            <!-- Top Header: Icon Badge + Caption -->
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="badgeBg" Width="44" Height="44" CornerRadius="22" Background="#065F46" Margin="0,0,14,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="txtIcon" Text="✔" Foreground="#34D399" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="txtTitle" Text="Notification" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="txtTypeTag" Text="INFORMATION" Foreground="#10B981" FontSize="10.5" FontWeight="Bold" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Scrollable Message Body -->
+            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,16">
+                <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock x:Name="txtMessage"
+                               Text=""
+                               Foreground="{DynamicResource ThemeTextPrimary}"
+                               FontSize="13"
+                               LineHeight="20"
+                               TextWrapping="Wrap"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Action Buttons Row -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnCancel" Content="Cancel" Visibility="Collapsed" Click="BtnCancel_Click"
+                        Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5"
+                        Padding="18,8" Margin="0,0,8,0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <Button x:Name="btnSecondary" Content="No" Visibility="Collapsed" Click="BtnSecondary_Click"
+                        Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5"
+                        Padding="20,8" Margin="0,0,8,0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <Button x:Name="btnPrimary" Content="OK" IsDefault="True" Click="BtnPrimary_Click"
+                        Foreground="White" FontWeight="Bold" FontSize="13" Padding="24,8" Cursor="Hand" BorderThickness="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.9"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.78"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

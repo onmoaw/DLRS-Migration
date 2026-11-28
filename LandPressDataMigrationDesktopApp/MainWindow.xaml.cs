@@ -384,7 +384,7 @@ namespace LandPressDataMigrationDesktopApp
                 string server = !string.IsNullOrWhiteSpace(_ServerName) ? _ServerName : txtServer.Text.Trim();
                 if (string.IsNullOrWhiteSpace(server))
                 {
-                    System.Windows.MessageBox.Show(
+                    ModernMessageBox.Show(
                         "Please enter a server name or connect to SQL Server first.",
                         "Server Connection Required",
                         MessageBoxButton.OK,
@@ -402,7 +402,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(
+                ModernMessageBox.Show(
                     "Error opening View Records window:\n" + ex.Message,
                     "View Records Error",
                     MessageBoxButton.OK,
@@ -482,12 +482,12 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (step == 2 && !_isStage2Completed)
             {
-                System.Windows.MessageBox.Show("Please complete Step 1 (Copy to Intermediate DB) first.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Please complete Step 1 (Copy to Intermediate DB) first.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (step == 3 && !_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Please complete Step 2 (Unicode Font Conversion & Intermediate DB Update) first.", "Step 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Please complete Step 2 (Unicode Font Conversion & Intermediate DB Update) first.", "Step 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -504,12 +504,12 @@ namespace LandPressDataMigrationDesktopApp
         private void ChipStep2_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (_isStage2Completed) ShowStep(2);
-            else System.Windows.MessageBox.Show("Please complete Step 1 (Copy to Intermediate DB) first.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+            else ModernMessageBox.Show("Please complete Step 1 (Copy to Intermediate DB) first.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         private void ChipStep3_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (_isStage3Completed) ShowStep(3);
-            else System.Windows.MessageBox.Show("Please complete Step 2 (Unicode Font Conversion) first.", "Step 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+            else ModernMessageBox.Show("Please complete Step 2 (Unicode Font Conversion) first.", "Step 2 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void ApplyRoleView()
@@ -634,7 +634,7 @@ namespace LandPressDataMigrationDesktopApp
             string norm = WorkspaceDirectoryManager.NormalizePath(folderPath);
             if (!WorkspaceDirectoryManager.EnsureFolderAndCheckAccess(norm, out string? errMsg))
             {
-                System.Windows.MessageBox.Show($"Unable to use folder:\n{errMsg}\n\nPlease choose a folder where you have read and write permissions.", "Invalid Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show($"Unable to use folder:\n{errMsg}\n\nPlease choose a folder where you have read and write permissions.", "Invalid Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -752,7 +752,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
             {
-                System.Windows.MessageBox.Show("Please ensure server is connected and dedicated folder is selected.", "Missing Configuration", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Please ensure server is connected and dedicated folder is selected.", "Missing Configuration", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -782,11 +782,11 @@ namespace LandPressDataMigrationDesktopApp
                 await conn.OpenAsync();
                 LoadDatabases(conn);
 
-                System.Windows.MessageBox.Show($"Core Database [{_BaseDbName}] restored successfully into your dedicated folder.", "Core DB Ready", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show($"Core Database [{_BaseDbName}] restored successfully into your dedicated folder.", "Core DB Ready", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Failed to restore Core Database:\n\n{ex.Message}", "Restore Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Failed to restore Core Database:\n\n{ex.Message}", "Restore Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await CheckAndValidateCoreDbAsync();
             }
             finally
@@ -800,7 +800,7 @@ namespace LandPressDataMigrationDesktopApp
             if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
                 return;
 
-            var res = System.Windows.MessageBox.Show(
+            var res = ModernMessageBox.Show(
                 $"Core database [{_BaseDbName}] will be detached from its current external location and placed into your dedicated folder:\n\n{_selectedWorkspaceFolder}\n\nProceed?",
                 "Relocate Core Database", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes) return;
@@ -818,17 +818,17 @@ namespace LandPressDataMigrationDesktopApp
                 {
                     await IntermediateDbService.AttachDatabaseAsync(_baseConnectionString, _BaseDbName, targetMdf);
                     await CheckAndValidateCoreDbAsync();
-                    System.Windows.MessageBox.Show($"Core Database [{_BaseDbName}] re-attached from dedicated folder.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ModernMessageBox.Show($"Core Database [{_BaseDbName}] re-attached from dedicated folder.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
-                    System.Windows.MessageBox.Show($"Core database [{_BaseDbName}] has been detached from external location.\n\nPlease select the backup file (.bak) to restore it into your dedicated folder.", "Select Backup File", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ModernMessageBox.Show($"Core database [{_BaseDbName}] has been detached from external location.\n\nPlease select the backup file (.bak) to restore it into your dedicated folder.", "Select Backup File", MessageBoxButton.OK, MessageBoxImage.Information);
                     BtnRestoreCoreDb_Click(sender, e);
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Failed to relocate core database: {ex.Message}", "Relocation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Failed to relocate core database: {ex.Message}", "Relocation Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 await CheckAndValidateCoreDbAsync();
             }
             finally
@@ -866,12 +866,12 @@ namespace LandPressDataMigrationDesktopApp
                 using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 600 };
                 await cmd.ExecuteNonQueryAsync();
 
-                System.Windows.MessageBox.Show($"Main database [{_BaseDbName}] backed up successfully to:\n\n{targetBak}", "Backup Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show($"Main database [{_BaseDbName}] backed up successfully to:\n\n{targetBak}", "Backup Completed", MessageBoxButton.OK, MessageBoxImage.Information);
                 UpdateWorkspaceStatusUI();
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Main database backup failed:\n\n{ex.Message}", "Backup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Main database backup failed:\n\n{ex.Message}", "Backup Failed", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -884,7 +884,7 @@ namespace LandPressDataMigrationDesktopApp
             if (string.IsNullOrEmpty(_baseConnectionString) || string.IsNullOrEmpty(_selectedWorkspaceFolder))
                 return;
 
-            var res = System.Windows.MessageBox.Show(
+            var res = ModernMessageBox.Show(
                 $"Staging database [{AppConfig.IntermediateDbName}] will be detached from its external location and moved/recreated inside your dedicated folder:\n\n{_selectedWorkspaceFolder}\n\nProceed?",
                 "Relocate Staging Database", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes) return;
@@ -914,7 +914,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Failed to relocate staging database: {ex.Message}", "Relocation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Failed to relocate staging database: {ex.Message}", "Relocation Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1194,7 +1194,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (string.IsNullOrEmpty(_baseConnectionString))
             {
-                System.Windows.MessageBox.Show("Please connect to a SQL Server instance first.", "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Please connect to a SQL Server instance first.", "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1230,7 +1230,7 @@ namespace LandPressDataMigrationDesktopApp
                 txtIntrmDbDetail.Text = $"Error: {ex.Message}";
                 txtIntrmDbDetail.Visibility = Visibility.Visible;
 
-                System.Windows.MessageBox.Show(
+                ModernMessageBox.Show(
                     $"Failed to create or repair [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}\n\nPlease check server permissions (CREATE DATABASE / ALTER permissions required).",
                     "Database Creation Error",
                     MessageBoxButton.OK,
@@ -1247,7 +1247,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (string.IsNullOrEmpty(_baseConnectionString))
             {
-                System.Windows.MessageBox.Show("Please connect to a SQL Server instance first.", "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Please connect to a SQL Server instance first.", "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1962,7 +1962,7 @@ namespace LandPressDataMigrationDesktopApp
                 if (btnCopyToIntrmDb != null)
                 {
                     btnCopyToIntrmDb.IsEnabled = true;
-                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "Copy Source Data to DLRS_MIGRATIONLOGTBL (Single Step)";
+                    if (txtBtnCopyToIntrm != null) txtBtnCopyToIntrm.Text = "Copy Source Data to DLRS_MIGRATIONLOGDB (Single Step)";
                 }
             }
 
@@ -1974,7 +1974,7 @@ namespace LandPressDataMigrationDesktopApp
                     btnStartFullAuto.IsEnabled = false;
                     if (txtFullAutoStatus != null)
                     {
-                        txtFullAutoStatus.Text = "Waiting: Initialize [DLRS_MIGRATIONLOGTBL] before starting.";
+                        txtFullAutoStatus.Text = "Waiting: Initialize [DLRS_MIGRATIONLOGDB] before starting.";
                         txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(245, 158, 11));
                     }
                 }
@@ -2450,7 +2450,7 @@ namespace LandPressDataMigrationDesktopApp
                     "Migration Blocked: Unit Already Migrated",
                     "Pre-Check (tblUnitMigrationLog)",
                     $"Unit code(s) in database [{_DbName}] have already been migrated and recorded as COMPLETED in tblUnitMigrationLog.\n\nAutomated pipeline will NOT proceed for this unit code to prevent duplicate data insertion.",
-                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_MIGRATIONLOGTBL].dbo.tblUnitMigrationLog.",
+                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_MIGRATIONLOGDB].dbo.tblUnitMigrationLog.",
                     allowSkip: false);
                 PipelineExecutionLogger.LogError("Pre-Check", $"Automated pipeline blocked: Unit code(s) in [{_DbName}] already migrated.");
                 return;
@@ -2496,7 +2496,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (txtFullAutoStatus != null)
                 {
-                    txtFullAutoStatus.Text = "Phase 1/3: Staging tables from source into DLRS_MIGRATIONLOGTBL...";
+                    txtFullAutoStatus.Text = "Phase 1/3: Staging tables from source into DLRS_MIGRATIONLOGDB...";
                     txtFullAutoStatus.Foreground = new SolidBrush(MediaColor.FromRgb(56, 189, 248));
                 }
                 if (txtFullAutoDetail != null)
@@ -2557,7 +2557,7 @@ namespace LandPressDataMigrationDesktopApp
                 UpdateWorkflowState();
 
                 if (txtFullAutoStatus != null)
-                    txtFullAutoStatus.Text = "Phase 2/3: Fetching staged records from DLRS_MIGRATIONLOGTBL...";
+                    txtFullAutoStatus.Text = "Phase 2/3: Fetching staged records from DLRS_MIGRATIONLOGDB...";
                 if (txtFullAutoDetail != null)
                     txtFullAutoDetail.Text = "Loading tblLinfo01 and tblLinfo02 for Unicode font conversion...";
                 if (pbFullAutoPipeline != null) pbFullAutoPipeline.Value = 35;
@@ -2611,7 +2611,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 // Commit Unicode updates to DLRS_Migration_Intrm
                 if (txtFullAutoStatus != null)
-                    txtFullAutoStatus.Text = "Phase 2/3: Writing converted Unicode records to DLRS_MIGRATIONLOGTBL...";
+                    txtFullAutoStatus.Text = "Phase 2/3: Writing converted Unicode records to DLRS_MIGRATIONLOGDB...";
                 if (txtFullAutoDetail != null)
                     txtFullAutoDetail.Text = "Committing batch updates via SQL JSON chunks...";
 
@@ -2779,7 +2779,7 @@ namespace LandPressDataMigrationDesktopApp
                 }
                 catch { }
 
-                System.Windows.MessageBox.Show(
+                ModernMessageBox.Show(
                     $"🎉 Complete Conversion & Migration Pipeline Finished!\n\n" +
                     $"Source Database: {_DbName}\n" +
                     $"Intermediate DB: {AppConfig.IntermediateDbName}\n" +
@@ -3201,13 +3201,13 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (string.IsNullOrEmpty(_DbName))
             {
-                System.Windows.MessageBox.Show("Please select a source database first.", "Source DB Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Please select a source database first.", "Source DB Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (!_isIntermediateDbReady)
             {
-                System.Windows.MessageBox.Show($"Please initialize [{AppConfig.IntermediateDbName}] first.", "Intermediate DB Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show($"Please initialize [{AppConfig.IntermediateDbName}] first.", "Intermediate DB Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -3218,7 +3218,7 @@ namespace LandPressDataMigrationDesktopApp
                     "Migration Blocked: Unit Already Migrated",
                     "Pre-Check (tblUnitMigrationLog)",
                     $"Unit code(s) in database [{_DbName}] have already been migrated and recorded as COMPLETED in tblUnitMigrationLog.\n\nStaging data is blocked for this unit code to prevent duplicate data insertion.",
-                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_MIGRATIONLOGTBL].dbo.tblUnitMigrationLog.",
+                    "Audit log entry with Status = 'COMPLETED' exists in [DLRS_MIGRATIONLOGDB].dbo.tblUnitMigrationLog.",
                     allowSkip: false);
                 return;
             }
@@ -3279,7 +3279,7 @@ namespace LandPressDataMigrationDesktopApp
                 txtStep1Status.Text = $"❌ Error copying data: {ex.Message}";
                 txtStep1Status.Foreground = System.Windows.Media.Brushes.Tomato;
                 btnCopyToIntrmDb.IsEnabled = true;
-                System.Windows.MessageBox.Show($"Failed to stage data into [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}", "Error Staging Data", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Failed to stage data into [{AppConfig.IntermediateDbName}]:\n\n{ex.Message}", "Error Staging Data", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -3357,7 +3357,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (dbName == AppConfig.IntermediateDbName)
                 {
-                    System.Windows.MessageBox.Show(
+                    ModernMessageBox.Show(
                         $"[{AppConfig.IntermediateDbName}] is the intermediate staging database and cannot be selected as the source migration database.\n\nPlease select your legacy source database to proceed.",
                         "Intermediate Database Selected",
                         MessageBoxButton.OK,
@@ -3370,7 +3370,7 @@ namespace LandPressDataMigrationDesktopApp
 
                 if (string.Equals(dbName, _BaseDbName, StringComparison.OrdinalIgnoreCase))
                 {
-                    System.Windows.MessageBox.Show(
+                    ModernMessageBox.Show(
                         $"[{_BaseDbName}] is the core destination database and cannot be selected as the source database.\n\nPlease select your legacy source database to proceed.",
                         "Core Target Database Selected",
                         MessageBoxButton.OK,
@@ -3384,7 +3384,7 @@ namespace LandPressDataMigrationDesktopApp
                 // Failsafe: Warn user if switching database after operations are already in progress
                 if (!string.IsNullOrEmpty(_DbName) && _DbName != dbName && (_isStage2Completed || _isStage3Completed || _isStage4Completed))
                 {
-                    var confirm = System.Windows.MessageBox.Show(
+                    var confirm = ModernMessageBox.Show(
                         $"Warning: Operations are completed or in progress for database \"{_DbName}\".\n\nSwitching to \"{dbName}\" will reset pipeline states for this session. Do you wish to switch databases?",
                         "Confirm Database Switch",
                         MessageBoxButton.YesNo,
@@ -3418,7 +3418,7 @@ namespace LandPressDataMigrationDesktopApp
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(ex.Message, "Error");
+                ModernMessageBox.Show(ex.Message, "Error");
             }
         }
 
@@ -3458,20 +3458,20 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!_isStage2Completed)
             {
-                System.Windows.MessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before converting fonts.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before converting fonts.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Failsafe Active: Step 2 (Unicode Conversion & Intermediate DB Update) is already completed.\n\nRe-running this operation is blocked to preserve data integrity.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("Failsafe Active: Step 2 (Unicode Conversion & Intermediate DB Update) is already completed.\n\nRe-running this operation is blocked to preserve data integrity.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             int totalToConvert = tblLinfo01List.Count + tblLinfo02List.Count;
             if (totalToConvert == 0)
             {
-                System.Windows.MessageBox.Show("No records loaded to convert. Please fetch table data first.");
+                ModernMessageBox.Show("No records loaded to convert. Please fetch table data first.");
                 return;
             }
 
@@ -3486,7 +3486,7 @@ namespace LandPressDataMigrationDesktopApp
             {
                 if (!UserSession.IsAdmin)
                 {
-                    System.Windows.MessageBox.Show(
+                    ModernMessageBox.Show(
                         $"⛔ Conversion Blocked:\n\n" +
                         $"All records in database \"{_DbName}\" already contain Bengali Unicode text.\n\n" +
                         "Re-running font conversion on already-converted Unicode text will cause severe character corruption (Mojibake).\n\n" +
@@ -3498,7 +3498,7 @@ namespace LandPressDataMigrationDesktopApp
                 }
                 else
                 {
-                    var confirm = System.Windows.MessageBox.Show(
+                    var confirm = ModernMessageBox.Show(
                         $"⚠️ DANGER - ALREADY CONVERTED DATA DETECTED:\n\n" +
                         $"All records in database \"{_DbName}\" already contain Bengali Unicode text.\n\n" +
                         "Re-running font conversion on records that are ALREADY in Unicode will corrupt vowel signs and conjuncts (Yuktakshar), turning Bangla text into illegible Mojibake.\n\n" +
@@ -3737,13 +3737,13 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!_isStage2Completed)
             {
-                System.Windows.MessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before updating intermediate database.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before updating intermediate database.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Failsafe Active: Intermediate database has already been updated with Unicode.\n\nRe-running this operation is blocked to preserve data consistency.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("Failsafe Active: Intermediate database has already been updated with Unicode.\n\nRe-running this operation is blocked to preserve data consistency.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -3936,13 +3936,13 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (!_isStage2Completed)
             {
-                System.Windows.MessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before fetching table data.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Step 1 (Copy Source Data to Intermediate Database) must be completed before fetching table data.", "Step 1 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Failsafe Active: Step 2 (Unicode Conversion & Intermediate DB Update) is already completed.\n\nFetching tables again is disabled to prevent overwriting migrated data.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("Failsafe Active: Step 2 (Unicode Conversion & Intermediate DB Update) is already completed.\n\nFetching tables again is disabled to prevent overwriting migrated data.", "Step 2 Locked", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -3950,7 +3950,7 @@ namespace LandPressDataMigrationDesktopApp
 
             if (selectedTables.Count == 0)
             {
-                System.Windows.MessageBox.Show("Please select at least one table to fetch.", "No Table Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("Please select at least one table to fetch.", "No Table Selected", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -4123,7 +4123,7 @@ namespace LandPressDataMigrationDesktopApp
                     fontConversionPermission.Foreground = System.Windows.Media.Brushes.Tomato;
                     fontConversionPermission.Text = $"⚠️ Notice: {string.Join(" and ", inMemoryConverted)} already formatted in Unicode.";
 
-                    System.Windows.MessageBox.Show(
+                    ModernMessageBox.Show(
                         $"⚠️ Warning: Converted Data Detected!\n\n" +
                         $"The following table(s) retrieved from intermediate database (source: \"{_DbName}\") already contain Bengali Unicode text:\n" +
                         $"• {string.Join("\n• ", inMemoryConverted)}\n\n" +
@@ -4150,7 +4150,7 @@ namespace LandPressDataMigrationDesktopApp
                 DataFetchingStatus.Visibility = Visibility.Visible;
                 DataFetchingStatus.Foreground = System.Windows.Media.Brushes.Tomato;
                 DataFetchingStatus.Text = $"❌ Error: {ex.Message}";
-                System.Windows.MessageBox.Show($"Failed to fetch table data from intermediate database:\n\n{ex.Message}", "Fetch Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModernMessageBox.Show($"Failed to fetch table data from intermediate database:\n\n{ex.Message}", "Fetch Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -4167,7 +4167,7 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (string.IsNullOrEmpty(_DbName))
             {
-                System.Windows.MessageBox.Show("Please select a database first.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("Please select a database first.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -4182,7 +4182,7 @@ namespace LandPressDataMigrationDesktopApp
             {
                 _isStage2Completed = true;
                 UpdateWorkflowState();
-                System.Windows.MessageBox.Show("Stage 2 preparation completed successfully! Stage 3 (Font Conversion) is now unlocked.", "Stage 2 Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("Stage 2 preparation completed successfully! Stage 3 (Font Conversion) is now unlocked.", "Stage 2 Completed", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
@@ -4200,13 +4200,13 @@ namespace LandPressDataMigrationDesktopApp
         {
             if (string.IsNullOrEmpty(_DbName))
             {
-                System.Windows.MessageBox.Show("Please select a database first.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                ModernMessageBox.Show("Please select a database first.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             if (!_isStage3Completed)
             {
-                System.Windows.MessageBox.Show("Please complete Stage 3 (Unicode Font Conversion & Database Update) before proceeding to Stage 4 (Data Migration).", "Stage 3 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ModernMessageBox.Show("Please complete Stage 3 (Unicode Font Conversion & Database Update) before proceeding to Stage 4 (Data Migration).", "Stage 3 Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
