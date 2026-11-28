@@ -649,7 +649,16 @@ namespace LandPressDataMigrationDesktopApp
             string bnEntryKhatian = BanglaNumberConverter.ToBanglaDigit(drv["EntryKhatian"]);
             string bnSheet = BanglaNumberConverter.ToBanglaDigit(drv["SheetNum"]);
             string mouzaName = drv["MouzaName"]?.ToString() ?? string.Empty;
-            string surveyName = drv["SurveyName"]?.ToString() ?? string.Empty;
+            string rsNumVal = drv.DataView?.Table?.Columns.Contains("RsNum") == true ? (drv["RsNum"]?.ToString()?.Trim() ?? string.Empty) : string.Empty;
+            string surveyName = drv["SurveyName"]?.ToString()?.Trim() ?? string.Empty;
+            if ((string.IsNullOrWhiteSpace(surveyName) || surveyName == rsNumVal) && _allSurveyItems != null)
+            {
+                var matchedSurvey = _allSurveyItems.FirstOrDefault(s => string.Equals(s.RsNum?.Trim(), rsNumVal, StringComparison.OrdinalIgnoreCase));
+                if (matchedSurvey != null && !string.IsNullOrWhiteSpace(matchedSurvey.RsName))
+                {
+                    surveyName = matchedSurvey.RsName;
+                }
+            }
 
             // Highlighted Banner and Hero Badge
             txtPrevHeroKhatianBadge.Text = $"খতিয়ান: {bnCurrentKhatian}";
@@ -1161,7 +1170,16 @@ namespace LandPressDataMigrationDesktopApp
             string bnCurrentKhatian = BanglaNumberConverter.ToBanglaDigit(currentKhatian);
             string bnFormerKhatian = BanglaNumberConverter.ToBanglaDigit(drv["FormerKhatian"]);
             string mouzaName = drv["MouzaName"]?.ToString() ?? string.Empty;
-            string surveyName = drv["SurveyName"]?.ToString() ?? string.Empty;
+            string rsNumVal = drv.DataView?.Table?.Columns.Contains("RsNum") == true ? (drv["RsNum"]?.ToString()?.Trim() ?? string.Empty) : string.Empty;
+            string surveyName = drv["SurveyName"]?.ToString()?.Trim() ?? string.Empty;
+            if ((string.IsNullOrWhiteSpace(surveyName) || surveyName == rsNumVal) && _allSurveyItems != null)
+            {
+                var matchedSurvey = _allSurveyItems.FirstOrDefault(s => string.Equals(s.RsNum?.Trim(), rsNumVal, StringComparison.OrdinalIgnoreCase));
+                if (matchedSurvey != null && !string.IsNullOrWhiteSpace(matchedSurvey.RsName))
+                {
+                    surveyName = matchedSurvey.RsName;
+                }
+            }
             string khatianStatus = drv["KhatianStatus"]?.ToString()?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(khatianStatus))
             {
@@ -1195,22 +1213,26 @@ namespace LandPressDataMigrationDesktopApp
             else
                 rptUpazila.Text = "—";
 
+            string mouzaUnitCod = string.Empty;
             if (cmbMouza.SelectedItem is AreaHierarchyItem mouzaItem)
             {
                 if (!string.IsNullOrWhiteSpace(mouzaItem.UnitNam))
                     rptMouza.Text = mouzaItem.UnitNam;
-                if (!string.IsNullOrWhiteSpace(mouzaItem.ResaNum))
-                {
-                    string rawJL = mouzaItem.ResaNum.Trim();
-                    if (int.TryParse(rawJL, out int jlInt))
-                        rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(jlInt.ToString("D3"));
-                    else
-                        rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(rawJL);
-                }
-                else
-                {
-                    rptJLNo.Text = "—";
-                }
+                if (!string.IsNullOrWhiteSpace(mouzaItem.UnitCod))
+                    mouzaUnitCod = mouzaItem.UnitCod.Trim();
+            }
+            if (string.IsNullOrWhiteSpace(mouzaUnitCod) && drv.DataView?.Table?.Columns.Contains("UnitCod") == true)
+            {
+                mouzaUnitCod = drv["UnitCod"]?.ToString()?.Trim() ?? string.Empty;
+            }
+            if (mouzaUnitCod.Length >= 3)
+            {
+                string lastThree = mouzaUnitCod.Substring(mouzaUnitCod.Length - 3);
+                rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(lastThree);
+            }
+            else if (!string.IsNullOrWhiteSpace(mouzaUnitCod))
+            {
+                rptJLNo.Text = BanglaNumberConverter.ToBanglaDigit(mouzaUnitCod);
             }
             else
             {

@@ -450,6 +450,7 @@ namespace LandPressDataMigrationDesktopApp
                     CREATE TABLE dbo.tblUnitMigrationLog (
                         LogId             BIGINT IDENTITY(1,1) PRIMARY KEY,
                         UnitCod           VARCHAR(20) NOT NULL,
+                        MouzaName         NVARCHAR(200) NOT NULL DEFAULT N'N/A',
                         SourceDbName      NVARCHAR(128) NOT NULL,
                         HalsabekRowCount  INT NOT NULL DEFAULT 0,
                         Linfo01RowCount   INT NOT NULL DEFAULT 0,
@@ -463,6 +464,11 @@ namespace LandPressDataMigrationDesktopApp
                     );
 
                     CREATE NONCLUSTERED INDEX IX_tblUnitMigrationLog_UnitCod ON dbo.tblUnitMigrationLog (UnitCod, SourceDbName);
+                END
+                ELSE
+                BEGIN
+                    IF COL_LENGTH('dbo.tblUnitMigrationLog', 'MouzaName') IS NULL
+                        ALTER TABLE dbo.tblUnitMigrationLog ADD MouzaName NVARCHAR(200) NOT NULL DEFAULT N'N/A';
                 END;";
 
             using (var cmd = new SqlCommand(ddlTables, intrmConn))
@@ -645,12 +651,31 @@ namespace LandPressDataMigrationDesktopApp
                     }
                 }
 
+                string areaJoinSql = "";
+                string mouzaExpr = "N'N/A'";
+                if (await TableExistsAsync(conn, "DLRSLSINF_4103PRSDB", "AREAINF"))
+                {
+                    areaJoinSql = @"
+                    OUTER APPLY (
+                        SELECT TOP 1 NULLIF(LTRIM(RTRIM(a.UNITNAM)), N'') AS UNITNAM
+                        FROM [DLRSLSINF_4103PRSDB].dbo.AREAINF a
+                        WHERE LTRIM(RTRIM(a.UNITCOD)) = COALESCE(h.UnitCod, p.UnitCod, o.UnitCod)
+                           OR LTRIM(RTRIM(a.UNITCOD)) = '7' + RIGHT(COALESCE(h.UnitCod, p.UnitCod, o.UnitCod), 8)
+                        ORDER BY CASE WHEN LTRIM(RTRIM(a.UNITCOD)) = COALESCE(h.UnitCod, p.UnitCod, o.UnitCod) THEN 0 ELSE 1 END
+                    ) area";
+                    mouzaExpr = "ISNULL(area.UNITNAM, N'N/A')";
+                }
+
                 string sql = $@"
+                    IF COL_LENGTH('[{DbName}].dbo.tblUnitMigrationLog', 'MouzaName') IS NULL
+                        ALTER TABLE [{DbName}].dbo.tblUnitMigrationLog ADD MouzaName NVARCHAR(200) NOT NULL DEFAULT N'N/A';
+
                     INSERT INTO [{DbName}].dbo.tblUnitMigrationLog (
-                        UnitCod, SourceDbName, HalsabekRowCount, Linfo01RowCount, Linfo02RowCount, TotalRecords, Status, CompletedDate, ExecutedBy, MachineName, Remarks
+                        UnitCod, MouzaName, SourceDbName, HalsabekRowCount, Linfo01RowCount, Linfo02RowCount, TotalRecords, Status, CompletedDate, ExecutedBy, MachineName, Remarks
                     )
                     SELECT 
                         COALESCE(h.UnitCod, p.UnitCod, o.UnitCod) AS UnitCod,
+                        {mouzaExpr} AS MouzaName,
                         @sourceDb,
                         ISNULL(h.HsbCount, 0),
                         ISNULL(p.P01Count, 0),
@@ -681,7 +706,7 @@ namespace LandPressDataMigrationDesktopApp
                         FROM [{scanDb}].dbo.tblLinfo02 
                         WHERE unitcod IS NOT NULL AND LEN(LTRIM(RTRIM(unitcod))) > 0
                         GROUP BY LTRIM(RTRIM(unitcod))
-                    ) o ON COALESCE(h.UnitCod, p.UnitCod) = o.UnitCod;";
+                    ) o ON COALESCE(h.UnitCod, p.UnitCod) = o.UnitCod{areaJoinSql};";
 
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@sourceDb", sourceDbName);
@@ -708,9 +733,13 @@ namespace LandPressDataMigrationDesktopApp
             await conn.OpenAsync();
 
             string sql = $@"
+                IF COL_LENGTH('[{DbName}].dbo.tblUnitMigrationLog', 'MouzaName') IS NULL
+                    ALTER TABLE [{DbName}].dbo.tblUnitMigrationLog ADD MouzaName NVARCHAR(200) NOT NULL DEFAULT N'N/A';
+
                 SELECT 
                     LogId,
                     UnitCod AS [Unit Code],
+                    ISNULL(NULLIF(LTRIM(RTRIM(MouzaName)), N''), N'N/A') AS [Mouza Name],
                     SourceDbName AS [Source DB],
                     HalsabekRowCount AS [Halsabek Rows],
                     Linfo01RowCount AS [Linfo01 Rows],

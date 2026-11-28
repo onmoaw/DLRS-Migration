@@ -1219,11 +1219,7 @@ namespace LandPressDataMigrationDesktopApp
                         LoadDatabases(conn);
                     }
 
-                    System.Windows.MessageBox.Show(
-                        $"Permanent Intermediate Database [{AppConfig.IntermediateDbName}] has been successfully created and verified on \"{_ServerName}\".\n\nTables created/verified:\n • tblHalsabek (with convsts)\n • tblLinfo01 (with Unicode KRemark, ROWID, convsts)\n • tblLinfo02 (with Unicode OwnName/addr1-10, RowId, convsts)\n • tblUnitMigrationLog (audit tracking table)\n\nYou may now select a source database to proceed.",
-                        "Database Ready",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                    new DatabaseReadyDialog(AppConfig.IntermediateDbName, _ServerName) { Owner = this }.ShowDialog();
                 }
             }
             catch (Exception ex)

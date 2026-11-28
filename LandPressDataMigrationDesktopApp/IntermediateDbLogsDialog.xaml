@@ -178,6 +178,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="#" Binding="{Binding LogId}" Width="50"/>
                         <DataGridTextColumn Header="Unit Code" Binding="{Binding [Unit Code]}" FontWeight="Bold" Width="100"/>
+                        <DataGridTextColumn Header="Mouza Name" Binding="{Binding [Mouza Name]}" Width="140"/>
                         <DataGridTextColumn Header="Source DB" Binding="{Binding [Source DB]}" Width="130"/>
                         <DataGridTextColumn Header="Halsabek Rows" Binding="{Binding [Halsabek Rows], StringFormat={}{0:N0}}" Width="100"/>
                         <DataGridTextColumn Header="Linfo01 Rows" Binding="{Binding [Linfo01 Rows], StringFormat={}{0:N0}}" Width="95"/>

@@ -1,0 +1,122 @@
+<Window x:Class="LandPressDataMigrationDesktopApp.DatabaseReadyDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Database Ready"
+        Width="520"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+    <Border Margin="12"
+            Background="{DynamicResource ThemeCardBg}"
+            BorderBrush="#10B981"
+            BorderThickness="1.5"
+            CornerRadius="14"
+            Padding="24">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="22" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.32"/>
+        </Border.Effect>
+
+        <StackPanel>
+            <!-- Top Header -->
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Width="48" Height="48" CornerRadius="24" Background="#065F46" Margin="0,0,14,0" VerticalAlignment="Center">
+                    <TextBlock Text="✔" Foreground="#34D399" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Database Ready" Foreground="{DynamicResource ThemeTextPrimary}" FontSize="19" FontWeight="Bold"/>
+                    <TextBlock x:Name="txtSubtitle" Text="Permanent Intermediate Database verified" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Info Pills -->
+            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="DATABASE" Foreground="{DynamicResource ThemeTextMuted}" FontSize="10" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtDbName" Text="DLRS_MIGRATIONLOGTBL" Foreground="#10B981" FontSize="13.5" FontWeight="Bold" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="SQL SERVER" Foreground="{DynamicResource ThemeTextMuted}" FontSize="10" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtServerName" Text="-" Foreground="#38BDF8" FontSize="13.5" FontWeight="Bold" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Verified Tables Checklist -->
+            <TextBlock Text="TABLES CREATED / VERIFIED" Foreground="{DynamicResource ThemeTextMuted}" FontSize="10.5" FontWeight="Bold" Margin="0,0,0,6"/>
+            <Border Background="{DynamicResource ThemeInsetBg}" BorderBrush="{DynamicResource ThemeCardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,16">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="✔" Foreground="#10B981" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <TextBlock Text="tblHalsabek" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5" Width="155"/>
+                        <TextBlock Text="Staged with convsts tracking" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="✔" Foreground="#10B981" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <TextBlock Text="tblLinfo01" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5" Width="155"/>
+                        <TextBlock Text="Unicode KRemark, ROWID, convsts" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="✔" Foreground="#10B981" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <TextBlock Text="tblLinfo02" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5" Width="155"/>
+                        <TextBlock Text="Unicode OwnName / addr1-10, RowId" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="✔" Foreground="#10B981" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <TextBlock Text="tblUnitMigrationLog" Foreground="{DynamicResource ThemeTextPrimary}" FontWeight="SemiBold" FontSize="12.5" Width="155"/>
+                        <TextBlock Text="Audit tracking table (with MouzaName)" Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Action Row -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="You may now select a source database to proceed." Foreground="{DynamicResource ThemeTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Content="Continue" IsDefault="True" IsCancel="True" Click="BtnContinue_Click"
+                        Foreground="White" FontWeight="Bold" FontSize="13" Padding="24,9" Cursor="Hand" BorderThickness="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#10B981" Offset="0"/>
+                                        <GradientStop Color="#059669" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.9"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.78"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

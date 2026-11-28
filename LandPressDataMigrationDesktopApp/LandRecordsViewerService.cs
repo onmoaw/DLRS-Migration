@@ -73,8 +73,7 @@ namespace LandPressDataMigrationDesktopApp
                 if (RsNum == "%")
                     return !string.IsNullOrWhiteSpace(RsName) ? RsName : "সব জরিপ / All Surveys";
 
-                string bnRs = BanglaNumberConverter.ToBanglaDigit(RsNum);
-                return !string.IsNullOrWhiteSpace(RsName) ? $"{bnRs} - {RsName}" : bnRs;
+                return !string.IsNullOrWhiteSpace(RsName) ? RsName : BanglaNumberConverter.ToBanglaDigit(RsNum);
             }
         }
 
@@ -117,6 +116,7 @@ BEGIN
         lf00.RSNUM,
         lf00.UNITCOD,
         ISNULL(a.UNITNAM, lf00.UNITCOD) AS MouzaName,
+        ISNULL(a.RESANUM, '') AS JlNo,
         ISNULL(NULLIF(LTRIM(RTRIM(rs.RSNAME)), ''), lf00.RSNUM) AS SurveyName,
         lf00.KHTNUM AS CurrentKhatian,
         ISNULL(lf00.PKHTNUM, '') AS FormerKhatian,
@@ -136,7 +136,7 @@ BEGIN
     INTO #tblKhatian
     FROM dbo_lis.LINFO00 lf00
     LEFT JOIN dbo.AREAINF a ON lf00.COMCOD = a.COMCOD AND lf00.UNITCOD = a.UNITCOD
-    LEFT JOIN dbo_lis.LRSINF01 rs ON lf00.COMCOD = rs.COMCOD AND lf00.RSNUM = rs.RSNUM
+    LEFT JOIN dbo_lis.LRSINF01 rs ON (rs.COMCOD = lf00.COMCOD OR rs.COMCOD = '0000') AND LTRIM(RTRIM(rs.RSNUM)) = LTRIM(RTRIM(lf00.RSNUM))
     LEFT JOIN dbo.LANDTYPE lt ON lf00.LTCODE = lt.LTCODE
     WHERE lf00.COMCOD = @ComCod
       AND (@RsNum = '%' OR lf00.RSNUM = @RsNum)
@@ -226,13 +226,14 @@ BEGIN
     ) uo
     GROUP BY KHTNUM;
 
-    -- Result Set 0: Khatians
+    -- Result Set 0: Khatians (sorted numerically by Khatian number)
     SELECT 
-        ROW_NUMBER() OVER (ORDER BY k.CurrentKhatian) AS SlNo,
+        ROW_NUMBER() OVER (ORDER BY CASE WHEN TRY_CAST(k.CurrentKhatian AS BIGINT) IS NOT NULL THEN 0 ELSE 1 END, TRY_CAST(k.CurrentKhatian AS BIGINT), k.CurrentKhatian) AS SlNo,
         k.COMCOD AS ComCod,
         k.RSNUM AS RsNum,
         k.UNITCOD AS UnitCod,
         k.MouzaName,
+        k.JlNo,
         k.SurveyName,
         k.CurrentKhatian,
         k.FormerKhatian,
@@ -255,7 +256,7 @@ BEGIN
     FROM #tblKhatian k
     LEFT JOIN #tblPlotAgg agg ON k.CurrentKhatian = agg.KHTNUM
     LEFT JOIN #tblOwnerSummary os ON k.CurrentKhatian = os.KHTNUM
-    ORDER BY k.CurrentKhatian;
+    ORDER BY CASE WHEN TRY_CAST(k.CurrentKhatian AS BIGINT) IS NOT NULL THEN 0 ELSE 1 END, TRY_CAST(k.CurrentKhatian AS BIGINT), k.CurrentKhatian;
 
     -- Result Set 1: Owners
     SELECT 
